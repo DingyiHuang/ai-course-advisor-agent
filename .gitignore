@@ -1,41 +1,30 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+.env*
+!.env.example
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
+# Dependencies and build output
+/node_modules/
 /.next/
 /out/
+/build/
+/coverage/
 
-# production
-/build
+# Raw competition materials must never enter the public repository
+*.docx
+source_materials/
+materials/raw/
+素材/
 
-# misc
+# Video source and recordings are published as release assets, not Git history
+*.mp4
+recordings/
+
+# Tooling and local files
+.vercel/
 .DS_Store
 *.pem
-
-# debug
+*.tsbuildinfo
+next-env.d.ts
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts

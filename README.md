@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI课程顾问 Agent
 
-## Getting Started
+OPC“首届软件与智能体开发大赛”的统一赛题作品。项目面向学生/家长、教师、机构/企业三类用户，目标是在严格资料边界内完成身份澄清、需求采集、班型推荐、课程问答、报名引导与多轮会话。
 
-First, run the development server:
+当前版本处于 TASK-01：项目脚手架、测试环境和正式交付文档已经建立，课程知识、规则与模型调用尚未接入。页面只用于验证基础运行，不返回课程事实。
+
+## 本地运行
+
+环境要求：Node.js 20.9 或更高版本、npm。
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+浏览器访问 `http://localhost:3000`。TASK-01 不需要真实模型密钥；进入模型集成阶段后，由参赛人在本地 `.env.local` 中填写，前端不会直接读取或调用密钥。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 质量检查
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
 
-## Learn More
+## 项目边界
 
-To learn more about Next.js, take a look at the following resources:
+- 学生课程只使用素材A。
+- 教师个人培训只使用素材B。
+- 平台、会员和机构服务只使用素材C。
+- 确定性代码负责筛选、日期、费用、前置条件、状态与来源拼接。
+- LLM负责面向用户的正文和推荐理由措辞，不得用关键词返回整段固定课程答案。
+- 原始 Word、素材目录、环境变量和录屏文件不得进入公开仓库。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 文档
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+正式交付文档从项目第一阶段持续维护，位于 `docs/`。当前测试结果只记录实际执行过的脚手架检查，未执行的业务用例保持“待执行”。
