@@ -37,6 +37,7 @@ export type StudentRegion =
 
 export type StudentConstraints = {
   region?: StudentRegion;
+  preferredOfflineCampus?: "beijing" | "shanghai";
   availablePeriods?: Array<Camp["period"]>;
   excludedPeriods?: Array<Camp["period"]>;
   modePreference?: "offline" | "online" | "either";
@@ -89,6 +90,9 @@ export type RecommendationResult<T> =
       status: "no_match";
       boundaryCode: string;
       factIds: string[];
+      decisionTrace: DecisionTraceItem[];
+      nextQuestionKeys?: string[];
+      nextQuestionOptions?: string[];
       effectiveConstraintCount: number;
     }
   | {

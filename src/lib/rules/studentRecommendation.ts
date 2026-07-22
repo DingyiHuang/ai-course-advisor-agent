@@ -10,6 +10,7 @@ import { CAMPS } from "@/lib/knowledge";
 function countStudentConstraints(constraints: StudentConstraints): number {
   return [
     constraints.region,
+    constraints.preferredOfflineCampus,
     constraints.availablePeriods?.length || constraints.excludedPeriods?.length,
     constraints.modePreference,
     constraints.canTravel,
@@ -36,6 +37,19 @@ function missingStudentConstraints(
   if (!constraints.learningGoal && constraints.needsReplay === undefined) {
     missing.push("learningGoal");
   }
+  if (
+    constraints.region === "guangzhou" &&
+    constraints.modePreference === "offline"
+  ) {
+    if (constraints.canTravel === undefined) {
+      missing.push("canTravel");
+    } else if (
+      constraints.canTravel === true &&
+      !constraints.preferredOfflineCampus
+    ) {
+      missing.push("preferredOfflineCampus");
+    }
+  }
 
   return missing;
 }
@@ -53,6 +67,8 @@ function chooseCampus(
 
   if (constraints.region === "beijing") return "bj";
   if (constraints.region === "shanghai") return "sh";
+  if (constraints.preferredOfflineCampus === "beijing") return "bj";
+  if (constraints.preferredOfflineCampus === "shanghai") return "sh";
 
   if (constraints.modePreference === "either") return "online";
   return undefined;
@@ -80,8 +96,16 @@ function toStudentRecommendation(
 
   if (camp.campus === "bj" || camp.campus === "sh") {
     decisionTrace.push({
-      code: `region_match_${camp.campus}`,
-      constraintKeys: ["region", "modePreference", "canTravel"],
+      code:
+        constraints.region === "guangzhou"
+          ? `travel_campus_${camp.campus}`
+          : `region_match_${camp.campus}`,
+      constraintKeys: [
+        "region",
+        "preferredOfflineCampus",
+        "modePreference",
+        "canTravel",
+      ],
       factIds: [
         `${camp.id}.campus`,
         `${camp.id}.deliveryMode`,
@@ -156,12 +180,22 @@ export function recommendStudentCamps(
   if (
     constraints.region === "guangzhou" &&
     constraints.modePreference === "offline" &&
-    constraints.canTravel !== true
+    constraints.canTravel === undefined
   ) {
+    const factIds = CAMPS.map((camp) => `${camp.id}.campus`);
     return {
       status: "no_match",
       boundaryCode: "student_guangzhou_offline_not_provided",
-      factIds: CAMPS.map((camp) => `${camp.id}.campus`),
+      factIds,
+      decisionTrace: [
+        {
+          code: "student_guangzhou_offline_not_provided",
+          constraintKeys: ["region", "modePreference"],
+          factIds,
+        },
+      ],
+      nextQuestionKeys: ["canTravel"],
+      nextQuestionOptions: ["可以前往北京", "可以前往上海", "均不便出行"],
       effectiveConstraintCount,
     };
   }
@@ -191,6 +225,13 @@ export function recommendStudentCamps(
       status: "no_match",
       boundaryCode: "student_date_conflict",
       factIds: CAMPS.map((camp) => `${camp.id}.startDate`),
+      decisionTrace: [
+        {
+          code: "student_date_conflict",
+          constraintKeys: ["availablePeriods", "excludedPeriods"],
+          factIds: CAMPS.map((camp) => `${camp.id}.startDate`),
+        },
+      ],
       effectiveConstraintCount,
     };
   }

@@ -66,7 +66,6 @@ describe("student deterministic recommendation mappings", () => {
       region: "guangzhou",
       availablePeriods: [1],
       modePreference: "offline",
-      canTravel: false,
     });
 
     expect(result).toMatchObject({
@@ -75,6 +74,34 @@ describe("student deterministic recommendation mappings", () => {
     });
     if (result.status !== "no_match") return;
     expect(result.factIds.every((id) => id.startsWith("camp-"))).toBe(true);
+    expect(result.nextQuestionKeys).toEqual(["canTravel"]);
+    expect(result.nextQuestionOptions).toEqual([
+      "可以前往北京",
+      "可以前往上海",
+      "均不便出行",
+    ]);
+    expect(result.decisionTrace[0]).toMatchObject({
+      code: "student_guangzhou_offline_not_provided",
+      constraintKeys: ["region", "modePreference"],
+    });
+  });
+
+  it("recommends online only after the Guangzhou family confirms travel is impossible", () => {
+    const result = recommendStudentCamps({
+      region: "guangzhou",
+      availablePeriods: [1],
+      modePreference: "offline",
+      canTravel: false,
+    });
+
+    expect(result.status).toBe("recommended");
+    if (result.status !== "recommended") return;
+    expect(result.recommendations[0].item.id).toBe("camp-p1-online");
+    expect(result.recommendations[0].decisionTrace).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "online_for_travel_or_preference" }),
+      ]),
+    );
   });
 
   it("exits with an explicit insufficient-information result after refusal", () => {

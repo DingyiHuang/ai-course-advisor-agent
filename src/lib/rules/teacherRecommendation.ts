@@ -178,12 +178,23 @@ export function recommendTeacherProducts(
 
   const product = candidates[0];
   if (!product) {
+    const factIds = TEACHER_PRODUCTS.filter(
+      (candidate) => candidate.level === level,
+    ).map((candidate) => `${candidate.id}.schedule`);
     return {
       status: "no_match",
       boundaryCode: "teacher_schedule_conflict",
-      factIds: TEACHER_PRODUCTS.filter(
-        (candidate) => candidate.level === level,
-      ).map((candidate) => `${candidate.id}.schedule`),
+      factIds,
+      decisionTrace: [
+        {
+          code: "teacher_schedule_conflict",
+          constraintKeys: [
+            "availableProductIds",
+            "canTakeContinuousLeave",
+          ],
+          factIds,
+        },
+      ],
       effectiveConstraintCount,
     };
   }
