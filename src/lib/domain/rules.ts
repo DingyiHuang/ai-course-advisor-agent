@@ -50,10 +50,12 @@ export type StudentConstraints = {
 
 export type TeacherGoal = "tools" | "web-app" | "rag-project";
 export type PrerequisiteStatus = "met" | "not_met" | "unknown";
+export type TeacherStartingLevel = "beginner" | "L1" | "L2";
 
 export type TeacherConstraints = {
   level?: TeacherProduct["level"];
   goal?: TeacherGoal;
+  startingLevel?: TeacherStartingLevel;
   canTakeContinuousLeave?: boolean;
   availableProductIds?: string[];
   city?: string;
@@ -87,12 +89,19 @@ export type RecommendationResult<T> =
       canExit: true;
     }
   | {
+      status: "boundary_follow_up";
+      boundaryCode: string;
+      factIds: string[];
+      decisionTrace: DecisionTraceItem[];
+      nextQuestionKeys: string[];
+      nextQuestionOptions: string[];
+      effectiveConstraintCount: number;
+    }
+  | {
       status: "no_match";
       boundaryCode: string;
       factIds: string[];
       decisionTrace: DecisionTraceItem[];
-      nextQuestionKeys?: string[];
-      nextQuestionOptions?: string[];
       effectiveConstraintCount: number;
     }
   | {

@@ -94,7 +94,9 @@ export function calculateCampFee(input: {
       },
       {
         code: `discount_${discountKind}`,
-        constraintKeys: ["group.size", "group.samePeriodAndCamp"],
+        constraintKeys: input.group
+          ? ["group.size", "group.samePeriodAndCamp"]
+          : [],
         factIds: factIds.filter((id) =>
           /earlyBirdPrice|groupMinimum|groupDiscount|groupScope/.test(id),
         ),
@@ -171,7 +173,9 @@ export function calculateTeacherFee(input: {
       },
       {
         code: `discount_${discountKind}`,
-        constraintKeys: ["group.size", "group.sameSchoolAndProduct"],
+        constraintKeys: input.group
+          ? ["group.size", "group.sameSchoolAndProduct"]
+          : [],
         factIds: factIds.filter((id) =>
           /earlyBirdDiscount|groupMinimum|groupDiscount/.test(id),
         ),

@@ -69,10 +69,10 @@ describe("student deterministic recommendation mappings", () => {
     });
 
     expect(result).toMatchObject({
-      status: "no_match",
+      status: "boundary_follow_up",
       boundaryCode: "student_guangzhou_offline_not_provided",
     });
-    if (result.status !== "no_match") return;
+    if (result.status !== "boundary_follow_up") return;
     expect(result.factIds.every((id) => id.startsWith("camp-"))).toBe(true);
     expect(result.nextQuestionKeys).toEqual(["canTravel"]);
     expect(result.nextQuestionOptions).toEqual([

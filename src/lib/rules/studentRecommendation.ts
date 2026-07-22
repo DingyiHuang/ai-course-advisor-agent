@@ -7,6 +7,13 @@ import type {
 } from "@/lib/domain/rules";
 import { CAMPS } from "@/lib/knowledge";
 
+function collectedStudentConstraintKeys(
+  constraints: StudentConstraints,
+  keys: Array<keyof StudentConstraints>,
+): string[] {
+  return keys.filter((key) => constraints[key] !== undefined);
+}
+
 function countStudentConstraints(constraints: StudentConstraints): number {
   return [
     constraints.region,
@@ -100,12 +107,12 @@ function toStudentRecommendation(
         constraints.region === "guangzhou"
           ? `travel_campus_${camp.campus}`
           : `region_match_${camp.campus}`,
-      constraintKeys: [
+      constraintKeys: collectedStudentConstraintKeys(constraints, [
         "region",
         "preferredOfflineCampus",
         "modePreference",
         "canTravel",
-      ],
+      ]),
       factIds: [
         `${camp.id}.campus`,
         `${camp.id}.deliveryMode`,
@@ -119,7 +126,11 @@ function toStudentRecommendation(
       code: constraints.needsReplay
         ? "online_for_replay"
         : "online_for_travel_or_preference",
-      constraintKeys: ["needsReplay", "canTravel", "modePreference"],
+      constraintKeys: collectedStudentConstraintKeys(constraints, [
+        "needsReplay",
+        "canTravel",
+        "modePreference",
+      ]),
       factIds: [
         `${camp.id}.deliveryMode`,
         `${camp.id}.addressOrPlatform`,
@@ -184,7 +195,7 @@ export function recommendStudentCamps(
   ) {
     const factIds = CAMPS.map((camp) => `${camp.id}.campus`);
     return {
-      status: "no_match",
+      status: "boundary_follow_up",
       boundaryCode: "student_guangzhou_offline_not_provided",
       factIds,
       decisionTrace: [
@@ -228,7 +239,10 @@ export function recommendStudentCamps(
       decisionTrace: [
         {
           code: "student_date_conflict",
-          constraintKeys: ["availablePeriods", "excludedPeriods"],
+          constraintKeys: collectedStudentConstraintKeys(constraints, [
+            "availablePeriods",
+            "excludedPeriods",
+          ]),
           factIds: CAMPS.map((camp) => `${camp.id}.startDate`),
         },
       ],

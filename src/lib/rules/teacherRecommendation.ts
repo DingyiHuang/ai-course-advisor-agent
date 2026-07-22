@@ -13,10 +13,39 @@ const GOAL_LEVEL: Record<TeacherGoal, TeacherProduct["level"]> = {
   "rag-project": "L3",
 };
 
+const STARTING_LEVEL_TARGET: Record<
+  NonNullable<TeacherConstraints["startingLevel"]>,
+  TeacherProduct["level"]
+> = {
+  beginner: "L1",
+  L1: "L2",
+  L2: "L3",
+};
+
+function resolveTargetLevel(constraints: TeacherConstraints): {
+  level: TeacherProduct["level"] | undefined;
+  constraintKeys: string[];
+} {
+  if (constraints.level) {
+    return { level: constraints.level, constraintKeys: ["level"] };
+  }
+  if (constraints.goal) {
+    return { level: GOAL_LEVEL[constraints.goal], constraintKeys: ["goal"] };
+  }
+  if (constraints.startingLevel) {
+    return {
+      level: STARTING_LEVEL_TARGET[constraints.startingLevel],
+      constraintKeys: ["startingLevel"],
+    };
+  }
+  return { level: undefined, constraintKeys: [] };
+}
+
 function countTeacherConstraints(constraints: TeacherConstraints): number {
   return [
     constraints.level,
     constraints.goal,
+    constraints.startingLevel,
     constraints.canTakeContinuousLeave,
     constraints.availableProductIds?.length,
     constraints.city,
@@ -31,14 +60,15 @@ function missingTeacherConstraints(
   constraints: TeacherConstraints,
 ): string[] {
   const missing: string[] = [];
-  if (!constraints.level && !constraints.goal) missing.push("levelOrGoal");
+  if (!constraints.level && !constraints.goal && !constraints.startingLevel) {
+    missing.push("levelGoalOrStartingLevel");
+  }
   if (constraints.canTakeContinuousLeave === undefined) {
     missing.push("canTakeContinuousLeave");
   }
   if (!constraints.availableProductIds?.length) missing.push("availableDates");
   if (!constraints.city) missing.push("city");
-  const targetLevel =
-    constraints.level ?? (constraints.goal && GOAL_LEVEL[constraints.goal]);
+  const targetLevel = resolveTargetLevel(constraints).level;
   if (
     targetLevel &&
     targetLevel !== "L1" &&
@@ -60,6 +90,8 @@ function toTeacherRecommendation(
   product: TeacherProduct,
   constraints: TeacherConstraints,
 ): Recommendation<TeacherProduct> {
+  const { constraintKeys: levelConstraintKeys } =
+    resolveTargetLevel(constraints);
   const decisionTrace = [
     {
       code: product.format === "intensive" ? "continuous_time" : "weekend_time",
@@ -68,7 +100,7 @@ function toTeacherRecommendation(
     },
     {
       code: `level_${product.level.toLowerCase()}`,
-      constraintKeys: ["level", "goal"],
+      constraintKeys: levelConstraintKeys,
       factIds: [
         `${product.id}.level`,
         `${product.id}.curriculumModules`,
@@ -139,7 +171,7 @@ export function recommendTeacherProducts(
         };
   }
 
-  const level = constraints.level ?? (constraints.goal && GOAL_LEVEL[constraints.goal]);
+  const { level } = resolveTargetLevel(constraints);
   if (!level) {
     return {
       status: "needs_more_information",
@@ -189,7 +221,9 @@ export function recommendTeacherProducts(
         {
           code: "teacher_schedule_conflict",
           constraintKeys: [
-            "availableProductIds",
+            ...(constraints.availableProductIds?.length
+              ? ["availableProductIds"]
+              : []),
             "canTakeContinuousLeave",
           ],
           factIds,
