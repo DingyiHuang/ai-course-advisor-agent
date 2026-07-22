@@ -91,6 +91,7 @@ const PRODUCT_SEEDS: ProductSeed[] = [
     format: "intensive",
     cities: ["北京"],
     locationsOrPlatforms: [
+      "北京教学基地线下",
       "北京市海淀区中关村南大街5号，AI教育中心北京教学基地（模拟地址）",
     ],
     startDate: "2026-08-01",
@@ -110,7 +111,7 @@ const PRODUCT_SEEDS: ProductSeed[] = [
       "广州工作坊",
     ],
     startDate: "2026-08-02",
-    schedule: ["8月2日上午4课时线上，下午4课时线下工作坊"],
+    schedule: ["8月2日上午4课时线上、下午4课时线下工作坊"],
     registrationDeadline: "2026-07-26",
     earlyBirdDeadline: "2026-07-19",
   },
@@ -173,6 +174,7 @@ export const TEACHER_PRODUCTS: TeacherProduct[] = PRODUCT_SEEDS.map((seed) => ({
   groupMinimum: 3,
   deviceRequirements: DEVICE_REQUIREMENTS,
   replayPolicy: REPLAY_POLICY,
+  refundPolicyProvided: false,
   availabilityKnown: false,
 }));
 
@@ -192,6 +194,11 @@ export const TEACHER_PRODUCT_FIELD_SOURCES: FieldSources<TeacherProduct> = {
   feeIncludes: { document: "B", chapter: "第五章" },
   deviceRequirements: { document: "B", chapter: "第四章" },
   replayPolicy: { document: "B", chapter: "第四章" },
+  refundPolicyProvided: {
+    document: "B",
+    chapter: "全文",
+    section: "未提供退款规则",
+  },
   prerequisite: { document: "B", chapter: "第一、六章" },
   curriculumModules: { document: "B", chapter: "第三章" },
   outcome: { document: "B", chapter: "第三章" },

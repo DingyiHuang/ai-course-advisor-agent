@@ -64,6 +64,7 @@ describe("typed knowledge inventory", () => {
       "groupDiscount",
       "deviceRequirements",
       "replayPolicy",
+      "refundPolicyProvided",
       "prerequisite",
       "availabilityKnown",
     ] as const;
@@ -71,6 +72,7 @@ describe("typed knowledge inventory", () => {
       "pricingRule",
       "minimumPeople",
       "minimumPrice",
+      "priceProvided",
       "grantsOrderPermission",
       "grantsDirectOrderPermission",
       "boundary",

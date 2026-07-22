@@ -107,6 +107,10 @@ describe("participant-authored knowledge goldens", () => {
       l1Intensive.registrationDeadline,
       l1Intensive.earlyBirdDeadline,
     ]).toEqual(["2026-08-01", "2026-07-25", "2026-07-18"]);
+    expect(l1Intensive.schedule[0]).toBe(
+      "8月1日09:00—12:00、14:00—17:00，共8课时",
+    );
+    expect(l1Intensive.locationsOrPlatforms[0]).toBe("北京教学基地线下");
     expect([
       l1Weekend.startDate,
       l1Weekend.registrationDeadline,
@@ -114,6 +118,9 @@ describe("participant-authored knowledge goldens", () => {
     ]).toEqual(["2026-08-02", "2026-07-26", "2026-07-19"]);
     expect(`${l1Weekend.cities.join("、")}（线上为腾讯会议）`).toBe(
       "北京、上海、广州（线上为腾讯会议）",
+    );
+    expect(l1Weekend.schedule[0]).toBe(
+      "8月2日上午4课时线上、下午4课时线下工作坊",
     );
 
     expect([
@@ -176,6 +183,11 @@ describe("participant-authored knowledge goldens", () => {
       ),
     ).toBe(true);
     expect(l1.replayPolicy).toContain("30天回放");
+    expect(
+      TEACHER_PRODUCTS.every(
+        (product) => product.refundPolicyProvided === false,
+      ),
+    ).toBe(true);
     expect(l2.prerequisite).toBe("完成L1或通过同等能力测评");
     expect(l3.prerequisite).toBe("完成L2或提交同等项目作品");
   });
@@ -201,6 +213,7 @@ describe("participant-authored knowledge goldens", () => {
     expect([agent.minimumPrice, agent.maximumPrice]).toEqual([10000, 30000]);
     expect([web.minimumPrice, web.maximumPrice]).toEqual([30000, 80000]);
     expect(rag.minimumPrice).toBe(80000);
+    expect(membership.priceProvided).toBe(false);
     expect(membership.grantsOrderPermission).toBe(false);
     expect(contest.grantsDirectOrderPermission).toBe(false);
   });

@@ -70,6 +70,7 @@ export type TeacherProduct = {
   feeIncludes: string[];
   deviceRequirements: string[];
   replayPolicy: string;
+  refundPolicyProvided: false;
   prerequisite: string | null;
   curriculumModules: string[];
   outcome: string;
@@ -87,6 +88,7 @@ export type PlatformService = {
   minimumTotalPrice?: number;
   minimumPrice?: number;
   maximumPrice?: number;
+  priceProvided?: boolean;
   grantsOrderPermission?: boolean;
   grantsDirectOrderPermission?: boolean;
   boundary: string;
