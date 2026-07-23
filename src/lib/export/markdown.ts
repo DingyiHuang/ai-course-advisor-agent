@@ -6,6 +6,7 @@ import type { CollectedSource } from "@/lib/citations";
 
 export type ExportMessage = {
   id: string;
+  clientRequestId?: string;
   role: "user" | "assistant" | "system" | "error";
   content: string;
   createdAt: string;

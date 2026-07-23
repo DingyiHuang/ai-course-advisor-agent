@@ -2,23 +2,28 @@ import { describe, expect, it } from "vitest";
 import type { ComposerPlan, GroundedFact } from "@/lib/domain/conversation";
 import { createComposer, resolveComposerRoute } from "@/lib/llm/composer";
 import {
+  assertComposerDidNotMakeExternalCommitment,
   assertComposerDidNotImpersonateHuman,
   assertComposerMentionedOnlyPlannedPeriods,
   assertComposerDidNotWriteSources,
   assertDecisionTraceConstraints,
   assertFollowUpUsesClosedDimensions,
   assertHighRiskValuesGrounded,
+  assertPlanMatchesConfirmedState,
+  GroundingError,
   validateUsedFactIds,
 } from "@/lib/validation/grounding";
 import { extractMoneyAmounts } from "@/lib/validation/money";
 import { formatSourceFootnotes } from "@/lib/citations";
 import { completion, ScriptedLlmClient } from "./helpers/scriptedLlm";
+import { createInitialConversationState } from "@/lib/conversation/session";
 
 function emptyPlan(overrides: Partial<ComposerPlan> = {}): ComposerPlan {
   return {
     status: "needs_more_information",
     route: "ask_follow_up",
     domain: "student",
+    confirmedConstraints: {},
     facts: [],
     calculations: [],
     decisionTrace: [],
@@ -121,7 +126,7 @@ describe("programmatic grounding gates", () => {
         facts,
         calculations: [],
       }),
-    ).toThrow("ungrounded amount or date");
+    ).toThrow("ungrounded amount");
     expect(() =>
       assertHighRiskValuesGrounded({
         message: "报价999—1500元/人。",
@@ -239,7 +244,131 @@ describe("programmatic grounding gates", () => {
         ],
         calculations: [],
       }),
-    ).toThrow("ungrounded amount or date");
+    ).toThrow("ungrounded amount");
+  });
+
+  it("attaches a machine-readable reason code to grounding failures", () => {
+    try {
+      assertHighRiskValuesGrounded({
+        message: "学校采购2万元起",
+        facts: [
+          {
+            id: "platform-school-procurement.pricingRule",
+            label: "计价规则",
+            value: "20人起，项目总价5万元起",
+          },
+        ],
+        calculations: [],
+      });
+      throw new Error("Expected grounding rejection");
+    } catch (error) {
+      expect(error).toBeInstanceOf(GroundingError);
+      expect((error as GroundingError).reasonCode).toBe("ungrounded_amount");
+    }
+  });
+
+  it.each([
+    "已为您安排人工顾问稍后联系。",
+    "顾问稍后会通过微信联系您。",
+    "已提交采购需求。",
+    "已为您锁定名额。",
+    "已经为您报名。",
+    "稍后会有人工顾问联系您。",
+    "本演示不提供真实报名，但已为您安排人工顾问稍后联系。",
+  ])("rejects unsupported external commitments: %s", (message) => {
+    expect(() => assertComposerDidNotMakeExternalCommitment(message)).toThrow(
+      "unsupported real-world commitment",
+    );
+  });
+
+  it("allows explicit simulation boundaries without promising contact", () => {
+    expect(() =>
+      assertComposerDidNotMakeExternalCommitment(
+        "可整理采购需求清单；本演示不提供真实报名、下单或人工联系。",
+      ),
+    ).not.toThrow();
+  });
+
+  it.each([
+    "请问周末是否方便上课？",
+    "您偏好线上、线下还是录播回放？",
+    "请问孩子在哪所学校？",
+    "请补充考级认证目标？",
+    "您需要回放吗？",
+    "请问您在北京哪个区域？",
+    "请问您平时晚上有时间吗？",
+  ])("rejects invented questions even when no question key is planned: %s", (message) => {
+    expect(() => assertFollowUpUsesClosedDimensions(message, [])).toThrow();
+  });
+
+  it("does not treat a replay fact statement as an invented follow-up", () => {
+    expect(() =>
+      assertFollowUpUsesClosedDimensions("该线上直播班提供30天回放。", []),
+    ).not.toThrow();
+  });
+
+  it("rejects a student plan whose entity and trace escape the confirmed period", () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    state.studentConstraints = {
+      region: "beijing",
+      availablePeriods: [1],
+      modePreference: "offline",
+    };
+    const plan = emptyPlan({
+      status: "recommended",
+      route: "recommendation",
+      confirmedConstraints: {
+        region: "beijing",
+        availablePeriods: [1],
+        modePreference: "offline",
+      },
+      entityIds: ["camp-p2-bj"],
+      decisionTrace: [
+        {
+          code: "period_available",
+          constraintKeys: ["availablePeriods"],
+          constraintValues: { availablePeriods: [2] },
+          factIds: ["camp-p2-bj.startDate"],
+        },
+      ],
+    });
+
+    expect(() => assertPlanMatchesConfirmedState(state, plan)).toThrow(
+      /confirmed constraint|escaped confirmed periods/u,
+    );
+  });
+
+  it("rejects a same-period student entity that differs from deterministic campus output", () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    state.studentConstraints = {
+      region: "beijing",
+      availablePeriods: [1],
+      modePreference: "offline",
+    };
+    const plan = emptyPlan({
+      status: "recommended",
+      route: "recommendation",
+      confirmedConstraints: {
+        region: "beijing",
+        availablePeriods: [1],
+        modePreference: "offline",
+      },
+      entityIds: ["camp-p1-online"],
+      decisionTrace: [
+        {
+          code: "period_available",
+          constraintKeys: ["availablePeriods"],
+          constraintValues: { availablePeriods: [1] },
+          factIds: ["camp-p1-online.startDate"],
+        },
+      ],
+    });
+
+    expect(() => assertPlanMatchesConfirmedState(state, plan)).toThrow(
+      "differ from deterministic output",
+    );
   });
 
   it("extracts only values in explicit money contexts", () => {

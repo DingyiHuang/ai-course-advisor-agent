@@ -5,6 +5,7 @@ import {
   KeyboardEvent,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
 } from "react";
@@ -16,26 +17,33 @@ import type {
 } from "@/lib/domain/conversation";
 import {
   downloadConversationMarkdown,
-  type ExportMessage,
 } from "@/lib/export/markdown";
 import {
   consumeRetryRequest,
   createRetryRequestSnapshot,
+  identifyChatRequest,
+  requestFromRetrySnapshot,
   type ChatRequest,
   type RetryRequestSnapshot,
 } from "@/lib/conversation/retryRequest";
+import {
+  acquireRequestLease,
+  areErrorControlsDisabled,
+  clientChatReducer,
+  createClientChatState,
+  releaseRequestLease,
+  type ClientUiMessage,
+  type IdentifiedClientUiMessage,
+} from "@/lib/conversation/clientChatState";
 import styles from "./CourseAdvisor.module.css";
 
-type UiMessage = ExportMessage & {
-  actions: string[];
-  options: string[];
-  retrySnapshot?: RetryRequestSnapshot;
-};
+type UiMessage = ClientUiMessage;
 
 type RequestOptions = {
   userLabel?: string;
   appendUser?: boolean;
   replaceOnSuccess?: boolean;
+  retrySnapshot?: RetryRequestSnapshot;
 };
 
 const EMPTY_PRESENTATION: ChatPresentation = { recommendations: [] };
@@ -203,16 +211,20 @@ function hasChatResponseShape(value: unknown): value is ChatResponse {
 
 export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   const [state, setState] = useState<ConversationState>(initialState);
-  const [messages, setMessages] = useState<UiMessage[]>(initialMessages);
+  const [chatUi, dispatchChatUi] = useReducer(
+    clientChatReducer,
+    undefined,
+    () => createClientChatState(initialMessages()),
+  );
+  const messages = chatUi.messages;
   const [draft, setDraft] = useState("");
   const [inputError, setInputError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [lastError, setLastError] = useState<ChatResponse["error"]>();
   const [sessionId, setSessionId] = useState("TASK05-001");
   const [exportNotice, setExportNotice] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const requestInFlightRef = useRef(false);
+  const requestInFlightRef = useRef<string | undefined>(undefined);
   const consumedRetryErrorIdsRef = useRef<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
@@ -229,14 +241,23 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
     const entries = Object.entries(source)
       .filter(
         ([key, value]) =>
-          !["stalledTurns", "refusesMoreQuestions"].includes(key) &&
+          ![
+            "stalledTurns",
+            "refusesMoreQuestions",
+            "regionDisplayName",
+          ].includes(key) &&
           value !== undefined &&
           (!Array.isArray(value) || value.length > 0),
       )
       .map(([key, value]) => ({
         key,
         label: CONSTRAINT_LABELS[key] ?? key,
-        value: displayValue(value),
+        value:
+          state.domain === "student" &&
+          key === "region" &&
+          state.studentConstraints.regionDisplayName
+            ? state.studentConstraints.regionDisplayName
+            : displayValue(value),
       }));
     if (state.domain === "platform" && state.institutionNeed) {
       entries.push({
@@ -274,14 +295,42 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
     request: ChatRequest,
     options: RequestOptions = {},
   ): Promise<ChatResponse | undefined> {
-    if (loading || requestInFlightRef.current) return undefined;
-    requestInFlightRef.current = true;
+    let identifiedRequest = identifyChatRequest(request);
+    const lease = acquireRequestLease(
+      requestInFlightRef.current,
+      identifiedRequest.clientRequestId,
+    );
+    requestInFlightRef.current = lease.activeClientRequestId;
+    if (!lease.acquired) return undefined;
+
+    if (options.retrySnapshot) {
+      const consumption = consumeRetryRequest(
+        options.retrySnapshot,
+        consumedRetryErrorIdsRef.current,
+      );
+      consumedRetryErrorIdsRef.current =
+        consumption.consumedErrorMessageIds;
+      if (!consumption.request) {
+        requestInFlightRef.current = releaseRequestLease(
+          requestInFlightRef.current,
+          identifiedRequest.clientRequestId,
+        );
+        return undefined;
+      }
+      identifiedRequest = consumption.request;
+      dispatchChatUi({
+        type: "retry_started",
+        clientRequestId: identifiedRequest.clientRequestId,
+        errorMessageId: options.retrySnapshot.errorMessageId,
+      });
+    }
     const appendUser = options.appendUser !== false && options.userLabel;
     if (appendUser) {
-      setMessages((current) => [
-        ...current,
-        {
+      dispatchChatUi({
+        type: "request_started",
+        userMessage: {
           id: uid("user"),
+          clientRequestId: identifiedRequest.clientRequestId,
           role: "user",
           content: options.userLabel as string,
           createdAt: new Date().toISOString(),
@@ -290,7 +339,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
           actions: [],
           options: [],
         },
-      ]);
+      });
     }
     setLoading(true);
     setInputError("");
@@ -300,7 +349,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
       const httpResponse = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
+        body: JSON.stringify(identifiedRequest),
       });
       const payload: unknown = await httpResponse.json().catch(() => undefined);
       if (!hasChatResponseShape(payload)) {
@@ -308,10 +357,10 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
       }
 
       setState(payload.state);
-      setLastError(payload.error);
       const messageId = uid(payload.error ? "error" : "assistant");
-      const nextMessage: UiMessage = {
+      const nextMessage: IdentifiedClientUiMessage = {
         id: messageId,
+        clientRequestId: identifiedRequest.clientRequestId,
         role: responseRole(payload),
         content: payload.message,
         createdAt: new Date().toISOString(),
@@ -322,31 +371,52 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
         options: payload.state.pendingQuestionOptions,
         retrySnapshot: payload.error?.retryable
           ? createRetryRequestSnapshot({
-              request,
-              retryState: payload.state,
+              request: identifiedRequest,
               errorMessageId: messageId,
             })
           : undefined,
       };
-      const noticeMessages = payload.notices.map((notice) =>
-        systemMessage(notice.message),
+      const noticeMessages: IdentifiedClientUiMessage[] = payload.notices.map(
+        (notice) => ({
+          ...systemMessage(notice.message),
+          clientRequestId: identifiedRequest.clientRequestId,
+        }),
       );
-      setMessages((current) => {
+      if (payload.error) {
+        dispatchChatUi({
+          type: "request_failed",
+          message: nextMessage,
+          error: payload.error,
+        });
+      } else {
         const additions = [...noticeMessages, nextMessage];
-        return options.replaceOnSuccess ? additions : [...current, ...additions];
-      });
+        dispatchChatUi(
+          options.replaceOnSuccess
+            ? { type: "replace_all", messages: additions }
+            : {
+                type: "request_succeeded",
+                clientRequestId: identifiedRequest.clientRequestId,
+                messages: additions,
+              },
+        );
+        if (payload.status === "menu" || payload.status === "reset") {
+          dispatchChatUi({ type: "menu_completed" });
+          consumedRetryErrorIdsRef.current = new Set();
+        }
+      }
       return payload;
     } catch {
       const localError = {
         code: "network_error",
         retryable: true,
       };
-      setLastError(localError as ChatResponse["error"]);
       const messageId = uid("error");
-      setMessages((current) => [
-        ...current,
-        {
+      dispatchChatUi({
+        type: "request_failed",
+        error: localError,
+        message: {
           id: messageId,
+          clientRequestId: identifiedRequest.clientRequestId,
           role: "error",
           content: "暂时无法连接课程顾问服务。对话状态仍在本机保留，请重试或返回菜单。",
           createdAt: new Date().toISOString(),
@@ -356,15 +426,17 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
           actions: ["重试", "返回菜单"],
           options: [],
           retrySnapshot: createRetryRequestSnapshot({
-            request,
-            retryState: request.state,
+            request: identifiedRequest,
             errorMessageId: messageId,
           }),
         },
-      ]);
+      });
       return undefined;
     } finally {
-      requestInFlightRef.current = false;
+      requestInFlightRef.current = releaseRequestLease(
+        requestInFlightRef.current,
+        identifiedRequest.clientRequestId,
+      );
       setLoading(false);
     }
   }
@@ -431,9 +503,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
     );
     if (result) {
       setDraft("");
-      setLastError(undefined);
       setSessionId(uid("TASK05"));
-      consumedRetryErrorIdsRef.current = new Set();
     }
   }
 
@@ -445,22 +515,9 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   }
 
   async function retryOriginalRequest(snapshot: RetryRequestSnapshot) {
-    const consumption = consumeRetryRequest(
-      snapshot,
-      consumedRetryErrorIdsRef.current,
-    );
-    consumedRetryErrorIdsRef.current = consumption.consumedErrorMessageIds;
-    if (!consumption.request) return;
-
-    setMessages((current) =>
-      current.map((message) =>
-        message.id === snapshot.errorMessageId
-          ? { ...message, retrySnapshot: undefined }
-          : message,
-      ),
-    );
-    await requestChat(consumption.request, {
+    await requestChat(requestFromRetrySnapshot(snapshot), {
       appendUser: false,
+      retrySnapshot: snapshot,
     });
   }
 
@@ -485,6 +542,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
         void selectDomain("platform");
         return;
       case "继续询问当前班型":
+      case "继续当前咨询":
       case "选择具体班型":
         focusWithDraft();
         return;
@@ -535,7 +593,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
       messages,
       state,
       testMode,
-      actualError: lastError,
+      actualError: chatUi.lastError,
       currentEntityName,
     });
     setExportNotice(`已导出：${filename}`);
@@ -704,6 +762,10 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
             {messages.map((message) => {
               const messageControlsDisabled =
                 loading || message.id !== latestResponseMessageId;
+              const errorControlsDisabled = areErrorControlsDisabled(
+                loading,
+                message.retrying,
+              );
               return (
                 <article className={`${styles.messageRow} ${styles[message.role]}`} key={message.id}>
                 <div className={styles.messageMeta}>
@@ -713,7 +775,10 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
                 <div className={styles.messageBubble}>{message.content}</div>
 
                 {message.presentation.recommendations.map((card) => (
-                  <section className={styles.recommendationCard} key={card.entityId}>
+                  <section
+                    className={styles.recommendationCard}
+                    key={`${message.clientRequestId ?? message.id}:${card.entityId}`}
+                  >
                     <div className={styles.cardTopline}>
                       <span>{card.kind === "student" ? "学生课程推荐" : "教师培训推荐"}</span>
                       <span>已核对</span>
@@ -790,12 +855,12 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
                       <button
                         type="button"
                         onClick={() => void retryOriginalRequest(message.retrySnapshot as RetryRequestSnapshot)}
-                        disabled={messageControlsDisabled}
+                        disabled={errorControlsDisabled}
                       >
                         重试原请求
                       </button>
                     )}
-                    <button type="button" onClick={() => void returnMenu()} disabled={messageControlsDisabled}>返回菜单</button>
+                    <button type="button" onClick={() => void returnMenu()} disabled={errorControlsDisabled}>返回菜单</button>
                   </div>
                 )}
                 </article>

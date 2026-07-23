@@ -120,6 +120,7 @@ describe("TASK-05 actual conversation Markdown export", () => {
     const messages = [
       {
         id: "student-1",
+        clientRequestId: "logical-student-request",
         role: "assistant" as const,
         content: "第一次学生推荐",
         createdAt: "2026-07-23T01:00:00Z",
@@ -136,6 +137,7 @@ describe("TASK-05 actual conversation Markdown export", () => {
       },
       {
         id: "student-2",
+        clientRequestId: "logical-student-request",
         role: "assistant" as const,
         content: "切回学生后的同一实体",
         createdAt: "2026-07-23T01:02:00Z",
@@ -163,6 +165,7 @@ describe("TASK-05 actual conversation Markdown export", () => {
     expect(summary).not.toContain("2980");
     expect(transcript).toContain("历史教师推荐价格2980元");
     expect(transcript).toContain("第一次学生推荐");
+    expect(transcript).toContain("切回学生后的同一实体");
     expect(result.markdown).toContain("完整会话历史");
   });
 });

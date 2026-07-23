@@ -57,7 +57,13 @@ const FIELD_LABELS: Record<string, string> = {
 
 const TOPIC_FIELDS: Record<FactTopic, string[]> = {
   schedule: ["startDate", "endDate", "schedule"],
-  registration: ["registrationDeadline", "earlyBirdDeadline"],
+  registration: [
+    "registrationDeadline",
+    "earlyBirdDeadline",
+    "boundary",
+    "grantsOrderPermission",
+    "grantsDirectOrderPermission",
+  ],
   price: [
     "standardPrice",
     "earlyBirdPrice",
@@ -84,8 +90,20 @@ const TOPIC_FIELDS: Record<FactTopic, string[]> = {
   fee_includes: ["feeIncludes", "lodgingPrice"],
   refund: ["refundRules", "refundPolicyProvided"],
   replay: ["replayDays", "replayPolicy"],
-  availability: ["availabilityKnown", "capacity", "minimumToOpen"],
-  curriculum: ["dailyOutline", "curriculumModules", "outcome"],
+  availability: [
+    "availabilityKnown",
+    "capacity",
+    "minimumToOpen",
+    "minimumPeople",
+  ],
+  curriculum: [
+    "dailyOutline",
+    "curriculumModules",
+    "outcome",
+    "category",
+    "audience",
+    "boundary",
+  ],
   prerequisite: ["prerequisite"],
 };
 

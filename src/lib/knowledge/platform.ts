@@ -21,7 +21,7 @@ export const PLATFORM_SERVICES: PlatformService[] = [
     pricingRule: "20人起，项目总价5万元起",
     minimumPeople: 20,
     minimumTotalPrice: 50000,
-    boundary: "个人教师报名价格仍以素材B为准",
+    boundary: "个人教师报名价格不适用于学校统一采购",
   },
   {
     id: "platform-basic-agent",

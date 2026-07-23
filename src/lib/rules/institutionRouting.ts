@@ -24,6 +24,12 @@ export function routeInstitutionNeed(need: InstitutionNeed): InstitutionRoute {
   if (service.pricingRule !== undefined) {
     factIds.push(`${service.id}.pricingRule`);
   }
+  if (need === "school_procurement") {
+    factIds.push(
+      `${service.id}.minimumPeople`,
+      `${service.id}.minimumTotalPrice`,
+    );
+  }
   if (need === "membership") {
     factIds.push(
       `${service.id}.priceProvided`,
@@ -41,6 +47,7 @@ export function routeInstitutionNeed(need: InstitutionNeed): InstitutionRoute {
       {
         code: `institution_${need}`,
         constraintKeys: ["institutionNeed"],
+        constraintValues: { institutionNeed: need },
         factIds,
       },
     ],

@@ -16,25 +16,47 @@ export type ChatRequest = {
   domain?: "student" | "teacher" | "platform";
   entityId?: string;
   testMode?: boolean;
+  clientRequestId?: string;
+  retryOf?: string;
+};
+
+export type IdentifiedChatRequest = ChatRequest & {
+  clientRequestId: string;
 };
 
 export type RetryRequestSnapshot = {
+  clientRequestId: string;
   message?: string;
-  state: ConversationState;
+  originalState: ConversationState;
   action?: ChatAction;
   errorMessageId: string;
   domain?: ChatRequest["domain"];
   entityId?: string;
 };
 
+export function createClientRequestId(): string {
+  return globalThis.crypto?.randomUUID?.() ??
+    `request-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function identifyChatRequest(
+  request: ChatRequest,
+  createId: () => string = createClientRequestId,
+): IdentifiedChatRequest {
+  return {
+    ...request,
+    clientRequestId: request.clientRequestId ?? createId(),
+  };
+}
+
 export function createRetryRequestSnapshot(input: {
-  request: ChatRequest;
-  retryState: ConversationState;
+  request: IdentifiedChatRequest;
   errorMessageId: string;
 }): RetryRequestSnapshot {
   return {
+    clientRequestId: input.request.clientRequestId,
     message: input.request.message,
-    state: structuredClone(input.retryState),
+    originalState: structuredClone(input.request.state),
     action: input.request.action,
     errorMessageId: input.errorMessageId,
     domain: input.request.domain,
@@ -44,20 +66,24 @@ export function createRetryRequestSnapshot(input: {
 
 export function requestFromRetrySnapshot(
   snapshot: RetryRequestSnapshot,
-): ChatRequest {
+): IdentifiedChatRequest {
+  const state = structuredClone(snapshot.originalState);
+  state.test.failNextModelCall = false;
   return {
     message: snapshot.message,
-    state: structuredClone(snapshot.state),
+    state,
     action: snapshot.action,
     domain: snapshot.domain,
     entityId: snapshot.entityId,
     testMode: false,
+    clientRequestId: snapshot.clientRequestId,
+    retryOf: snapshot.clientRequestId,
   };
 }
 
 export type RetryRequestConsumption = {
   consumedErrorMessageIds: Set<string>;
-  request?: ChatRequest;
+  request?: IdentifiedChatRequest;
 };
 
 export function consumeRetryRequest(

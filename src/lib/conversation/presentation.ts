@@ -12,6 +12,7 @@ import type {
 } from "@/lib/domain/knowledge";
 import type { CollectedSource } from "@/lib/citations";
 import { getKnowledgeEntityById } from "./facts";
+import { regionDisplayNameFor } from "./studentRegion";
 
 const CONSTRAINT_LABELS: Record<string, string> = {
   region: "所在地区",
@@ -59,6 +60,12 @@ function constraintValue(
   state: ConversationState,
   key: string,
 ): string {
+  if (state.domain === "student" && key === "region") {
+    return (
+      regionDisplayNameFor(state.studentConstraints) ??
+      displayValue(state.studentConstraints.region)
+    );
+  }
   const source =
     state.domain === "student"
       ? state.studentConstraints
@@ -152,6 +159,7 @@ function recommendationCard(input: {
       delivery: `${camp.locationName}｜${camp.addressOrPlatform}`,
       standardPrice: camp.standardPrice,
       actualPrice: Number.isFinite(actualPrice) ? actualPrice : camp.standardPrice,
+      replayDays: camp.replayDays,
       discountLabel: discountLabel(calculation.discountKind),
       reasons: reasonsForEntity(input),
       sources: sourcesForEntity(input.sources, camp.id),

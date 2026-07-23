@@ -22,6 +22,39 @@ import {
   getKnowledgeEntityById,
   groundedFactsFromIds,
 } from "./facts";
+import { studentOfflineBoundaryStatement } from "./studentRegion";
+
+function confirmedConstraints(
+  state: ConversationState,
+): Record<string, unknown> {
+  if (state.domain === "student") {
+    return Object.fromEntries(
+      Object.entries(state.studentConstraints)
+        .filter(
+          ([key, value]) =>
+            key !== "stalledTurns" &&
+            key !== "refusesMoreQuestions" &&
+            value !== undefined,
+        )
+        .map(([key, value]) => [key, structuredClone(value)]),
+    );
+  }
+  if (state.domain === "teacher") {
+    return Object.fromEntries(
+      Object.entries(state.teacherConstraints)
+        .filter(
+          ([key, value]) =>
+            key !== "stalledTurns" &&
+            key !== "refusesMoreQuestions" &&
+            value !== undefined,
+        )
+        .map(([key, value]) => [key, structuredClone(value)]),
+    );
+  }
+  return state.domain === "platform" && state.institutionNeed
+    ? { institutionNeed: state.institutionNeed }
+    : {};
+}
 
 function finalizePlan(
   input: Omit<ComposerPlan, "route">,
@@ -58,10 +91,14 @@ function basePlan(input: {
   boundaryCode?: string;
   requiredPrefix?: string;
   crossDomainFrom?: "student" | "teacher" | "platform";
+  omitBusinessContext?: boolean;
 }): ComposerPlan {
   return finalizePlan({
     status: input.status,
     domain: input.state.domain,
+    confirmedConstraints: input.omitBusinessContext
+      ? {}
+      : confirmedConstraints(input.state),
     facts: input.facts ?? [],
     calculations: input.calculations ?? [],
     decisionTrace: input.decisionTrace ?? [],
@@ -71,10 +108,9 @@ function basePlan(input: {
     entityIds: input.entityIds ?? [],
     boundaryCode: input.boundaryCode,
     requiredPrefix: input.requiredPrefix,
-    crossDomainNotice: crossDomainNotice(
-      input.crossDomainFrom,
-      input.state.domain,
-    ),
+    crossDomainNotice: input.omitBusinessContext
+      ? undefined
+      : crossDomainNotice(input.crossDomainFrom, input.state.domain),
   });
 }
 
@@ -172,8 +208,9 @@ function campRecommendationPlan(
       actions: ["返回菜单"],
       boundaryCode: result.boundaryCode,
       requiredPrefix:
-        result.boundaryCode === "student_guangzhou_offline_not_provided"
-          ? "素材A没有广州学生线下班。"
+        result.boundaryCode === "student_guangzhou_offline_not_provided" ||
+        result.boundaryCode === "student_other_region_offline_not_provided"
+          ? studentOfflineBoundaryStatement(state.studentConstraints)
           : undefined,
       crossDomainFrom,
     });
@@ -359,7 +396,7 @@ function factQuestionPlan(input: {
   }
   return basePlan({
     state: input.state,
-    status: "fact_answer",
+    status: "contextual_followup",
     facts,
     calculations,
     actions: ["继续询问当前班型", "返回菜单"],
@@ -375,12 +412,24 @@ export function buildComposerPlan(input: {
   currentDate: BusinessDate;
   crossDomainFrom?: "student" | "teacher" | "platform";
 }): ComposerPlan {
-  if (input.intent === "unrelated") {
+  if (
+    input.intent === "unrelated" ||
+    ((input.intent === "unclear" || input.intent === "unknown") &&
+      input.state.domain !== "unknown")
+  ) {
+    const hasCurrentContext = Boolean(
+      input.state.selectedEntityId ||
+      input.state.lastRecommendationIds.length ||
+      input.state.institutionNeed,
+    );
     return basePlan({
       state: input.state,
       status: "unrelated",
-      actions: ["咨询学生课程", "咨询教师培训", "咨询机构服务"],
+      actions: hasCurrentContext
+        ? ["继续当前咨询", "返回菜单"]
+        : ["咨询学生课程", "咨询教师培训", "咨询机构服务", "返回菜单"],
       crossDomainFrom: input.crossDomainFrom,
+      omitBusinessContext: true,
     });
   }
   if (input.state.domain === "unknown") {
@@ -391,9 +440,25 @@ export function buildComposerPlan(input: {
       nextQuestionOptions: ["学生或家长", "教师", "机构或企业人员"],
     });
   }
-  if (input.intent === "fact_question") {
+  if (
+    input.intent === "fact_question" ||
+    input.intent === "contextual_followup"
+  ) {
     const plan = factQuestionPlan(input);
     if (plan) return plan;
+  }
+  if (
+    input.intent !== "identity_selection" &&
+    input.intent !== "new_consultation" &&
+    input.intent !== "recommendation" &&
+    input.intent !== "institution_service"
+  ) {
+    return basePlan({
+      state: input.state,
+      status: "unrelated",
+      actions: ["继续当前咨询", "返回菜单"],
+      omitBusinessContext: true,
+    });
   }
   if (input.state.domain === "student") {
     return campRecommendationPlan(
@@ -430,7 +495,7 @@ export function buildComposerPlan(input: {
     status: "institution_info",
     facts: groundedFactsFromIds(route.factIds),
     decisionTrace: route.decisionTrace,
-    actions: ["联系模拟人工顾问", "返回菜单"],
+    actions: ["查看模拟咨询流程", "整理采购需求清单", "返回菜单"],
     entityIds: [route.service.id],
     crossDomainFrom: input.crossDomainFrom,
   });

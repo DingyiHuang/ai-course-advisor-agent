@@ -165,10 +165,13 @@ describe("classifier candidates are evidence-gated", () => {
     });
 
     expect(applied.state.domain).toBe("unknown");
-    expect(applied.state.studentConstraints).toEqual({ region: "beijing" });
+    expect(applied.state.studentConstraints).toEqual({
+      region: "beijing",
+      regionDisplayName: "北京",
+    });
     expect(
       transitionConversationDomain(applied.state, "student").studentConstraints,
-    ).toEqual({ region: "beijing" });
+    ).toEqual({ region: "beijing", regionDisplayName: "北京" });
   });
 
   it("drops free student keys and enum values outside the closed contract", () => {
@@ -232,6 +235,7 @@ describe("classifier candidates are evidence-gated", () => {
     expect(routing.domain).toBeUndefined();
     expect(routing.studentConstraints).toEqual({
       region: "beijing",
+      regionDisplayName: "北京",
       availablePeriods: [1],
       modePreference: "any",
     });
@@ -316,5 +320,206 @@ describe("classifier candidates are evidence-gated", () => {
     expect(applied.state.domain).toBe("student");
     expect(applied.state.selectedEntityId).toBe("camp-p1-bj");
     expect(applied.factTopics).toEqual(["replay"]);
+  });
+
+  it("lets an explicit period override conflicting classifier output and old state", () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    state.studentConstraints = {
+      region: "beijing",
+      availablePeriods: [2],
+      modePreference: "offline",
+    };
+    const routing = resolveDeterministicTurnRouting({
+      message: "改成第1期",
+      state,
+    });
+    const candidate = parseClassifierCandidate(JSON.stringify({
+      intent: "recommendation",
+      studentConstraints: { availablePeriods: [2] },
+      teacherConstraints: {},
+      studentReference: {},
+      teacherReference: {},
+      factTopics: [],
+      evidence: {
+        intent: "改成",
+        "student.availablePeriods": "第1期",
+      },
+    }));
+
+    const applied = applyClassifierCandidate({
+      message: "改成第1期",
+      state,
+      candidate,
+      authoritativeStudentConstraints: routing.studentConstraints,
+    });
+
+    expect(routing.studentConstraints.availablePeriods).toEqual([1]);
+    expect(applied.state.studentConstraints.availablePeriods).toEqual([1]);
+    expect(applied.corrections).toEqual([
+      {
+        reasonCode: "explicit_constraint_overrode_classifier",
+        field: "student.availablePeriods",
+        candidateValue: [2],
+        confirmedValue: [1],
+      },
+    ]);
+  });
+
+  it("collects all closed constraints from a same-turn explicit student identity", () => {
+    const routing = resolveDeterministicTurnRouting({
+      message: "我是广州家长，第一期只想线下",
+      state: createInitialConversationState(),
+    });
+
+    expect(routing.domain).toBe("student");
+    expect(routing.studentConstraints).toEqual({
+      region: "guangzhou",
+      regionDisplayName: "广州",
+      availablePeriods: [1],
+      modePreference: "offline",
+    });
+  });
+
+  it("normalizes a Beijing district and explicit mode change over adversarial classifier values", () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    state.studentConstraints = {
+      region: "guangzhou",
+      availablePeriods: [1],
+      modePreference: "offline",
+    };
+    const message = "我住朝阳区，改成线上";
+    const routing = resolveDeterministicTurnRouting({ message, state });
+    const candidate = parseClassifierCandidate(JSON.stringify({
+      intent: "recommendation",
+      studentConstraints: {
+        region: "shanghai",
+        modePreference: "offline",
+      },
+      teacherConstraints: {},
+      studentReference: {},
+      teacherReference: {},
+      factTopics: [],
+      evidence: {
+        intent: "改成",
+        "student.region": "朝阳区",
+        "student.modePreference": "改成线上",
+      },
+    }));
+    const applied = applyClassifierCandidate({
+      message,
+      state,
+      candidate,
+      authoritativeStudentConstraints: routing.studentConstraints,
+    });
+
+    expect(routing.studentConstraints).toMatchObject({
+      region: "beijing",
+      modePreference: "online",
+    });
+    expect(applied.state.studentConstraints).toMatchObject({
+      region: "beijing",
+      availablePeriods: [1],
+      modePreference: "online",
+    });
+    expect(applied.corrections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "student.region",
+          candidateValue: "shanghai",
+          confirmedValue: "beijing",
+        }),
+        expect.objectContaining({
+          field: "student.modePreference",
+          candidateValue: "offline",
+          confirmedValue: "online",
+        }),
+      ]),
+    );
+  });
+
+  it("maps named non-Beijing/Shanghai cities to other and atomically replaces stale Guangzhou", () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    state.studentConstraints = {
+      region: "guangzhou",
+      regionDisplayName: "广州",
+      availablePeriods: [1],
+      modePreference: "offline",
+      canTravel: false,
+    };
+
+    for (const city of ["天津", "深圳", "成都"]) {
+      const routing = resolveDeterministicTurnRouting({
+        message: `我在${city}，想报一个学生班`,
+        state,
+      });
+      expect(routing.studentConstraints).toMatchObject({
+        region: "other",
+        regionDisplayName: city,
+      });
+    }
+  });
+
+  it("rejects a classifier city name that is absent from the current user message", () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    state.studentConstraints = {
+      region: "guangzhou",
+      regionDisplayName: "广州",
+      availablePeriods: [1],
+      modePreference: "offline",
+    };
+    const message = "我在其他地区，第一期只想线下";
+    const routing = resolveDeterministicTurnRouting({ message, state });
+    const candidate = parseClassifierCandidate(JSON.stringify({
+      intent: "new_consultation",
+      studentConstraints: {
+        region: "other",
+        regionDisplayName: "深圳",
+        availablePeriods: [1],
+        modePreference: "offline",
+      },
+      teacherConstraints: {},
+      studentReference: {},
+      teacherReference: {},
+      factTopics: [],
+      evidence: {
+        intent: "想线下",
+        "student.region": "其他地区",
+        "student.regionDisplayName": "其他地区",
+        "student.availablePeriods": "第一期",
+        "student.modePreference": "线下",
+      },
+    }));
+
+    const applied = applyClassifierCandidate({
+      message,
+      state,
+      candidate,
+      authoritativeStudentConstraints: routing.studentConstraints,
+    });
+
+    expect(applied.state.studentConstraints).toMatchObject({
+      region: "other",
+      availablePeriods: [1],
+      modePreference: "offline",
+    });
+    expect(applied.state.studentConstraints.regionDisplayName).toBeUndefined();
+    expect(JSON.stringify(applied.state)).not.toContain("深圳");
+    expect(JSON.stringify(applied.state)).not.toContain("广州");
+  });
+
+  it("sanitizes inconsistent other-region display names from client state", () => {
+    const state = sanitizeConversationState({
+      domain: "student",
+      studentConstraints: {
+        region: "other",
+        regionDisplayName: "广州",
+      },
+    });
+
+    expect(state.studentConstraints).toEqual({ region: "other" });
   });
 });

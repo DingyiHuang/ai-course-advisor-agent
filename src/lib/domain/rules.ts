@@ -11,6 +11,7 @@ export type DiscountKind = "none" | "earlyBird" | "group";
 export type DecisionTraceItem = {
   code: string;
   constraintKeys: string[];
+  constraintValues?: Record<string, unknown>;
   factIds: string[];
 };
 
@@ -37,6 +38,7 @@ export type StudentRegion =
 
 export type StudentConstraints = {
   region?: StudentRegion;
+  regionDisplayName?: string;
   preferredOfflineCampus?: "beijing" | "shanghai";
   availablePeriods?: Array<Camp["period"]>;
   excludedPeriods?: Array<Camp["period"]>;

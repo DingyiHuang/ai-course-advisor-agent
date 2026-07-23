@@ -118,10 +118,11 @@ describe("TASK-04 session orchestration", () => {
       ],
       outputs: [
         {
-          message: "结合第一期安排和不便出行的情况，线上直播班更匹配。",
+          message: "结合第一期安排和不便出行的情况，线上直播班提供30天回放。",
           usedFactIds: [
             "camp-p1-online.startDate",
             "camp-p1-online.deliveryMode",
+            "camp-p1-online.replayDays",
           ],
           actions: ["继续询问当前班型"],
           recommendationReasons: [
@@ -130,8 +131,8 @@ describe("TASK-04 session orchestration", () => {
               reasons: [
                 { constraintKey: "availablePeriods", reason: "第一期符合可参加时间。" },
                 { constraintKey: "region", reason: "广州没有学生线下班。" },
-                { constraintKey: "canTravel", reason: "线上形式无需跨城出行。" },
-                { constraintKey: "modePreference", reason: "在无法出行时改用线上直播。" },
+                { constraintKey: "canTravel", reason: "北京、上海均不便前往。" },
+                { constraintKey: "modePreference", reason: "保留线下偏好，但当前以线上直播作为可行备选。" },
               ],
             },
           ],

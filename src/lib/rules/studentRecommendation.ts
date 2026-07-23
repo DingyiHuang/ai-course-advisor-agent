@@ -7,11 +7,36 @@ import type {
 } from "@/lib/domain/rules";
 import { CAMPS } from "@/lib/knowledge";
 
+function studentOfflineNotProvidedLocally(
+  constraints: StudentConstraints,
+): boolean {
+  return constraints.region === "guangzhou" || constraints.region === "other";
+}
+
+function localOfflineTraceCode(constraints: StudentConstraints): string {
+  return constraints.region === "guangzhou"
+    ? "guangzhou_student_offline_not_provided"
+    : "other_region_student_offline_not_provided";
+}
+
 function collectedStudentConstraintKeys(
   constraints: StudentConstraints,
   keys: Array<keyof StudentConstraints>,
 ): string[] {
   return keys.filter((key) => constraints[key] !== undefined);
+}
+
+function studentConstraintValues(
+  constraints: StudentConstraints,
+  keys: Array<keyof StudentConstraints>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    keys.flatMap((key) =>
+      constraints[key] === undefined
+        ? []
+        : [[key, structuredClone(constraints[key])]],
+    ),
+  );
 }
 
 function countStudentConstraints(constraints: StudentConstraints): number {
@@ -41,7 +66,7 @@ function missingStudentConstraints(
     missing.push("modePreference");
   }
   if (
-    constraints.region === "guangzhou" &&
+    studentOfflineNotProvidedLocally(constraints) &&
     constraints.modePreference === "offline"
   ) {
     if (constraints.canTravel === undefined) {
@@ -90,28 +115,39 @@ function toStudentRecommendation(
     decisionTrace.push({
       code: "period_available",
       constraintKeys: ["availablePeriods"],
+      constraintValues: studentConstraintValues(constraints, [
+        "availablePeriods",
+      ]),
       factIds: [`${camp.id}.startDate`, `${camp.id}.endDate`],
     });
   } else if (constraints.excludedPeriods?.length) {
     decisionTrace.push({
       code: "period_not_excluded",
       constraintKeys: ["excludedPeriods"],
+      constraintValues: studentConstraintValues(constraints, [
+        "excludedPeriods",
+      ]),
       factIds: [`${camp.id}.startDate`, `${camp.id}.endDate`],
     });
   }
 
   if (camp.campus === "bj" || camp.campus === "sh") {
+    const constraintKeys = collectedStudentConstraintKeys(constraints, [
+      "region",
+      "preferredOfflineCampus",
+      "modePreference",
+      "canTravel",
+    ]);
     decisionTrace.push({
       code:
-        constraints.region === "guangzhou"
+        studentOfflineNotProvidedLocally(constraints)
           ? `travel_campus_${camp.campus}`
           : `region_match_${camp.campus}`,
-      constraintKeys: collectedStudentConstraintKeys(constraints, [
-        "region",
-        "preferredOfflineCampus",
-        "modePreference",
-        "canTravel",
-      ]),
+      constraintKeys,
+      constraintValues: studentConstraintValues(
+        constraints,
+        constraintKeys as Array<keyof StudentConstraints>,
+      ),
       factIds: [
         `${camp.id}.campus`,
         `${camp.id}.deliveryMode`,
@@ -127,14 +163,18 @@ function toStudentRecommendation(
       `${camp.id}.replayDays`,
     ];
     if (
-      constraints.region === "guangzhou" &&
+      studentOfflineNotProvidedLocally(constraints) &&
       constraints.modePreference === "offline" &&
       constraints.canTravel === false
     ) {
       decisionTrace.push(
         {
-          code: "guangzhou_student_offline_not_provided",
+          code: localOfflineTraceCode(constraints),
           constraintKeys: ["region"],
+          constraintValues: studentConstraintValues(constraints, [
+            "region",
+            "regionDisplayName",
+          ]),
           factIds: periodScopedCamps.flatMap((item) => [
             `${item.id}.campus`,
             `${item.id}.deliveryMode`,
@@ -143,24 +183,35 @@ function toStudentRecommendation(
         {
           code: "beijing_shanghai_travel_unavailable",
           constraintKeys: ["canTravel"],
+          constraintValues: studentConstraintValues(constraints, [
+            "canTravel",
+          ]),
           factIds: onlineFactIds,
         },
         {
           code: "online_fallback_for_unmet_offline_preference",
           constraintKeys: ["modePreference"],
+          constraintValues: studentConstraintValues(constraints, [
+            "modePreference",
+          ]),
           factIds: onlineFactIds,
         },
       );
     } else {
+      const constraintKeys = collectedStudentConstraintKeys(constraints, [
+        "needsReplay",
+        "canTravel",
+        "modePreference",
+      ]);
       decisionTrace.push({
         code: constraints.needsReplay
           ? "online_for_replay"
           : "online_for_travel_or_preference",
-        constraintKeys: collectedStudentConstraintKeys(constraints, [
-          "needsReplay",
-          "canTravel",
-          "modePreference",
-        ]),
+        constraintKeys,
+        constraintValues: studentConstraintValues(
+          constraints,
+          constraintKeys as Array<keyof StudentConstraints>,
+        ),
         factIds: onlineFactIds,
       });
     }
@@ -170,6 +221,7 @@ function toStudentRecommendation(
     decisionTrace.push({
       code: "replay_not_required",
       constraintKeys: ["needsReplay"],
+      constraintValues: studentConstraintValues(constraints, ["needsReplay"]),
       factIds: [`${camp.id}.deliveryMode`, `${camp.id}.replayDays`],
     });
   }
@@ -208,7 +260,7 @@ export function recommendStudentCamps(
   }
 
   if (
-    constraints.region === "guangzhou" &&
+    studentOfflineNotProvidedLocally(constraints) &&
     constraints.modePreference === "offline" &&
     constraints.canTravel === undefined
   ) {
@@ -220,12 +272,23 @@ export function recommendStudentCamps(
     const factIds = periodScopedCamps.map((camp) => `${camp.id}.campus`);
     return {
       status: "boundary_follow_up",
-      boundaryCode: "student_guangzhou_offline_not_provided",
+      boundaryCode:
+        constraints.region === "guangzhou"
+          ? "student_guangzhou_offline_not_provided"
+          : "student_other_region_offline_not_provided",
       factIds,
       decisionTrace: [
         {
-          code: "student_guangzhou_offline_not_provided",
+          code:
+            constraints.region === "guangzhou"
+              ? "student_guangzhou_offline_not_provided"
+              : "student_other_region_offline_not_provided",
           constraintKeys: ["region", "modePreference"],
+          constraintValues: studentConstraintValues(constraints, [
+            "region",
+            "regionDisplayName",
+            "modePreference",
+          ]),
           factIds,
         },
       ],
@@ -274,6 +337,10 @@ export function recommendStudentCamps(
         {
           code: "student_date_conflict",
           constraintKeys: collectedStudentConstraintKeys(constraints, [
+            "availablePeriods",
+            "excludedPeriods",
+          ]),
+          constraintValues: studentConstraintValues(constraints, [
             "availablePeriods",
             "excludedPeriods",
           ]),

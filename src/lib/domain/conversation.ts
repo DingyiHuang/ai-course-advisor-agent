@@ -9,12 +9,16 @@ import type { CollectedSource } from "@/lib/citations";
 export type ConversationDomain = "unknown" | "student" | "teacher" | "platform";
 
 export type ConversationIntent =
+  | "identity_selection"
+  | "new_consultation"
+  | "contextual_followup"
   | "recommendation"
   | "fact_question"
   | "institution_service"
   | "reset"
   | "menu"
   | "unrelated"
+  | "unclear"
   | "unknown";
 
 export type FactTopic =
@@ -71,6 +75,7 @@ export type ComposerPlanStatus =
   | "prerequisite_blocked"
   | "institution_info"
   | "fact_answer"
+  | "contextual_followup"
   | "catalog"
   | "unrelated";
 
@@ -89,6 +94,8 @@ export type ComposerPlan = {
   status: ComposerPlanStatus;
   route: ComposerRoute;
   domain: ConversationDomain;
+  confirmedConstraints: Record<string, unknown>;
+  retryFeedback?: string;
   facts: GroundedFact[];
   calculations: GroundedCalculation[];
   decisionTrace: DecisionTraceItem[];
@@ -126,6 +133,7 @@ export type RecommendationCard = {
   delivery: string;
   standardPrice: number;
   actualPrice: number;
+  replayDays?: number;
   discountLabel: string;
   reasons: Array<
     RecommendationReasonItem & {
@@ -160,6 +168,59 @@ export type ChatError = {
   retryable: boolean;
 };
 
+export type ClassifierCorrection = {
+  reasonCode: "explicit_constraint_overrode_classifier";
+  field:
+    | "student.region"
+    | "student.regionDisplayName"
+    | "student.availablePeriods"
+    | "student.modePreference"
+    | "student.canTravel"
+    | "student.needsReplay";
+  candidateValue: unknown;
+  confirmedValue: unknown;
+};
+
+export type GroundingReasonCode =
+  | "invalid_decision_trace"
+  | "invalid_fact_id"
+  | "missing_required_fact"
+  | "ungrounded_amount"
+  | "ungrounded_date"
+  | "source_metadata_forbidden"
+  | "human_impersonation"
+  | "external_commitment"
+  | "period_mismatch"
+  | "recommendation_invariant"
+  | "recommendation_reason_mismatch"
+  | "unsupported_follow_up"
+  | "unsupported_action";
+
+export type TurnDiagnostics = {
+  classifierCandidate?: {
+    domainCandidate?: Exclude<ConversationDomain, "unknown">;
+    intent: ConversationIntent;
+    studentConstraints: Partial<StudentConstraints>;
+    institutionNeed?: InstitutionNeed;
+    factTopics: FactTopic[];
+  };
+  effectiveIntent?: ConversationIntent;
+  corrections: ClassifierCorrection[];
+  confirmedDomain: ConversationDomain;
+  confirmedConstraints: Record<string, unknown>;
+  pendingQuestionKeys: string[];
+  entityIds: string[];
+  decisionTrace: DecisionTraceItem[];
+  groundingFailures: Array<{
+    attempt: 1 | 2;
+    reasonCode: GroundingReasonCode;
+    detailCode?: string;
+  }>;
+  composerAttempts: number;
+  finalStatus?: ChatResponse["status"];
+  routeLatencyMs?: number;
+};
+
 export type ChatNotice = {
   code: "identity_switched";
   message: string;
@@ -186,4 +247,5 @@ export type ChatResponse = {
   notices: ChatNotice[];
   boundaryCode?: string;
   error?: ChatError;
+  diagnostics?: TurnDiagnostics;
 };

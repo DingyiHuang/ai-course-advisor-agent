@@ -23,6 +23,7 @@ describe("student deterministic recommendation mappings", () => {
         expect.objectContaining({
           code: "period_available",
           constraintKeys: ["availablePeriods"],
+          constraintValues: { availablePeriods: [1] },
         }),
         expect.objectContaining({ code: "region_match_bj" }),
       ]),
@@ -95,19 +96,88 @@ describe("student deterministic recommendation mappings", () => {
     expect(result.status).toBe("recommended");
     if (result.status !== "recommended") return;
     expect(result.recommendations[0].item.id).toBe("camp-p1-online");
+    expect(result.recommendations[0].item).toMatchObject({
+      period: 1,
+      standardPrice: 3980,
+      replayDays: 30,
+    });
     expect(result.recommendations[0].decisionTrace).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           code: "guangzhou_student_offline_not_provided",
           constraintKeys: ["region"],
+          constraintValues: { region: "guangzhou" },
         }),
         expect.objectContaining({
           code: "beijing_shanghai_travel_unavailable",
           constraintKeys: ["canTravel"],
+          constraintValues: { canTravel: false },
         }),
         expect.objectContaining({
           code: "online_fallback_for_unmet_offline_preference",
           constraintKeys: ["modePreference"],
+          constraintValues: { modePreference: "offline" },
+        }),
+      ]),
+    );
+  });
+
+  it("uses the general local-offline boundary for a named other city", () => {
+    const result = recommendStudentCamps({
+      region: "other",
+      regionDisplayName: "深圳",
+      availablePeriods: [1],
+      modePreference: "offline",
+    });
+
+    expect(result).toMatchObject({
+      status: "boundary_follow_up",
+      boundaryCode: "student_other_region_offline_not_provided",
+      nextQuestionKeys: ["canTravel"],
+    });
+    if (result.status !== "boundary_follow_up") return;
+    expect(result.decisionTrace[0]).toMatchObject({
+      code: "student_other_region_offline_not_provided",
+      constraintValues: {
+        region: "other",
+        regionDisplayName: "深圳",
+        modePreference: "offline",
+      },
+    });
+    expect(result.factIds.every((id) => id.startsWith("camp-"))).toBe(true);
+  });
+
+  it("keeps an other-city offline preference while deterministically falling back online", () => {
+    const result = recommendStudentCamps({
+      region: "other",
+      regionDisplayName: "成都",
+      availablePeriods: [1],
+      modePreference: "offline",
+      canTravel: false,
+    });
+
+    expect(result.status).toBe("recommended");
+    if (result.status !== "recommended") return;
+    expect(result.recommendations[0].item).toMatchObject({
+      id: "camp-p1-online",
+      period: 1,
+      standardPrice: 3980,
+      replayDays: 30,
+    });
+    expect(result.recommendations[0].decisionTrace).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "other_region_student_offline_not_provided",
+          constraintValues: {
+            region: "other",
+            regionDisplayName: "成都",
+          },
+        }),
+        expect.objectContaining({
+          code: "beijing_shanghai_travel_unavailable",
+        }),
+        expect.objectContaining({
+          code: "online_fallback_for_unmet_offline_preference",
         }),
       ]),
     );

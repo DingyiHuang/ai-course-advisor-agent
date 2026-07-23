@@ -12,6 +12,7 @@ import {
   PLATFORM_SERVICES,
   TEACHER_PRODUCTS,
 } from "@/lib/knowledge";
+import { normalizeStudentRegionName } from "./studentRegion";
 
 const DOMAINS: ConversationDomain[] = [
   "unknown",
@@ -25,6 +26,23 @@ const KNOWN_ENTITY_IDS = new Set([
   ...TEACHER_PRODUCTS.map(({ id }) => id),
   ...PLATFORM_SERVICES.map(({ id }) => id),
 ]);
+
+function entityMatchesConfirmedState(
+  entityId: string,
+  state: ConversationState,
+): boolean {
+  if (
+    state.domain !== "student" ||
+    !state.studentConstraints.availablePeriods?.length
+  ) {
+    return true;
+  }
+  const camp = CAMPS.find(({ id }) => id === entityId);
+  return Boolean(
+    camp &&
+      state.studentConstraints.availablePeriods.includes(camp.period),
+  );
+}
 
 const PENDING_QUESTION_KEYS: Record<ConversationDomain, ReadonlySet<string>> = {
   unknown: new Set(["identity"]),
@@ -47,6 +65,8 @@ const PENDING_QUESTION_KEYS: Record<ConversationDomain, ReadonlySet<string>> = {
     "availableProductIds",
     "city",
     "prerequisiteStatus",
+    "levelGoalOrStartingLevel",
+    "availableDates",
     "selectedCourse",
     "factTopic",
   ]),
@@ -121,6 +141,15 @@ function sanitizeStudentConstraints(value: unknown): StudentConstraints {
   const output: StudentConstraints = {};
   if (["beijing", "shanghai", "guangzhou", "other"].includes(String(input.region))) {
     output.region = input.region as StudentConstraints["region"];
+  }
+  if (output.region && typeof input.regionDisplayName === "string") {
+    const normalized = normalizeStudentRegionName(input.regionDisplayName);
+    if (
+      normalized?.region === output.region &&
+      normalized.regionDisplayName
+    ) {
+      output.regionDisplayName = normalized.regionDisplayName;
+    }
   }
   if (["beijing", "shanghai"].includes(String(input.preferredOfflineCampus))) {
     output.preferredOfflineCampus =
@@ -215,16 +244,18 @@ export function sanitizeConversationState(value: unknown): ConversationState {
     domainPrefix &&
     typeof input.selectedEntityId === "string" &&
     input.selectedEntityId.startsWith(domainPrefix) &&
-    KNOWN_ENTITY_IDS.has(input.selectedEntityId)
+    KNOWN_ENTITY_IDS.has(input.selectedEntityId) &&
+    entityMatchesConfirmedState(input.selectedEntityId, state)
   ) {
     state.selectedEntityId = input.selectedEntityId;
   }
   if (Array.isArray(input.lastRecommendationIds)) {
     state.lastRecommendationIds = [...new Set(input.lastRecommendationIds.filter(
       (item): item is string =>
-        typeof item === "string" &&
-        (domainPrefix ? item.startsWith(domainPrefix) : false) &&
-        KNOWN_ENTITY_IDS.has(item),
+            typeof item === "string" &&
+            (domainPrefix ? item.startsWith(domainPrefix) : false) &&
+            KNOWN_ENTITY_IDS.has(item) &&
+            entityMatchesConfirmedState(item, state),
     ))].slice(0, 9);
   }
   if (Array.isArray(input.pendingQuestionKeys)) {
