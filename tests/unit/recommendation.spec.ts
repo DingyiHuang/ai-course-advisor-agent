@@ -11,7 +11,6 @@ describe("student deterministic recommendation mappings", () => {
       availablePeriods: [1],
       canTravel: true,
       modePreference: "offline",
-      learningGoal: "搭建个人学习助手",
     });
 
     expect(result.status).toBe("recommended");
@@ -26,7 +25,6 @@ describe("student deterministic recommendation mappings", () => {
           constraintKeys: ["availablePeriods"],
         }),
         expect.objectContaining({ code: "region_match_bj" }),
-        expect.objectContaining({ code: "learning_goal_supported" }),
       ]),
     );
   });
@@ -99,9 +97,42 @@ describe("student deterministic recommendation mappings", () => {
     expect(result.recommendations[0].item.id).toBe("camp-p1-online");
     expect(result.recommendations[0].decisionTrace).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "online_for_travel_or_preference" }),
+        expect.objectContaining({
+          code: "guangzhou_student_offline_not_provided",
+          constraintKeys: ["region"],
+        }),
+        expect.objectContaining({
+          code: "beijing_shanghai_travel_unavailable",
+          constraintKeys: ["canTravel"],
+        }),
+        expect.objectContaining({
+          code: "online_fallback_for_unmet_offline_preference",
+          constraintKeys: ["modePreference"],
+        }),
       ]),
     );
+  });
+
+  it("filters by explicit available periods before applying delivery or campus", () => {
+    const result = recommendStudentCamps({
+      region: "guangzhou",
+      availablePeriods: [1],
+      modePreference: "offline",
+      canTravel: false,
+    });
+
+    expect(result.status).toBe("recommended");
+    if (result.status !== "recommended") return;
+    expect(result.recommendations).toHaveLength(1);
+    expect(result.recommendations.every(({ item }) => item.period === 1)).toBe(true);
+    expect(result.recommendations.map(({ item }) => item.id)).toEqual([
+      "camp-p1-online",
+    ]);
+    expect(
+      result.recommendations[0].decisionTrace
+        .flatMap(({ factIds }) => factIds)
+        .every((factId) => factId.startsWith("camp-p1-")),
+    ).toBe(true);
   });
 
   it("exits with an explicit insufficient-information result after refusal", () => {

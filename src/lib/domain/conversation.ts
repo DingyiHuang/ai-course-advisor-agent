@@ -71,6 +71,7 @@ export type ComposerPlanStatus =
   | "prerequisite_blocked"
   | "institution_info"
   | "fact_answer"
+  | "catalog"
   | "unrelated";
 
 export type ComposerRoute =
@@ -79,6 +80,7 @@ export type ComposerRoute =
   | "fact_answer"
   | "boundary"
   | "institution"
+  | "catalog"
   | "insufficient_information"
   | "no_match"
   | "unrelated";
@@ -94,6 +96,7 @@ export type ComposerPlan = {
   nextQuestionOptions: string[];
   actions: string[];
   entityIds: string[];
+  boundaryCode?: string;
   requiredPrefix?: string;
   crossDomainNotice?: string;
 };
@@ -102,6 +105,50 @@ export type ComposerOutput = {
   message: string;
   usedFactIds: string[];
   actions: string[];
+  recommendationReasons: RecommendationReasonGroup[];
+};
+
+export type RecommendationReasonItem = {
+  constraintKey: string;
+  reason: string;
+};
+
+export type RecommendationReasonGroup = {
+  entityId: string;
+  reasons: RecommendationReasonItem[];
+};
+
+export type RecommendationCard = {
+  entityId: string;
+  kind: "student" | "teacher";
+  name: string;
+  date: string;
+  delivery: string;
+  standardPrice: number;
+  actualPrice: number;
+  discountLabel: string;
+  reasons: Array<
+    RecommendationReasonItem & {
+      constraintLabel: string;
+      constraintValue: string;
+    }
+  >;
+  sources: CollectedSource[];
+  availabilityNote: string;
+};
+
+export type InstitutionServiceCard = {
+  entityId: string;
+  name: string;
+  audience: string;
+  pricingRule: string;
+  boundary: string;
+  sources: CollectedSource[];
+};
+
+export type ChatPresentation = {
+  recommendations: RecommendationCard[];
+  institutionService?: InstitutionServiceCard;
 };
 
 export type ChatError = {
@@ -113,12 +160,30 @@ export type ChatError = {
   retryable: boolean;
 };
 
+export type ChatNotice = {
+  code: "identity_switched";
+  message: string;
+  fromDomain: Exclude<ConversationDomain, "unknown">;
+  toDomain: Exclude<ConversationDomain, "unknown">;
+};
+
 export type ChatResponse = {
-  status: ComposerPlanStatus | "reset" | "menu" | "test_failure_armed" | "error";
+  status:
+    | ComposerPlanStatus
+    | "catalog"
+    | "selection"
+    | "identity_selected"
+    | "reset"
+    | "menu"
+    | "test_failure_armed"
+    | "error";
   message: string;
   state: ConversationState;
   sources: CollectedSource[];
   entityIds: string[];
   actions: string[];
+  presentation: ChatPresentation;
+  notices: ChatNotice[];
+  boundaryCode?: string;
   error?: ChatError;
 };

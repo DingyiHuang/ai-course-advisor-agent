@@ -6,6 +6,7 @@
   --brand: #1259d5;
   --brand-soft: #eaf1ff;
   --border: #dce5f2;
+  color-scheme: light;
 }
 
 * {
@@ -25,4 +26,22 @@ body {
   font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(38, 93, 201, 0.24);
+  outline-offset: 2px;
+}
+
+::selection {
+  color: #0f2f69;
+  background: #ccdcfb;
 }

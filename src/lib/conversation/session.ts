@@ -26,6 +26,33 @@ const KNOWN_ENTITY_IDS = new Set([
   ...PLATFORM_SERVICES.map(({ id }) => id),
 ]);
 
+const PENDING_QUESTION_KEYS: Record<ConversationDomain, ReadonlySet<string>> = {
+  unknown: new Set(["identity"]),
+  student: new Set([
+    "region",
+    "preferredOfflineCampus",
+    "availablePeriods",
+    "excludedPeriods",
+    "modePreference",
+    "canTravel",
+    "needsReplay",
+    "selectedCourse",
+    "factTopic",
+  ]),
+  teacher: new Set([
+    "level",
+    "goal",
+    "startingLevel",
+    "canTakeContinuousLeave",
+    "availableProductIds",
+    "city",
+    "prerequisiteStatus",
+    "selectedCourse",
+    "factTopic",
+  ]),
+  platform: new Set(["institutionNeed", "selectedCourse", "factTopic"]),
+};
+
 export function createInitialConversationState(): ConversationState {
   return {
     version: 1,
@@ -38,6 +65,28 @@ export function createInitialConversationState(): ConversationState {
     shortHistory: [],
     test: { failNextModelCall: false },
   };
+}
+
+export function transitionConversationDomain(
+  state: ConversationState,
+  domain: Exclude<ConversationDomain, "unknown">,
+): ConversationState {
+  const next = structuredClone(state);
+  if (next.domain === domain) return next;
+
+  const provisionalStudentConstraints =
+    next.domain === "unknown" && domain === "student"
+      ? sanitizeStudentConstraints(next.studentConstraints)
+      : {};
+  next.domain = domain;
+  next.studentConstraints = provisionalStudentConstraints;
+  next.teacherConstraints = {};
+  delete next.institutionNeed;
+  delete next.selectedEntityId;
+  next.lastRecommendationIds = [];
+  next.pendingQuestionKeys = [];
+  next.pendingQuestionOptions = [];
+  return next;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -83,14 +132,11 @@ function sanitizeStudentConstraints(value: unknown): StudentConstraints {
       if (periods.length) output[key] = periods;
     }
   }
-  if (["offline", "online", "either"].includes(String(input.modePreference))) {
+  if (["offline", "online", "any"].includes(String(input.modePreference))) {
     output.modePreference = input.modePreference as StudentConstraints["modePreference"];
   }
   for (const key of ["canTravel", "needsReplay", "refusesMoreQuestions"] as const) {
     if (typeof input[key] === "boolean") output[key] = input[key];
-  }
-  if (typeof input.learningGoal === "string" && input.learningGoal.trim()) {
-    output.learningGoal = input.learningGoal.trim().slice(0, 80);
   }
   if (Number.isInteger(input.stalledTurns) && Number(input.stalledTurns) >= 0) {
     output.stalledTurns = Math.min(Number(input.stalledTurns), 3);
@@ -183,7 +229,9 @@ export function sanitizeConversationState(value: unknown): ConversationState {
   }
   if (Array.isArray(input.pendingQuestionKeys)) {
     state.pendingQuestionKeys = input.pendingQuestionKeys.filter(
-      (item): item is string => typeof item === "string" && item.length <= 50,
+      (item): item is string =>
+        typeof item === "string" &&
+        PENDING_QUESTION_KEYS[state.domain].has(item),
     ).slice(0, 5);
   }
   if (Array.isArray(input.pendingQuestionOptions)) {

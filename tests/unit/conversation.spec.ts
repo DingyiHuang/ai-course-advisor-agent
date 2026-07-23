@@ -89,6 +89,7 @@ describe("TASK-04 session orchestration", () => {
           message: "学生线下课程目前只有北京和上海。可以前往北京、上海，还是均不便出行？",
           usedFactIds: ["camp-p1-bj.campus"],
           actions: ["返回菜单"],
+          recommendationReasons: [],
         },
       ],
     });
@@ -123,6 +124,17 @@ describe("TASK-04 session orchestration", () => {
             "camp-p1-online.deliveryMode",
           ],
           actions: ["继续询问当前班型"],
+          recommendationReasons: [
+            {
+              entityId: "camp-p1-online",
+              reasons: [
+                { constraintKey: "availablePeriods", reason: "第一期符合可参加时间。" },
+                { constraintKey: "region", reason: "广州没有学生线下班。" },
+                { constraintKey: "canTravel", reason: "线上形式无需跨城出行。" },
+                { constraintKey: "modePreference", reason: "在无法出行时改用线上直播。" },
+              ],
+            },
+          ],
         },
       ],
     });
@@ -134,6 +146,18 @@ describe("TASK-04 session orchestration", () => {
     expect(second.status).toBe("recommended");
     expect(second.entityIds).toEqual(["camp-p1-online"]);
     expect(second.state.selectedEntityId).toBe("camp-p1-online");
+    expect(second.presentation.recommendations).toHaveLength(1);
+    expect(
+      second.presentation.recommendations[0].reasons.map(
+        ({ constraintKey }) => constraintKey,
+      ),
+    ).toEqual([
+      "availablePeriods",
+      "region",
+      "canTravel",
+      "modePreference",
+    ]);
+    expect(second.presentation.recommendations[0].sources.length).toBeGreaterThan(0);
   });
 
   it("uses startingLevel=beginner without inventing goal and recommends only L1 weekend", async () => {
@@ -162,6 +186,15 @@ describe("TASK-04 session orchestration", () => {
             "teacher-l1-weekend.level",
           ],
           actions: ["继续询问当前班型"],
+          recommendationReasons: [
+            {
+              entityId: "teacher-l1-weekend",
+              reasons: [
+                { constraintKey: "canTakeContinuousLeave", reason: "周末安排不要求工作日连续脱岗。" },
+                { constraintKey: "startingLevel", reason: "L1适合零基础起步。" },
+              ],
+            },
+          ],
         },
       ],
     });
@@ -255,6 +288,7 @@ describe("TASK-04 session orchestration", () => {
         message: "费用信息已经为你核对。",
         usedFactIds: ["camp-p1-bj.standardPrice"],
         actions: ["继续询问当前班型"],
+        recommendationReasons: [],
       }],
     });
     const first = await runConversationTurn(
@@ -267,6 +301,7 @@ describe("TASK-04 session orchestration", () => {
         message: "我已查清这个班的价格信息。",
         usedFactIds: ["camp-p1-bj.standardPrice"],
         actions: ["继续询问当前班型"],
+        recommendationReasons: [],
       }],
     });
     const second = await runConversationTurn(
@@ -293,5 +328,65 @@ describe("TASK-04 session orchestration", () => {
       const response = await runConversationTurn({ action, state }, unused);
       expect(response.state).toEqual(createInitialConversationState());
     }
+  });
+
+  it("sets an explicit role and selects only an entity from the latest recommendations", async () => {
+    const unused = dependencies({ candidates: [], outputs: [] });
+    const selectedRole = await runConversationTurn(
+      { action: "select_domain", domain: "teacher" },
+      unused,
+    );
+    expect(selectedRole.status).toBe("identity_selected");
+    expect(selectedRole.state.domain).toBe("teacher");
+
+    selectedRole.state.lastRecommendationIds = ["teacher-l1-weekend"];
+    const selectedCourse = await runConversationTurn(
+      {
+        action: "select_entity",
+        entityId: "teacher-l1-weekend",
+        state: selectedRole.state,
+      },
+      unused,
+    );
+    expect(selectedCourse.status).toBe("selection");
+    expect(selectedCourse.state.selectedEntityId).toBe("teacher-l1-weekend");
+
+    const rejected = await runConversationTurn(
+      {
+        action: "select_entity",
+        entityId: "teacher-l3-intensive",
+        state: selectedRole.state,
+      },
+      unused,
+    );
+    expect(rejected.error?.code).toBe("invalid_input");
+  });
+
+  it("uses a structured catalog action without classifier keyword routing", async () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    const catalogFactIds = [1, 2, 3].flatMap((period) =>
+      ["bj", "sh", "online"].map((campus) =>
+        `camp-p${period}-${campus}.startDate`,
+      ),
+    );
+    const deps = dependencies({
+      candidates: [],
+      outputs: [
+        {
+          message: "已按三个营期与三种授课形式整理全部学生课程。",
+          usedFactIds: catalogFactIds,
+          actions: ["返回菜单"],
+          recommendationReasons: [],
+        },
+      ],
+    });
+    const response = await runConversationTurn(
+      { action: "catalog", message: "查看全部课程", state },
+      deps,
+    );
+    expect(response.status).toBe("catalog");
+    expect(response.entityIds).toHaveLength(9);
+    expect(deps.classifierCalls).not.toHaveBeenCalled();
   });
 });

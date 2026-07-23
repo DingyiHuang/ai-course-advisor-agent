@@ -8,6 +8,7 @@ import type {
 } from "@/lib/domain/conversation";
 import type { BusinessDate } from "@/lib/time/shanghai";
 import type { Camp, TeacherProduct } from "@/lib/domain/knowledge";
+import { CAMPS, PLATFORM_SERVICES, TEACHER_PRODUCTS } from "@/lib/knowledge";
 import { routeInstitutionNeed } from "@/lib/rules/institutionRouting";
 import {
   calculateCampFee,
@@ -54,6 +55,7 @@ function basePlan(input: {
   nextQuestionOptions?: string[];
   actions?: string[];
   entityIds?: string[];
+  boundaryCode?: string;
   requiredPrefix?: string;
   crossDomainFrom?: "student" | "teacher" | "platform";
 }): ComposerPlan {
@@ -67,6 +69,7 @@ function basePlan(input: {
     nextQuestionOptions: input.nextQuestionOptions ?? [],
     actions: input.actions ?? [],
     entityIds: input.entityIds ?? [],
+    boundaryCode: input.boundaryCode,
     requiredPrefix: input.requiredPrefix,
     crossDomainNotice: crossDomainNotice(
       input.crossDomainFrom,
@@ -167,6 +170,7 @@ function campRecommendationPlan(
       nextQuestionKeys: result.nextQuestionKeys,
       nextQuestionOptions: result.nextQuestionOptions,
       actions: ["返回菜单"],
+      boundaryCode: result.boundaryCode,
       requiredPrefix:
         result.boundaryCode === "student_guangzhou_offline_not_provided"
           ? "素材A没有广州学生线下班。"
@@ -181,6 +185,7 @@ function campRecommendationPlan(
       facts: groundedFactsFromIds(result.factIds),
       decisionTrace: result.decisionTrace,
       actions: ["调整日期条件", "返回菜单"],
+      boundaryCode: result.boundaryCode,
       crossDomainFrom,
     });
   }
@@ -259,6 +264,7 @@ function teacherRecommendationPlan(
     facts: groundedFactsFromIds(result.factIds),
     decisionTrace: result.decisionTrace,
     actions: ["调整日期条件", "返回菜单"],
+    boundaryCode: result.boundaryCode,
     crossDomainFrom,
   });
 }
@@ -409,10 +415,10 @@ export function buildComposerPlan(input: {
       status: "needs_more_information",
       nextQuestionKeys: ["institutionNeed"],
       nextQuestionOptions: [
-        "会员权益",
-        "企业培训",
-        "学校采购",
-        "项目交付",
+        "会员权益：了解平台会员和能力权益",
+        "企业培训：面向企业团队的AI工具培训",
+        "学校采购：学校统一采购教师培训",
+        "项目交付：Agent、AI Web或知识库项目服务",
       ],
       actions: ["返回菜单"],
       crossDomainFrom: input.crossDomainFrom,
@@ -427,5 +433,88 @@ export function buildComposerPlan(input: {
     actions: ["联系模拟人工顾问", "返回菜单"],
     entityIds: [route.service.id],
     crossDomainFrom: input.crossDomainFrom,
+  });
+}
+
+export function buildCatalogPlan(input: {
+  state: ConversationState;
+}): ComposerPlan {
+  if (input.state.domain === "unknown") {
+    return basePlan({
+      state: input.state,
+      status: "needs_identity",
+      nextQuestionKeys: ["identity"],
+      nextQuestionOptions: ["学生或家长", "教师", "机构或企业人员"],
+    });
+  }
+
+  if (input.state.domain === "student") {
+    const entityIds = CAMPS.map(({ id }) => id);
+    const factIdsByEntity = entityIds.map((id) => [
+      `${id}.period`,
+      `${id}.deliveryMode`,
+      `${id}.locationName`,
+      `${id}.addressOrPlatform`,
+      `${id}.startDate`,
+      `${id}.endDate`,
+      `${id}.standardPrice`,
+      `${id}.earlyBirdPrice`,
+    ]);
+    return basePlan({
+      state: input.state,
+      status: "catalog",
+      facts: groundedFactsFromIds(factIdsByEntity.flat()),
+      decisionTrace: entityIds.map((id, index) => ({
+        code: `catalog_${id}`,
+        constraintKeys: [],
+        factIds: factIdsByEntity[index],
+      })),
+      actions: ["返回菜单"],
+      entityIds,
+    });
+  }
+
+  if (input.state.domain === "teacher") {
+    const entityIds = TEACHER_PRODUCTS.map(({ id }) => id);
+    const factIdsByEntity = entityIds.map((id) => [
+      `${id}.level`,
+      `${id}.format`,
+      `${id}.schedule`,
+      `${id}.locationsOrPlatforms`,
+      `${id}.standardPrice`,
+      `${id}.prerequisite`,
+    ]);
+    return basePlan({
+      state: input.state,
+      status: "catalog",
+      facts: groundedFactsFromIds(factIdsByEntity.flat()),
+      decisionTrace: entityIds.map((id, index) => ({
+        code: `catalog_${id}`,
+        constraintKeys: [],
+        factIds: factIdsByEntity[index],
+      })),
+      actions: ["返回菜单"],
+      entityIds,
+    });
+  }
+
+  const entityIds = PLATFORM_SERVICES.map(({ id }) => id);
+  const factIdsByEntity = PLATFORM_SERVICES.map((service) => [
+    `${service.id}.category`,
+    `${service.id}.audience`,
+    ...(service.pricingRule ? [`${service.id}.pricingRule`] : []),
+    `${service.id}.boundary`,
+  ]);
+  return basePlan({
+    state: input.state,
+    status: "catalog",
+    facts: groundedFactsFromIds(factIdsByEntity.flat()),
+    decisionTrace: entityIds.map((id, index) => ({
+      code: `catalog_${id}`,
+      constraintKeys: [],
+      factIds: factIdsByEntity[index],
+    })),
+    actions: ["返回菜单"],
+    entityIds,
   });
 }

@@ -10,6 +10,7 @@ import type {
   TeacherConstraints,
 } from "@/lib/domain/rules";
 import { CAMPS, TEACHER_PRODUCTS } from "@/lib/knowledge";
+import { transitionConversationDomain } from "@/lib/conversation/session";
 import { parseStrictJsonObject } from "./json";
 import { withOneModelRetry } from "./retry";
 import type { LlmClient } from "./types";
@@ -113,6 +114,99 @@ function readPeriods(value: unknown): Array<1 | 2 | 3> | undefined {
   return periods.length ? periods : undefined;
 }
 
+const BEIJING_DISTRICTS = [
+  "东城区",
+  "西城区",
+  "朝阳区",
+  "丰台区",
+  "石景山区",
+  "海淀区",
+  "门头沟区",
+  "房山区",
+  "通州区",
+  "顺义区",
+  "昌平区",
+  "大兴区",
+  "怀柔区",
+  "平谷区",
+  "密云区",
+  "延庆区",
+] as const;
+
+function studentRegionFromEvidence(
+  evidence: string | undefined,
+): StudentConstraints["region"] | undefined {
+  if (!evidence) return undefined;
+  const value = evidence.toLocaleLowerCase().replace(/\s+/gu, "");
+  if (
+    /北京|beijing/u.test(value) ||
+    BEIJING_DISTRICTS.some((district) => value.includes(district))
+  ) {
+    return "beijing";
+  }
+  if (/上海|shanghai/u.test(value)) return "shanghai";
+  if (/广州|guangzhou/u.test(value)) return "guangzhou";
+  if (/(?:其他城市|其他地区|外地|非北上广)/u.test(value)) return "other";
+  return undefined;
+}
+
+function explicitPeriodsFromEvidence(
+  evidence: string | undefined,
+): Array<1 | 2 | 3> {
+  if (!evidence) return [];
+  const value = evidence.replace(/\s+/gu, "");
+  return [
+    /(?:第?[一1]期|营期[一1])/u.test(value) ? 1 : undefined,
+    /(?:第?[二2]期|营期[二2])/u.test(value) ? 2 : undefined,
+    /(?:第?[三3]期|营期[三3])/u.test(value) ? 3 : undefined,
+  ].filter((period): period is 1 | 2 | 3 => period !== undefined);
+}
+
+function modeFromEvidence(
+  evidence: string | undefined,
+): StudentConstraints["modePreference"] | undefined {
+  if (!evidence) return undefined;
+  const value = evidence.replace(/\s+/gu, "");
+  if (/(?:线上线下|线下线上).{0,4}(?:均可|都可|都行|不限)|(?:均可|都可以|无所谓)/u.test(value)) {
+    return "any";
+  }
+  if (/(?:线下|面授|到场上课)/u.test(value)) return "offline";
+  if (/(?:线上|在线|直播课?)/u.test(value)) return "online";
+  return undefined;
+}
+
+function travelFromEvidence(evidence: string | undefined): boolean | undefined {
+  if (!evidence) return undefined;
+  const value = evidence.replace(/\s+/gu, "");
+  if (
+    /(?:均|都)?(?:不便|不能|无法|不方便).{0,4}(?:出行|前往|去)|不考虑跨城/u.test(value)
+  ) {
+    return false;
+  }
+  if (/(?:可以|能|方便).{0,4}(?:出行|前往|去)(?:北京|上海)?/u.test(value)) {
+    return true;
+  }
+  return undefined;
+}
+
+function replayFromEvidence(evidence: string | undefined): boolean | undefined {
+  if (!evidence) return undefined;
+  const value = evidence.replace(/\s+/gu, "");
+  if (/(?:不需要|不要|无需).{0,3}(?:录播|回放)/u.test(value)) return false;
+  if (/(?:需要|要|希望有).{0,3}(?:录播|回放)|(?:录播|回放).{0,3}(?:需要|要)/u.test(value)) {
+    return true;
+  }
+  return undefined;
+}
+
+function refusalFromEvidence(evidence: string | undefined): boolean | undefined {
+  if (!evidence) return undefined;
+  const value = evidence.replace(/\s+/gu, "");
+  return /(?:不想|不要|拒绝).{0,6}(?:再回答|继续回答|补充)|不再补充/u.test(value)
+    ? true
+    : undefined;
+}
+
 function readTeacherProductIds(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const known = new Set(TEACHER_PRODUCTS.map(({ id }) => id));
@@ -140,13 +234,10 @@ export function parseClassifierCandidate(content: string): ClassifierCandidate {
     intent: readEnum(parsed.intent, INTENTS) ?? "unknown",
     studentConstraints: {
       region: readEnum(student.region, ["beijing", "shanghai", "guangzhou", "other"]),
-      preferredOfflineCampus: readEnum(student.preferredOfflineCampus, ["beijing", "shanghai"]),
       availablePeriods: readPeriods(student.availablePeriods),
-      excludedPeriods: readPeriods(student.excludedPeriods),
-      modePreference: readEnum(student.modePreference, ["offline", "online", "either"]),
+      modePreference: readEnum(student.modePreference, ["offline", "online", "any"]),
       canTravel: readBoolean(student.canTravel),
       needsReplay: readBoolean(student.needsReplay),
-      learningGoal: readShortString(student.learningGoal, 80),
       refusesMoreQuestions: readBoolean(student.refusesMoreQuestions),
     },
     teacherConstraints: {
@@ -179,6 +270,47 @@ function normalizedContains(input: string, evidence: string | undefined): boolea
   return normalize(input).includes(normalize(evidence));
 }
 
+function domainEvidenceMatches(
+  domain: Exclude<ConversationDomain, "unknown">,
+  evidence: string | undefined,
+  message: string,
+  currentDomain: ConversationDomain,
+): boolean {
+  if (!evidence) return false;
+  const value = evidence.replace(/\s+/gu, "");
+  const normalizedMessage = message.replace(/\s+/gu, "");
+  const head = normalizedMessage.split(/[，,。；;！？!?]/u, 1)[0] ?? "";
+  const allowsBareRole =
+    currentDomain === "unknown" || currentDomain === domain;
+  if (domain === "student") {
+    return (
+      /(?:学生|家长)/u.test(value) &&
+      (
+        /我(?:是|是一名|作为).{0,12}(?:学生|家长)/u.test(normalizedMessage) ||
+        (allowsBareRole && /(?:学生|家长)$/u.test(head))
+      )
+    );
+  }
+  if (domain === "teacher") {
+    return (
+      /(?:教师|老师)/u.test(value) &&
+      (
+        /我(?:是|是一名|作为).{0,12}(?:教师|老师)/u.test(normalizedMessage) ||
+        (allowsBareRole && /(?:教师|老师)$/u.test(head))
+      )
+    );
+  }
+  return (
+    /(?:机构|教育局|企业|公司)|学校.{0,8}(?:采购|培训|组织)/u.test(value) &&
+    (
+      /(?:我们学校|我们公司|学校.{0,12}(?:采购|培训|组织)|教育局|企业|机构)/u.test(
+        normalizedMessage,
+      ) ||
+      (allowsBareRole && /(?:机构|企业|学校)$/u.test(head))
+    )
+  );
+}
+
 function acceptFields<T extends object>(input: {
   message: string;
   prefix: "student" | "teacher";
@@ -198,18 +330,80 @@ function acceptFields<T extends object>(input: {
   return { value, keys };
 }
 
+function evidenceCheckedStudentCandidate(input: {
+  candidate: Partial<StudentConstraints>;
+  evidence: Record<string, string>;
+}): Partial<StudentConstraints> {
+  const candidate = input.candidate;
+  const output: Partial<StudentConstraints> = {};
+  const regionEvidence = input.evidence["student.region"];
+  if (
+    candidate.region &&
+    studentRegionFromEvidence(regionEvidence) === candidate.region
+  ) {
+    output.region = candidate.region;
+  }
+
+  const explicitPeriods = explicitPeriodsFromEvidence(
+    input.evidence["student.availablePeriods"],
+  );
+  const periods = candidate.availablePeriods?.filter((period) =>
+    explicitPeriods.includes(period),
+  );
+  if (periods?.length) output.availablePeriods = periods;
+
+  const modeEvidence = input.evidence["student.modePreference"];
+  if (
+    candidate.modePreference &&
+    modeFromEvidence(modeEvidence) === candidate.modePreference
+  ) {
+    output.modePreference = candidate.modePreference;
+  }
+
+  const travelEvidence = input.evidence["student.canTravel"];
+  if (
+    candidate.canTravel !== undefined &&
+    travelFromEvidence(travelEvidence) === candidate.canTravel
+  ) {
+    output.canTravel = candidate.canTravel;
+  }
+
+  const replayEvidence = input.evidence["student.needsReplay"];
+  if (
+    candidate.needsReplay !== undefined &&
+    replayFromEvidence(replayEvidence) === candidate.needsReplay
+  ) {
+    output.needsReplay = candidate.needsReplay;
+  }
+
+  const refusalEvidence = input.evidence["student.refusesMoreQuestions"];
+  if (
+    candidate.refusesMoreQuestions === true &&
+    refusalFromEvidence(refusalEvidence) === true
+  ) {
+    output.refusesMoreQuestions = true;
+  }
+  return output;
+}
+
 export function applyClassifierCandidate(input: {
   message: string;
   state: ConversationState;
   candidate: ClassifierCandidate;
 }): AppliedClassifierCandidate {
-  const next: ConversationState = structuredClone(input.state);
+  let next: ConversationState = structuredClone(input.state);
   const acceptedConstraintKeys: string[] = [];
   let crossDomainFrom: Exclude<ConversationDomain, "unknown"> | undefined;
 
   if (
     input.candidate.domainCandidate &&
-    normalizedContains(input.message, input.candidate.evidence.domain)
+    normalizedContains(input.message, input.candidate.evidence.domain) &&
+    domainEvidenceMatches(
+      input.candidate.domainCandidate,
+      input.candidate.evidence.domain,
+      input.message,
+      next.domain,
+    )
   ) {
     if (
       next.domain !== "unknown" &&
@@ -217,14 +411,21 @@ export function applyClassifierCandidate(input: {
     ) {
       crossDomainFrom = next.domain;
     }
-    next.domain = input.candidate.domainCandidate;
+    next = transitionConversationDomain(
+      next,
+      input.candidate.domainCandidate,
+    );
   }
 
-  if (next.domain === "student") {
+  if (next.domain === "student" || next.domain === "unknown") {
+    const candidate = evidenceCheckedStudentCandidate({
+      candidate: input.candidate.studentConstraints,
+      evidence: input.candidate.evidence,
+    });
     const student = acceptFields<StudentConstraints>({
       message: input.message,
       prefix: "student",
-      candidate: input.candidate.studentConstraints,
+      candidate,
       existing: next.studentConstraints,
       evidence: input.candidate.evidence,
     });
@@ -271,10 +472,11 @@ export function applyClassifierCandidate(input: {
 
   if (
     input.candidate.institutionNeed &&
+    next.domain === "platform" &&
     normalizedContains(input.message, input.candidate.evidence.institutionNeed)
   ) {
     next.institutionNeed = input.candidate.institutionNeed;
-    if (next.domain === "platform") acceptedConstraintKeys.push("institutionNeed");
+    acceptedConstraintKeys.push("institutionNeed");
   }
 
   const factTopics = input.candidate.factTopics.filter((topic) =>
@@ -345,7 +547,7 @@ const CLASSIFIER_SYSTEM_PROMPT = `你是AI课程顾问的结构化分类器。�
 提取当前消息中有直接文字证据的身份、意图和约束候选；每个非空候选都必须在evidence中给出用户原话的最短连续片段。
 身份domainCandidate只能是student、teacher、platform或null。
 intent只能是recommendation、fact_question、institution_service、reset、menu、unrelated、unknown。
-studentConstraints允许region(beijing/shanghai/guangzhou/other)、preferredOfflineCampus(beijing/shanghai)、availablePeriods/excludedPeriods(1/2/3数组)、modePreference(offline/online/either)、canTravel、needsReplay、learningGoal、refusesMoreQuestions。
+studentConstraints只允许region(beijing/shanghai/guangzhou/other)、availablePeriods(仅含1/2/3的数组)、modePreference(offline/online/any)、canTravel、needsReplay、refusesMoreQuestions；不得输出district、learningGoal或其他键。北京各区统一输出region=beijing。availablePeriods只能来自用户明确说出的第一期、第二期或第三期，“周末可以上课”等泛化时间不得映射成营期。modePreference只能表示线上、线下或均可，“录播回放”不是授课形式。
 teacherConstraints允许level(L1/L2/L3)、goal(tools/web-app/rag-project)、startingLevel(beginner/L1/L2)、canTakeContinuousLeave、availableProductIds、city、prerequisiteStatus(met/not_met/unknown)、refusesMoreQuestions。
 “零基础”只提取startingLevel=beginner，除非用户另有明确目标原话，否则不得生成goal。
 institutionNeed只能是membership、enterprise_training、school_procurement、basic_agent、ai_web、rag或null。

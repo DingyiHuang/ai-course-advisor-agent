@@ -1,0 +1,852 @@
+"use client";
+
+import {
+  FormEvent,
+  KeyboardEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type {
+  ChatPresentation,
+  ChatResponse,
+  ConversationDomain,
+  ConversationState,
+} from "@/lib/domain/conversation";
+import {
+  downloadConversationMarkdown,
+  type ExportMessage,
+} from "@/lib/export/markdown";
+import {
+  consumeRetryRequest,
+  createRetryRequestSnapshot,
+  type ChatRequest,
+  type RetryRequestSnapshot,
+} from "@/lib/conversation/retryRequest";
+import styles from "./CourseAdvisor.module.css";
+
+type UiMessage = ExportMessage & {
+  actions: string[];
+  options: string[];
+  retrySnapshot?: RetryRequestSnapshot;
+};
+
+type RequestOptions = {
+  userLabel?: string;
+  appendUser?: boolean;
+  replaceOnSuccess?: boolean;
+};
+
+const EMPTY_PRESENTATION: ChatPresentation = { recommendations: [] };
+
+const ROLE_OPTIONS = [
+  {
+    domain: "student" as const,
+    title: "学生/家长",
+    note: "夏令营班型、营期、费用与准备事项",
+    mark: "学",
+  },
+  {
+    domain: "teacher" as const,
+    title: "教师",
+    note: "培训等级、时间形式、前置条件与费用",
+    mark: "教",
+  },
+  {
+    domain: "platform" as const,
+    title: "机构/学校",
+    note: "企业培训、学校采购、平台与项目服务",
+    mark: "企",
+  },
+];
+
+const DOMAIN_LABELS: Record<ConversationDomain, string> = {
+  unknown: "待确认",
+  student: "学生/家长",
+  teacher: "教师",
+  platform: "机构/学校",
+};
+
+const INSTITUTION_LABELS: Record<string, string> = {
+  membership: "会员权益",
+  enterprise_training: "企业培训",
+  school_procurement: "学校采购",
+  basic_agent: "基础Agent交付",
+  ai_web: "AI Web应用",
+  rag: "企业知识库/RAG",
+};
+
+const CONSTRAINT_LABELS: Record<string, string> = {
+  region: "地区",
+  preferredOfflineCampus: "目的城市",
+  availablePeriods: "可参加营期",
+  excludedPeriods: "冲突营期",
+  modePreference: "授课形式",
+  canTravel: "能否出行",
+  needsReplay: "回放需求",
+  level: "目标等级",
+  goal: "培训目标",
+  startingLevel: "当前基础",
+  canTakeContinuousLeave: "连续时间",
+  availableProductIds: "可参加班型",
+  city: "城市",
+  prerequisiteStatus: "前置条件",
+  institutionNeed: "服务分类",
+};
+
+const VALUE_LABELS: Record<string, string> = {
+  beijing: "北京",
+  shanghai: "上海",
+  guangzhou: "广州",
+  other: "其他地区",
+  offline: "线下",
+  online: "线上",
+  any: "均可",
+  beginner: "零基础",
+  tools: "AI工具应用",
+  "web-app": "AI Web应用",
+  "rag-project": "知识库/RAG项目",
+  met: "已满足",
+  not_met: "未满足",
+  unknown: "待确认",
+};
+
+const SOURCE_TITLES = {
+  A: "2026暑期AI素养夏令营课程手册",
+  B: "初高中教师AI素养培训体系介绍",
+  C: "OPC超级个体赋能平台产品白皮书",
+} as const;
+
+function initialState(): ConversationState {
+  return {
+    version: 1,
+    domain: "unknown",
+    studentConstraints: {},
+    teacherConstraints: {},
+    lastRecommendationIds: [],
+    pendingQuestionKeys: [],
+    pendingQuestionOptions: [],
+    shortHistory: [],
+    test: { failNextModelCall: false },
+  };
+}
+
+function uid(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function systemMessage(content: string): UiMessage {
+  return {
+    id: uid("system"),
+    role: "system",
+    content,
+    createdAt: new Date().toISOString(),
+    sources: [],
+    presentation: EMPTY_PRESENTATION,
+    actions: [],
+    options: [],
+  };
+}
+
+function initialMessages(): UiMessage[] {
+  return [
+    systemMessage(
+      "欢迎使用 AI课程顾问。我会先确认身份和有效约束，再基于对应资料提供课程或机构服务建议。",
+    ),
+  ];
+}
+
+function displayValue(value: unknown): string {
+  if (typeof value === "boolean") return value ? "是" : "否";
+  if (Array.isArray(value)) {
+    return value.map((item) => VALUE_LABELS[String(item)] ?? String(item)).join("、");
+  }
+  return VALUE_LABELS[String(value)] ?? String(value);
+}
+
+function sourceLabel(source: UiMessage["sources"][number]): string {
+  const section = source.section ? `（${source.section}）` : "";
+  return `素材${source.document}《${SOURCE_TITLES[source.document]}》${source.chapter}${section}`;
+}
+
+function responseRole(response: ChatResponse): UiMessage["role"] {
+  if (response.error) return "error";
+  if (
+    [
+      "reset",
+      "menu",
+      "selection",
+      "identity_selected",
+      "test_failure_armed",
+    ].includes(response.status)
+  ) {
+    return "system";
+  }
+  return "assistant";
+}
+
+function hasChatResponseShape(value: unknown): value is ChatResponse {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.status === "string" &&
+    typeof item.message === "string" &&
+    Boolean(item.state) &&
+    Array.isArray(item.sources) &&
+    Array.isArray(item.entityIds) &&
+    Array.isArray(item.actions) &&
+    Array.isArray(item.notices) &&
+    Boolean(item.presentation)
+  );
+}
+
+export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
+  const [state, setState] = useState<ConversationState>(initialState);
+  const [messages, setMessages] = useState<UiMessage[]>(initialMessages);
+  const [draft, setDraft] = useState("");
+  const [inputError, setInputError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [lastError, setLastError] = useState<ChatResponse["error"]>();
+  const [sessionId, setSessionId] = useState("TASK05-001");
+  const [exportNotice, setExportNotice] = useState("");
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const requestInFlightRef = useRef(false);
+  const consumedRetryErrorIdsRef = useRef<ReadonlySet<string>>(new Set());
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [messages, loading]);
+
+  const constraints = useMemo(() => {
+    const source =
+      state.domain === "student"
+        ? state.studentConstraints
+        : state.domain === "teacher"
+          ? state.teacherConstraints
+          : {};
+    const entries = Object.entries(source)
+      .filter(
+        ([key, value]) =>
+          !["stalledTurns", "refusesMoreQuestions"].includes(key) &&
+          value !== undefined &&
+          (!Array.isArray(value) || value.length > 0),
+      )
+      .map(([key, value]) => ({
+        key,
+        label: CONSTRAINT_LABELS[key] ?? key,
+        value: displayValue(value),
+      }));
+    if (state.domain === "platform" && state.institutionNeed) {
+      entries.push({
+        key: "institutionNeed",
+        label: CONSTRAINT_LABELS.institutionNeed,
+        value: INSTITUTION_LABELS[state.institutionNeed] ?? state.institutionNeed,
+      });
+    }
+    return entries;
+  }, [state]);
+
+  const currentEntityName = useMemo(() => {
+    if (state.domain === "platform" && state.institutionNeed) {
+      return INSTITUTION_LABELS[state.institutionNeed] ?? state.institutionNeed;
+    }
+    if (!state.selectedEntityId) return "尚未选择";
+    for (const message of [...messages].reverse()) {
+      const card = message.presentation.recommendations.find(
+        ({ entityId }) => entityId === state.selectedEntityId,
+      );
+      if (card) return card.name;
+      if (message.presentation.institutionService?.entityId === state.selectedEntityId) {
+        return message.presentation.institutionService.name;
+      }
+    }
+    return "已选择当前班型";
+  }, [messages, state.domain, state.institutionNeed, state.selectedEntityId]);
+
+  const latestResponseMessageId = useMemo(
+    () => [...messages].reverse().find((message) => message.role !== "user")?.id,
+    [messages],
+  );
+
+  async function requestChat(
+    request: ChatRequest,
+    options: RequestOptions = {},
+  ): Promise<ChatResponse | undefined> {
+    if (loading || requestInFlightRef.current) return undefined;
+    requestInFlightRef.current = true;
+    const appendUser = options.appendUser !== false && options.userLabel;
+    if (appendUser) {
+      setMessages((current) => [
+        ...current,
+        {
+          id: uid("user"),
+          role: "user",
+          content: options.userLabel as string,
+          createdAt: new Date().toISOString(),
+          sources: [],
+          presentation: EMPTY_PRESENTATION,
+          actions: [],
+          options: [],
+        },
+      ]);
+    }
+    setLoading(true);
+    setInputError("");
+    setExportNotice("");
+
+    try {
+      const httpResponse = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+      });
+      const payload: unknown = await httpResponse.json().catch(() => undefined);
+      if (!hasChatResponseShape(payload)) {
+        throw new Error("invalid_response");
+      }
+
+      setState(payload.state);
+      setLastError(payload.error);
+      const messageId = uid(payload.error ? "error" : "assistant");
+      const nextMessage: UiMessage = {
+        id: messageId,
+        role: responseRole(payload),
+        content: payload.message,
+        createdAt: new Date().toISOString(),
+        status: payload.status,
+        sources: payload.sources,
+        presentation: payload.presentation,
+        actions: payload.actions,
+        options: payload.state.pendingQuestionOptions,
+        retrySnapshot: payload.error?.retryable
+          ? createRetryRequestSnapshot({
+              request,
+              retryState: payload.state,
+              errorMessageId: messageId,
+            })
+          : undefined,
+      };
+      const noticeMessages = payload.notices.map((notice) =>
+        systemMessage(notice.message),
+      );
+      setMessages((current) => {
+        const additions = [...noticeMessages, nextMessage];
+        return options.replaceOnSuccess ? additions : [...current, ...additions];
+      });
+      return payload;
+    } catch {
+      const localError = {
+        code: "network_error",
+        retryable: true,
+      };
+      setLastError(localError as ChatResponse["error"]);
+      const messageId = uid("error");
+      setMessages((current) => [
+        ...current,
+        {
+          id: messageId,
+          role: "error",
+          content: "暂时无法连接课程顾问服务。对话状态仍在本机保留，请重试或返回菜单。",
+          createdAt: new Date().toISOString(),
+          status: "error",
+          sources: [],
+          presentation: EMPTY_PRESENTATION,
+          actions: ["重试", "返回菜单"],
+          options: [],
+          retrySnapshot: createRetryRequestSnapshot({
+            request,
+            retryState: request.state,
+            errorMessageId: messageId,
+          }),
+        },
+      ]);
+      return undefined;
+    } finally {
+      requestInFlightRef.current = false;
+      setLoading(false);
+    }
+  }
+
+  async function sendMessage(message: string, action: "message" | "catalog" = "message") {
+    const normalized = message.trim();
+    if (!normalized) {
+      setInputError("请输入问题后再发送，不会发起空请求。");
+      inputRef.current?.focus();
+      return;
+    }
+    if (message.length > 500) {
+      setInputError(`当前${message.length}字，单次最多500字，请精简后再发送。`);
+      inputRef.current?.focus();
+      return;
+    }
+    setDraft("");
+    await requestChat(
+      { action, message: normalized, state },
+      { userLabel: normalized },
+    );
+  }
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    void sendMessage(draft);
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (!loading) void sendMessage(draft);
+    }
+  }
+
+  async function selectDomain(domain: "student" | "teacher" | "platform") {
+    const title = ROLE_OPTIONS.find((item) => item.domain === domain)?.title ?? domain;
+    await requestChat(
+      { action: "select_domain", domain, state },
+      { userLabel: `选择身份：${title}` },
+    );
+    inputRef.current?.focus();
+  }
+
+  async function selectEntity(entityId: string, name: string) {
+    await requestChat(
+      { action: "select_entity", entityId, state },
+      { userLabel: `继续咨询：${name}` },
+    );
+    inputRef.current?.focus();
+  }
+
+  async function returnMenu() {
+    await requestChat(
+      { action: "menu", state },
+      { userLabel: "返回菜单" },
+    );
+  }
+
+  async function restart() {
+    const result = await requestChat(
+      { action: "reset", state },
+      { appendUser: false, replaceOnSuccess: true },
+    );
+    if (result) {
+      setDraft("");
+      setLastError(undefined);
+      setSessionId(uid("TASK05"));
+      consumedRetryErrorIdsRef.current = new Set();
+    }
+  }
+
+  async function armTestFailure() {
+    await requestChat(
+      { action: "inject_next_failure", state, testMode: true },
+      { userLabel: "[测试] 模拟下一次模型失败" },
+    );
+  }
+
+  async function retryOriginalRequest(snapshot: RetryRequestSnapshot) {
+    const consumption = consumeRetryRequest(
+      snapshot,
+      consumedRetryErrorIdsRef.current,
+    );
+    consumedRetryErrorIdsRef.current = consumption.consumedErrorMessageIds;
+    if (!consumption.request) return;
+
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === snapshot.errorMessageId
+          ? { ...message, retrySnapshot: undefined }
+          : message,
+      ),
+    );
+    await requestChat(consumption.request, {
+      appendUser: false,
+    });
+  }
+
+  function focusWithDraft(value = "") {
+    if (value) setDraft(value);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
+  function handleApiAction(action: string) {
+    switch (action) {
+      case "返回菜单":
+      case "重新选择身份":
+        void returnMenu();
+        return;
+      case "咨询学生课程":
+        void selectDomain("student");
+        return;
+      case "咨询教师培训":
+        void selectDomain("teacher");
+        return;
+      case "咨询机构服务":
+        void selectDomain("platform");
+        return;
+      case "继续询问当前班型":
+      case "选择具体班型":
+        focusWithDraft();
+        return;
+      case "询问时间":
+        void sendMessage("请介绍当前班型的时间安排。");
+        return;
+      case "询问费用":
+        void sendMessage("请介绍当前班型的费用和实际适用优惠。");
+        return;
+      case "询问准备事项":
+        void sendMessage("参加当前班型需要准备什么？");
+        return;
+      case "查看课程推荐":
+        void sendMessage("请根据我已经提供的条件推荐课程。");
+        return;
+      case "查看其他营期":
+        focusWithDraft("我想调整可参加的营期：");
+        return;
+      case "查看其他班型":
+        focusWithDraft("我想调整班型或时间安排：");
+        return;
+      case "调整日期条件":
+        focusWithDraft("我可以调整日期，新的可参加时间是：");
+        return;
+      case "联系模拟人工顾问":
+        void sendMessage("如需人工确认，请说明资料范围内可用的联系方式或下一步。");
+        return;
+      case "recommend_L1":
+        void sendMessage("请为我改为评估L1班型。");
+        return;
+      case "recommend_L2":
+        void sendMessage("请为我改为评估L2班型。");
+        return;
+      case "ability_assessment":
+        void sendMessage("请说明同等能力测评这一前置路径。");
+        return;
+      case "submit_equivalent_project":
+        void sendMessage("请说明提交同等项目作品这一前置路径。");
+        return;
+      default:
+        focusWithDraft(action);
+    }
+  }
+
+  function exportMarkdown() {
+    const filename = downloadConversationMarkdown({
+      sessionId,
+      messages,
+      state,
+      testMode,
+      actualError: lastError,
+      currentEntityName,
+    });
+    setExportNotice(`已导出：${filename}`);
+  }
+
+  const starterPrompts =
+    state.domain === "student"
+      ? [
+          "我在北京，第一期可以参加，偏好线下",
+          "我在广州，想给孩子看第一期线下班",
+          "不方便出行，需要课程回放，第二期可参加",
+        ]
+      : state.domain === "teacher"
+        ? [
+            "我是零基础教师，工作日不能连续脱岗",
+            "我已完成L1，能连续参加培训，想学习AI Web应用",
+            "我想了解教师培训的时间安排和费用",
+          ]
+        : state.domain === "platform"
+          ? [
+              "学校计划采购20人的教师培训",
+              "企业需要50人的AI工具培训",
+              "我们想做一个企业知识库RAG项目",
+            ]
+          : [];
+
+  return (
+    <main className={styles.pageShell}>
+      {testMode && (
+        <div className={styles.testBanner} role="status">
+          <span>TEST MODE</span>
+          仅用于故障恢复验证；测试控件只影响下一次模型请求
+        </div>
+      )}
+
+      <header className={styles.header}>
+        <div className={styles.brand}>
+          <div className={styles.logo} aria-hidden="true">AI</div>
+          <div>
+            <p className={styles.kicker}>资料可追溯 · 决策有依据</p>
+            <h1>AI课程顾问</h1>
+          </div>
+        </div>
+        <p className={styles.headerDescription}>
+          为学生与家长、教师、机构与学校提供身份澄清、课程匹配和服务咨询。
+        </p>
+        <div className={styles.headerActions}>
+          <button type="button" className={styles.ghostButton} onClick={exportMarkdown}>
+            导出 Markdown
+          </button>
+          <button type="button" className={styles.ghostButton} onClick={() => void restart()} disabled={loading}>
+            重新开始
+          </button>
+        </div>
+      </header>
+
+      <div className={styles.workspace}>
+        <aside className={styles.contextPanel} aria-label="当前咨询状态">
+          <div className={styles.contextHeader}>
+            <span>咨询状态</span>
+            <span className={styles.liveBadge}><i /> 实时更新</span>
+          </div>
+
+          <section className={styles.contextSection}>
+            <p className={styles.contextLabel}>当前身份</p>
+            <strong className={styles.contextValue}>{DOMAIN_LABELS[state.domain]}</strong>
+            <div className={styles.miniRoleGrid}>
+              {ROLE_OPTIONS.map((role) => (
+                <button
+                  type="button"
+                  key={role.domain}
+                  className={state.domain === role.domain ? styles.miniRoleActive : styles.miniRole}
+                  onClick={() => void selectDomain(role.domain)}
+                  disabled={loading || state.domain === role.domain}
+                >
+                  {role.title}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.contextSection}>
+            <p className={styles.contextLabel}>已确认的有效约束</p>
+            {constraints.length ? (
+              <dl className={styles.constraintList}>
+                {constraints.map((item) => (
+                  <div key={item.key}>
+                    <dt>{item.label}</dt>
+                    <dd>{item.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className={styles.emptyState}>尚未采集约束</p>
+            )}
+          </section>
+
+          <section className={styles.contextSection}>
+            <p className={styles.contextLabel}>当前班型 / 服务</p>
+            <p className={styles.currentEntity}>{currentEntityName}</p>
+          </section>
+
+          <section className={styles.sessionSection}>
+            <label htmlFor="session-id">会话 / 测试编号</label>
+            <input
+              id="session-id"
+              value={sessionId}
+              maxLength={50}
+              onChange={(event) => setSessionId(event.target.value)}
+            />
+          </section>
+
+          <div className={styles.sideActions}>
+            <button type="button" onClick={() => void sendMessage("查看全部课程", "catalog")} disabled={loading}>
+              查看全部课程
+            </button>
+            <button type="button" onClick={() => void returnMenu()} disabled={loading}>
+              返回菜单
+            </button>
+            {testMode && (
+              <button
+                type="button"
+                className={state.test.failNextModelCall ? styles.testArmedButton : styles.testButton}
+                onClick={() => void armTestFailure()}
+                disabled={loading || state.test.failNextModelCall}
+              >
+                {state.test.failNextModelCall ? "下一次失败已就绪" : "模拟模型失败"}
+              </button>
+            )}
+          </div>
+          {exportNotice && <p className={styles.exportNotice}>{exportNotice}</p>}
+        </aside>
+
+        <section className={styles.chatPanel} aria-label="课程顾问对话">
+          <div className={styles.chatHeader}>
+            <div>
+              <strong>课程咨询</strong>
+              <p>每条事实回答均由程序校验并追加资料来源</p>
+            </div>
+            <span className={styles.privacyBadge}>不显示密钥与内部提示</span>
+          </div>
+
+          <div className={styles.chatBody} aria-live="polite">
+            {state.domain === "unknown" && (
+              <section className={styles.welcomeCard}>
+                <span className={styles.welcomeEyebrow}>先从身份开始</span>
+                <h2>你好，我是你的 AI 课程顾问</h2>
+                <p>你可以选择明确身份，也可以直接描述“我想学AI”等需求，我会先做身份澄清。</p>
+                <div className={styles.roleCards}>
+                  {ROLE_OPTIONS.map((role) => (
+                    <button
+                      type="button"
+                      key={role.domain}
+                      onClick={() => void selectDomain(role.domain)}
+                      disabled={loading}
+                    >
+                      <span className={styles.roleMark}>{role.mark}</span>
+                      <span><strong>{role.title}</strong><small>{role.note}</small></span>
+                      <b aria-hidden="true">→</b>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {messages.map((message) => {
+              const messageControlsDisabled =
+                loading || message.id !== latestResponseMessageId;
+              return (
+                <article className={`${styles.messageRow} ${styles[message.role]}`} key={message.id}>
+                <div className={styles.messageMeta}>
+                  <span>{message.role === "user" ? "你" : message.role === "assistant" ? "AI课程顾问" : message.role === "error" ? "请求异常" : "系统状态"}</span>
+                  {message.status && <small>{message.status}</small>}
+                </div>
+                <div className={styles.messageBubble}>{message.content}</div>
+
+                {message.presentation.recommendations.map((card) => (
+                  <section className={styles.recommendationCard} key={card.entityId}>
+                    <div className={styles.cardTopline}>
+                      <span>{card.kind === "student" ? "学生课程推荐" : "教师培训推荐"}</span>
+                      <span>已核对</span>
+                    </div>
+                    <h3>{card.name}</h3>
+                    <div className={styles.cardFacts}>
+                      <div><span>日期</span><strong>{card.date}</strong></div>
+                      <div><span>地点 / 方式</span><strong>{card.delivery}</strong></div>
+                      <div><span>标准费用</span><strong>{card.standardPrice.toLocaleString("zh-CN")}元</strong></div>
+                      <div><span>本次适用</span><strong>{card.actualPrice.toLocaleString("zh-CN")}元 · {card.discountLabel}</strong></div>
+                    </div>
+                    <div className={styles.reasonBlock}>
+                      <h4>与你的约束逐项对应</h4>
+                      <ul>
+                        {card.reasons.map((reason) => (
+                          <li key={reason.constraintKey}>
+                            <span>{reason.constraintLabel} · {reason.constraintValue}</span>
+                            <p>{reason.reason}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className={styles.sourceBlock}>
+                      <strong>资料来源（程序追加）</strong>
+                      {card.sources.map((source) => <span key={sourceLabel(source)}>{sourceLabel(source)}</span>)}
+                    </div>
+                    <p className={styles.availabilityNote}>{card.availabilityNote}</p>
+                    <button
+                      type="button"
+                      className={styles.cardButton}
+                      onClick={() => void selectEntity(card.entityId, card.name)}
+                      disabled={messageControlsDisabled}
+                    >
+                      继续咨询该班
+                    </button>
+                  </section>
+                ))}
+
+                {message.presentation.institutionService && (
+                  <section className={styles.serviceCard}>
+                    <span className={styles.welcomeEyebrow}>机构服务 · 仅使用素材C</span>
+                    <h3>{message.presentation.institutionService.name}</h3>
+                    <dl>
+                      <div><dt>适用对象</dt><dd>{message.presentation.institutionService.audience}</dd></div>
+                      <div><dt>计价规则</dt><dd>{message.presentation.institutionService.pricingRule}</dd></div>
+                      <div><dt>服务边界</dt><dd>{message.presentation.institutionService.boundary}</dd></div>
+                    </dl>
+                    <div className={styles.sourceBlock}>
+                      <strong>资料来源（程序追加）</strong>
+                      {message.presentation.institutionService.sources.map((source) => <span key={sourceLabel(source)}>{sourceLabel(source)}</span>)}
+                    </div>
+                  </section>
+                )}
+
+                {message.options.length > 0 && (
+                  <div className={styles.optionRow} aria-label="可选回答">
+                    {message.options.map((option) => (
+                      <button type="button" key={option} onClick={() => void sendMessage(option)} disabled={messageControlsDisabled}>{option}</button>
+                    ))}
+                  </div>
+                )}
+
+                {message.actions.length > 0 && !message.actions.includes("重试") && (
+                  <div className={styles.actionRow} aria-label="可执行操作">
+                    {message.actions.map((action) => (
+                      <button type="button" key={action} onClick={() => handleApiAction(action)} disabled={messageControlsDisabled}>{action}</button>
+                    ))}
+                  </div>
+                )}
+
+                {message.role === "error" && (
+                  <div className={styles.errorActions}>
+                    {message.retrySnapshot && (
+                      <button
+                        type="button"
+                        onClick={() => void retryOriginalRequest(message.retrySnapshot as RetryRequestSnapshot)}
+                        disabled={messageControlsDisabled}
+                      >
+                        重试原请求
+                      </button>
+                    )}
+                    <button type="button" onClick={() => void returnMenu()} disabled={messageControlsDisabled}>返回菜单</button>
+                  </div>
+                )}
+                </article>
+              );
+            })}
+
+            {loading && (
+              <div className={styles.loadingMessage} role="status">
+                <span><i /><i /><i /></span>
+                正在核对约束、课程事实与资料来源…
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          <div className={styles.composerArea}>
+            {starterPrompts.length > 0 && (
+              <div className={styles.starterPrompts}>
+                {starterPrompts.map((prompt) => (
+                  <button type="button" key={prompt} onClick={() => void sendMessage(prompt)} disabled={loading}>{prompt}</button>
+                ))}
+              </div>
+            )}
+            <form className={styles.composer} onSubmit={handleSubmit}>
+              <textarea
+                ref={inputRef}
+                value={draft}
+                rows={2}
+                maxLength={800}
+                placeholder="自由描述你的需求，例如：我想学AI，但还不确定适合哪类课程…"
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  if (inputError) setInputError("");
+                }}
+                onKeyDown={handleKeyDown}
+                disabled={loading}
+                aria-invalid={Boolean(inputError)}
+              />
+              <div className={styles.composerFooter}>
+                <span className={draft.length > 500 ? styles.countError : undefined}>{draft.length}/500</span>
+                <span>Enter 发送 · Shift + Enter 换行</span>
+                <button type="submit" disabled={loading || draft.length > 500}>
+                  {loading ? "发送中" : "发送"}
+                </button>
+              </div>
+            </form>
+            {inputError && <p className={styles.inputError} role="alert">{inputError}</p>}
+            <p className={styles.disclaimer}>课程规模与最低开班人数不代表实时余位；报名状态需以资料规则及模拟人工确认为准。</p>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}

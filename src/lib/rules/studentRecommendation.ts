@@ -22,7 +22,6 @@ function countStudentConstraints(constraints: StudentConstraints): number {
     constraints.modePreference,
     constraints.canTravel,
     constraints.needsReplay,
-    constraints.learningGoal,
   ].filter((value) => value !== undefined && value !== 0).length;
 }
 
@@ -40,9 +39,6 @@ function missingStudentConstraints(
   }
   if (!constraints.modePreference && constraints.canTravel === undefined) {
     missing.push("modePreference");
-  }
-  if (!constraints.learningGoal && constraints.needsReplay === undefined) {
-    missing.push("learningGoal");
   }
   if (
     constraints.region === "guangzhou" &&
@@ -77,7 +73,7 @@ function chooseCampus(
   if (constraints.preferredOfflineCampus === "beijing") return "bj";
   if (constraints.preferredOfflineCampus === "shanghai") return "sh";
 
-  if (constraints.modePreference === "either") return "online";
+  if (constraints.modePreference === "any") return "online";
   return undefined;
 }
 
@@ -86,6 +82,9 @@ function toStudentRecommendation(
   constraints: StudentConstraints,
 ): Recommendation<Camp> {
   const decisionTrace: DecisionTraceItem[] = [];
+  const periodScopedCamps = constraints.availablePeriods?.length
+    ? CAMPS.filter((item) => constraints.availablePeriods?.includes(item.period))
+    : CAMPS;
 
   if (constraints.availablePeriods?.includes(camp.period)) {
     decisionTrace.push({
@@ -122,29 +121,49 @@ function toStudentRecommendation(
   }
 
   if (camp.campus === "online") {
-    decisionTrace.push({
-      code: constraints.needsReplay
-        ? "online_for_replay"
-        : "online_for_travel_or_preference",
-      constraintKeys: collectedStudentConstraintKeys(constraints, [
-        "needsReplay",
-        "canTravel",
-        "modePreference",
-      ]),
-      factIds: [
-        `${camp.id}.deliveryMode`,
-        `${camp.id}.addressOrPlatform`,
-        `${camp.id}.replayDays`,
-      ],
-    });
-  }
-
-  if (constraints.learningGoal) {
-    decisionTrace.push({
-      code: "learning_goal_supported",
-      constraintKeys: ["learningGoal"],
-      factIds: [`${camp.id}.dailyOutline`],
-    });
+    const onlineFactIds = [
+      `${camp.id}.deliveryMode`,
+      `${camp.id}.addressOrPlatform`,
+      `${camp.id}.replayDays`,
+    ];
+    if (
+      constraints.region === "guangzhou" &&
+      constraints.modePreference === "offline" &&
+      constraints.canTravel === false
+    ) {
+      decisionTrace.push(
+        {
+          code: "guangzhou_student_offline_not_provided",
+          constraintKeys: ["region"],
+          factIds: periodScopedCamps.flatMap((item) => [
+            `${item.id}.campus`,
+            `${item.id}.deliveryMode`,
+          ]),
+        },
+        {
+          code: "beijing_shanghai_travel_unavailable",
+          constraintKeys: ["canTravel"],
+          factIds: onlineFactIds,
+        },
+        {
+          code: "online_fallback_for_unmet_offline_preference",
+          constraintKeys: ["modePreference"],
+          factIds: onlineFactIds,
+        },
+      );
+    } else {
+      decisionTrace.push({
+        code: constraints.needsReplay
+          ? "online_for_replay"
+          : "online_for_travel_or_preference",
+        constraintKeys: collectedStudentConstraintKeys(constraints, [
+          "needsReplay",
+          "canTravel",
+          "modePreference",
+        ]),
+        factIds: onlineFactIds,
+      });
+    }
   }
 
   if (constraints.needsReplay === false) {
@@ -193,7 +212,12 @@ export function recommendStudentCamps(
     constraints.modePreference === "offline" &&
     constraints.canTravel === undefined
   ) {
-    const factIds = CAMPS.map((camp) => `${camp.id}.campus`);
+    const periodScopedCamps = constraints.availablePeriods?.length
+      ? CAMPS.filter((camp) =>
+          constraints.availablePeriods?.includes(camp.period),
+        )
+      : CAMPS;
+    const factIds = periodScopedCamps.map((camp) => `${camp.id}.campus`);
     return {
       status: "boundary_follow_up",
       boundaryCode: "student_guangzhou_offline_not_provided",
@@ -227,9 +251,19 @@ export function recommendStudentCamps(
     : ([1, 2, 3] as Array<Camp["period"]>).filter(
         (period) => !constraints.excludedPeriods?.includes(period),
       );
-  const candidates = CAMPS.filter(
-    (camp) => camp.campus === campus && availablePeriods.includes(camp.period),
-  ).slice(0, 2);
+  const periodCandidates = CAMPS.filter((camp) =>
+    availablePeriods.includes(camp.period),
+  );
+  const candidates = periodCandidates
+    .filter((camp) => camp.campus === campus)
+    .slice(0, 2);
+
+  if (
+    constraints.availablePeriods?.length &&
+    candidates.some((camp) => !constraints.availablePeriods?.includes(camp.period))
+  ) {
+    throw new Error("Student recommendation escaped availablePeriods");
+  }
 
   if (!candidates.length) {
     return {

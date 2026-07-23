@@ -40,10 +40,9 @@ export type StudentConstraints = {
   preferredOfflineCampus?: "beijing" | "shanghai";
   availablePeriods?: Array<Camp["period"]>;
   excludedPeriods?: Array<Camp["period"]>;
-  modePreference?: "offline" | "online" | "either";
+  modePreference?: "offline" | "online" | "any";
   canTravel?: boolean;
   needsReplay?: boolean;
-  learningGoal?: string;
   refusesMoreQuestions?: boolean;
   stalledTurns?: number;
 };
