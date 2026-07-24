@@ -1240,7 +1240,7 @@ describe("TASK-05 real Route Handler integration", () => {
     );
   });
 
-  it("retries a Guangzhou fallback that claims all constraints fully match", async () => {
+  it("normalizes a Guangzhou fallback that claims all constraints fully match without recomposition", async () => {
     providerControl.composerMode = "guangzhou_first_full_match_then_ok";
     const first = (
       await postChat({
@@ -1264,7 +1264,9 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(second.entityIds).toEqual(["camp-p1-online"]);
     expect(second.message).not.toMatch(/(?:完全|全部).{0,6}(?:符合|匹配)/u);
     expect(second.diagnostics).toMatchObject({
-      composerAttempts: 2,
+      composerAttempts: 1,
+      composerRetries: 0,
+      externalModelCalls: 1,
       groundingFailures: [
         { attempt: 1, reasonCode: "recommendation_reason_mismatch" },
       ],
@@ -1296,7 +1298,9 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(second.message).toContain("线下偏好未满足");
     expect(second.message).not.toMatch(/(?:完全|全部).{0,6}(?:符合|匹配)/u);
     expect(second.diagnostics).toMatchObject({
-      composerAttempts: 2,
+      composerAttempts: 1,
+      composerRetries: 0,
+      externalModelCalls: 1,
       groundingFailures: [
         {
           attempt: 1,

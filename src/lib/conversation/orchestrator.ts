@@ -1155,11 +1155,45 @@ async function completeComposerPlan(input: {
           : rawOutput;
       const groundingStartedAt = performance.now();
       try {
-        generated = validateComposerOutput({
-          output,
-          plan: input.plan,
-          userMessage: input.userMessage,
-        });
+        try {
+          generated = validateComposerOutput({
+            output,
+            plan: input.plan,
+            userMessage: input.userMessage,
+          });
+        } catch (error) {
+          const canNormalizeLocally =
+            attempt === 1 &&
+            error instanceof GroundingError &&
+            error.reasonCode === "recommendation_reason_mismatch" &&
+            hasOfflineFallbackTrace(
+              new Set(input.plan.decisionTrace.map(({ code }) => code)),
+            );
+          if (!canNormalizeLocally) throw error;
+
+          const normalizedOutput = normalizeSecondAttemptOfflineFallback(
+            input.plan,
+            output,
+          );
+          try {
+            generated = validateComposerOutput({
+              output: normalizedOutput,
+              plan: input.plan,
+              userMessage: input.userMessage,
+            });
+          } catch {
+            throw error;
+          }
+          if (input.dependencies.diagnostics) {
+            input.dependencies.diagnostics.groundingFailures.push({
+              attempt,
+              reasonCode: error.reasonCode,
+              ...(error.detailCode
+                ? { detailCode: error.detailCode }
+                : {}),
+            });
+          }
+        }
       } finally {
         addDiagnosticDuration(
           input.dependencies,
