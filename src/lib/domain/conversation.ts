@@ -217,6 +217,14 @@ export type TurnDiagnostics = {
     detailCode?: string;
   }>;
   composerAttempts: number;
+  composerRetries: number;
+  externalModelCalls: number;
+  contextParsingMs: number;
+  constraintExtractionMs: number;
+  classifierMs: number;
+  ruleExecutionMs: number;
+  composerMs: number;
+  groundingMs: number;
   finalStatus?: ChatResponse["status"];
   routeLatencyMs?: number;
 };
