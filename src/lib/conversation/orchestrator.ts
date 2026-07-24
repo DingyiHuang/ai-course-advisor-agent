@@ -960,8 +960,16 @@ function validateComposerOutput(input: {
     ].join("\n"),
     input.plan.entityIds,
   );
-  const usedFactIds = validateUsedFactIds(
+  const modelUsedFactIds = validateUsedFactIds(
     input.output.usedFactIds,
+    input.plan.facts,
+  );
+  const programmaticFactIds =
+    input.plan.requiredPrefix !== undefined || input.plan.status === "catalog"
+      ? input.plan.decisionTrace.flatMap(({ factIds }) => factIds)
+      : [];
+  const usedFactIds = validateUsedFactIds(
+    [...modelUsedFactIds, ...programmaticFactIds],
     input.plan.facts,
   );
   if (input.plan.facts.length && usedFactIds.length === 0) {

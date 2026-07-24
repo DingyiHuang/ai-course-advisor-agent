@@ -29,6 +29,7 @@ const providerControl = vi.hoisted(() => ({
     | "other_region_first_guangzhou_then_ok"
     | "other_region_boundary_first_guangzhou_then_ok"
     | "always_ungrounded"
+    | "programmatic_content_omits_fact_ids"
     | "valid_chinese_amount",
   classifierCalls: 0,
   composerCalls: 0,
@@ -288,7 +289,18 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
       constraintKeys: string[];
     }>;
   };
-  const usedFactIds = facts.map(({ id }) => id);
+  const traceCodes = new Set(
+    ((payload.decisionTrace as Array<{ code?: string }>) ?? [])
+      .map(({ code }) => code)
+      .filter((code): code is string => typeof code === "string"),
+  );
+  const usedFactIds =
+    providerControl.composerMode === "programmatic_content_omits_fact_ids" &&
+    (plan.status === "catalog" ||
+      (plan.status === "boundary_follow_up" &&
+        traceCodes.has("teacher_outside_city_travel_required")))
+      ? []
+      : facts.map(({ id }) => id);
   const recommendationReasons =
     plan.recommendationReasonRequirements?.map((group) => ({
       entityId: group.entityId,
@@ -297,11 +309,6 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
         reason: `该班型与已确认的${constraintKey}约束相符。`,
       })),
     })) ?? [];
-  const traceCodes = new Set(
-    ((payload.decisionTrace as Array<{ code?: string }>) ?? [])
-      .map(({ code }) => code)
-      .filter((code): code is string => typeof code === "string"),
-  );
   const hasOfflineFallback =
     traceCodes.has("guangzhou_student_offline_not_provided") ||
     traceCodes.has("other_region_student_offline_not_provided");
@@ -763,6 +770,30 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(first.diagnostics).toMatchObject({
       classifierMs: 0,
       composerAttempts: 1,
+      externalModelCalls: 1,
+    });
+  });
+
+  it("counts code-generated teacher boundary facts without forcing a composer retry", async () => {
+    providerControl.composerMode = "programmatic_content_omits_fact_ids";
+    const { response } = await postChat({
+      action: "message",
+      message:
+        "我是教师，零基础，可以连续参加，日期没有要求，人在深圳，想学习AI课程",
+      state: createInitialConversationState(),
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(response.status).toBe("boundary_follow_up");
+    expect(response.sources.length).toBeGreaterThan(0);
+    expect(response.sources.every(({ document }) => document === "B")).toBe(
+      true,
+    );
+    expect(response.diagnostics).toMatchObject({
+      composerAttempts: 1,
+      composerRetries: 0,
+      groundingFailures: [],
       externalModelCalls: 1,
     });
   });
@@ -1626,6 +1657,33 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(providerControl.composerCalls).toBe(composerCallsBefore + 1);
     expect(response.diagnostics).toMatchObject({
       effectiveIntent: "new_consultation",
+      externalModelCalls: 1,
+    });
+  });
+
+  it("counts structured catalog card facts without forcing a composer retry", async () => {
+    providerControl.composerMode = "programmatic_content_omits_fact_ids";
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+
+    const { response } = await postChat({
+      action: "message",
+      message: "有什么课程推荐",
+      state,
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(response.status).toBe("catalog");
+    expect(response.presentation.recommendations).toHaveLength(6);
+    expect(response.sources.length).toBeGreaterThan(0);
+    expect(response.sources.every(({ document }) => document === "B")).toBe(
+      true,
+    );
+    expect(response.diagnostics).toMatchObject({
+      composerAttempts: 1,
+      composerRetries: 0,
+      groundingFailures: [],
       externalModelCalls: 1,
     });
   });
