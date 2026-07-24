@@ -79,6 +79,51 @@ describe("composer routing and contracts", () => {
     );
   });
 
+  it("omits history for recommendations and limits other routes to two recent turns", async () => {
+    const recommendationClient = new ScriptedLlmClient([
+      completion(
+        '{"message":"推荐结果已核对。","usedFactIds":[],"actions":[],"recommendationReasons":[]}',
+      ),
+    ]);
+    const factClient = new ScriptedLlmClient([
+      completion(
+        '{"message":"课程信息已核对。","usedFactIds":[],"actions":[],"recommendationReasons":[]}',
+      ),
+    ]);
+    const history = [
+      { role: "user" as const, content: "较早的学生问题" },
+      { role: "assistant" as const, content: "较早的学生回答" },
+      { role: "user" as const, content: "最近的教师问题" },
+      { role: "assistant" as const, content: "最近的教师回答" },
+    ];
+
+    await createComposer(recommendationClient).composeOnce(
+      emptyPlan({
+        status: "recommended",
+        route: "recommendation",
+        domain: "teacher",
+      }),
+      history,
+    );
+    await createComposer(factClient).composeOnce(
+      emptyPlan({
+        status: "fact_answer",
+        route: "fact_answer",
+        domain: "teacher",
+      }),
+      history,
+    );
+
+    const recommendationPayload = JSON.parse(
+      recommendationClient.calls[0].messages[1].content,
+    ) as { shortContext: unknown[] };
+    const factPayload = JSON.parse(
+      factClient.calls[0].messages[1].content,
+    ) as { shortContext: unknown[] };
+    expect(recommendationPayload.shortContext).toEqual([]);
+    expect(factPayload.shortContext).toEqual(history.slice(-2));
+  });
+
   it("answers school procurement from deterministic facts without calling the model", async () => {
     const client = new ScriptedLlmClient([]);
     const plan = emptyPlan({

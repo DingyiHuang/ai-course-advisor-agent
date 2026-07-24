@@ -228,6 +228,25 @@ function effectiveIntent(input: {
   return input.originalState.domain === "unknown" ? "unknown" : "unclear";
 }
 
+function deterministicCandidate(input: {
+  routingState: ConversationState;
+  deterministicIntent?: ConversationIntent;
+}): ClassifierCandidate {
+  return {
+    intent:
+      input.deterministicIntent ??
+      (input.routingState.domain === "unknown"
+        ? "unknown"
+        : "new_consultation"),
+    studentConstraints: {},
+    teacherConstraints: {},
+    studentReference: {},
+    teacherReference: {},
+    factTopics: [],
+    evidence: {},
+  };
+}
+
 function incrementStalledTurns(
   state: ConversationState,
   madeProgress: boolean,
@@ -1491,28 +1510,38 @@ export async function runConversationTurn(
       }
       return response;
     }
-    const classifierStartedAt = performance.now();
     let candidate: ClassifierCandidate;
-    try {
-      candidate = await dependencies.classifier.classify(
-        message,
+    const skipClassifier =
+      routingState.domain !== "unknown" ||
+      deterministic.intent !== undefined;
+    if (skipClassifier) {
+      candidate = deterministicCandidate({
         routingState,
-      );
-    } finally {
-      addDiagnosticDuration(
-        dependencies,
-        "classifierMs",
-        classifierStartedAt,
-      );
-    }
-    if (dependencies.diagnostics) {
-      dependencies.diagnostics.classifierCandidate = {
-        domainCandidate: candidate.domainCandidate,
-        intent: candidate.intent,
-        studentConstraints: structuredClone(candidate.studentConstraints),
-        institutionNeed: candidate.institutionNeed,
-        factTopics: [...candidate.factTopics],
-      };
+        deterministicIntent: deterministic.intent,
+      });
+    } else {
+      const classifierStartedAt = performance.now();
+      try {
+        candidate = await dependencies.classifier.classify(
+          message,
+          routingState,
+        );
+      } finally {
+        addDiagnosticDuration(
+          dependencies,
+          "classifierMs",
+          classifierStartedAt,
+        );
+      }
+      if (dependencies.diagnostics) {
+        dependencies.diagnostics.classifierCandidate = {
+          domainCandidate: candidate.domainCandidate,
+          intent: candidate.intent,
+          studentConstraints: structuredClone(candidate.studentConstraints),
+          institutionNeed: candidate.institutionNeed,
+          factTopics: [...candidate.factTopics],
+        };
+      }
     }
     if (deterministic.domain || deterministic.factTopics.length > 0) {
       candidate.domainCandidate = undefined;

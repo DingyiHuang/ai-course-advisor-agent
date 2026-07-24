@@ -100,8 +100,10 @@ function institutionRouting(
 
 function personalDomain(message: string): KnownDomain | undefined {
   const text = normalized(message);
-  if (/^(?:学生|家长|学生或家长)$/u.test(text)) return "student";
-  if (/^(?:教师|老师)$/u.test(text)) return "teacher";
+  if (/^(?:学生|家长|学生或家长)(?:$|[，,：:])/u.test(text)) {
+    return "student";
+  }
+  if (/^(?:教师(?:$|[，,：:])|老师$)/u.test(text)) return "teacher";
   if (/^(?:机构|学校|机构或企业人员|机构\/学校)$/u.test(text)) {
     return "platform";
   }
@@ -304,12 +306,18 @@ function explicitStudentConstraints(
     )
   ) {
     patch.canTravel = false;
+  } else if (
+    /(?:不便|不能|无法|不方便)(?:跨城)?(?:出行|前往外地)/u.test(text)
+  ) {
+    patch.canTravel = false;
   } else if (/^(?:可以)?前往北京$/u.test(text)) {
     patch.canTravel = true;
     patch.preferredOfflineCampus = "beijing";
   } else if (/^(?:可以)?前往上海$/u.test(text)) {
     patch.canTravel = true;
     patch.preferredOfflineCampus = "shanghai";
+  } else if (/(?:可以|能|方便)(?:跨城)?(?:出行|前往外地)/u.test(text)) {
+    patch.canTravel = true;
   }
 
   const region = residenceRegion(message, state);

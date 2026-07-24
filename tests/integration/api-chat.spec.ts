@@ -672,11 +672,14 @@ describe("TASK-05 real Route Handler integration", () => {
   });
 
   it("R04 recommends only the L1 weekend teacher product", async () => {
+    const classifierCallsBefore = providerControl.classifierCalls;
+    const composerCallsBefore = providerControl.composerCalls;
     const { response } = await postChat({
       action: "message",
       message: "零基础教师，周末有空，工作日不能脱岗",
       state: createInitialConversationState(),
       testMode: false,
+      diagnostics: true,
     });
     expect(response.state.domain).toBe("teacher");
     expect(response.entityIds).toEqual(["teacher-l1-weekend"]);
@@ -686,6 +689,13 @@ describe("TASK-05 real Route Handler integration", () => {
     });
     expect(JSON.stringify(response)).not.toContain("teacher-l1-intensive");
     expect(JSON.stringify(response)).not.toContain("platform-school-procurement");
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(providerControl.composerCalls).toBe(composerCallsBefore + 1);
+    expect(response.diagnostics).toMatchObject({
+      classifierMs: 0,
+      composerAttempts: 1,
+      externalModelCalls: 1,
+    });
   });
 
   it("R05 recommends L2 intensive with prerequisite, time and goal traces", async () => {
@@ -719,6 +729,8 @@ describe("TASK-05 real Route Handler integration", () => {
   });
 
   it("keeps an outside teacher city and asks only whether travel to a course city is possible", async () => {
+    const classifierCallsBefore = providerControl.classifierCalls;
+    const composerCallsBefore = providerControl.composerCalls;
     const first = (
       await postChat({
         action: "message",
@@ -746,6 +758,98 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(first.message).toContain("腾讯会议");
     expect(first.message).toContain("线下工作坊");
     expect(first.presentation.recommendations).toEqual([]);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(providerControl.composerCalls).toBe(composerCallsBefore + 1);
+    expect(first.diagnostics).toMatchObject({
+      classifierMs: 0,
+      composerAttempts: 1,
+      externalModelCalls: 1,
+    });
+  });
+
+  it("fills all pending teacher answers in one turn without classifier routing", async () => {
+    const setup = (
+      await postChat({
+        action: "message",
+        message: "我是教师，零基础，想学习AI课程",
+        state: createInitialConversationState(),
+        testMode: false,
+      })
+    ).response;
+    expect(setup.state.pendingQuestionKeys).toEqual(
+      expect.arrayContaining([
+        "canTakeContinuousLeave",
+        "availableDates",
+        "city",
+      ]),
+    );
+    const classifierCallsBefore = providerControl.classifierCalls;
+    const composerCallsBefore = providerControl.composerCalls;
+
+    const answer = (
+      await postChat({
+        action: "message",
+        message: "可以连续参加，日期没有要求，在深圳",
+        state: setup.state,
+        testMode: false,
+        diagnostics: true,
+      })
+    ).response;
+
+    expect(answer.status).toBe("boundary_follow_up");
+    expect(answer.boundaryCode).toBe(
+      "teacher_outside_city_travel_required",
+    );
+    expect(answer.state.teacherConstraints).toMatchObject({
+      startingLevel: "beginner",
+      canTakeContinuousLeave: true,
+      city: "深圳",
+    });
+    expect(answer.state.teacherConstraints.availableProductIds).toHaveLength(6);
+    expect(answer.state.pendingQuestionKeys).toEqual([
+      "canTravelToCourseCity",
+    ]);
+    expect(answer.message).not.toMatch(/日期|所在城市/u);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(providerControl.composerCalls).toBe(composerCallsBefore + 1);
+    expect(answer.diagnostics).toMatchObject({
+      classifierMs: 0,
+      composerAttempts: 1,
+      externalModelCalls: 1,
+    });
+  });
+
+  it("preserves Chengdu while extracting flexible dates and weekend-only availability", async () => {
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+    state.pendingQuestionKeys = [
+      "canTakeContinuousLeave",
+      "availableDates",
+      "city",
+    ];
+    const classifierCallsBefore = providerControl.classifierCalls;
+
+    const { response } = await postChat({
+      action: "message",
+      message: "日期都行，只能周末，我在成都",
+      state,
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(response.status).toBe("boundary_follow_up");
+    expect(response.state.teacherConstraints).toMatchObject({
+      canTakeContinuousLeave: false,
+      city: "成都",
+    });
+    expect(response.state.teacherConstraints.availableProductIds).toHaveLength(
+      6,
+    );
+    expect(response.state.pendingQuestionKeys).toEqual([
+      "canTravelToCourseCity",
+    ]);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(response.diagnostics?.classifierMs).toBe(0);
   });
 
   it("does not repeat the outside city question after a teacher declines all supported travel cities", async () => {
@@ -1058,8 +1162,9 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(second.message).toContain("30天回放");
   });
 
-  it("overrides a classifier that changes the explicit first period to the second", async () => {
+  it("skips the classifier when explicit student constraints are sufficient", async () => {
     providerControl.classifierMode = "first_period_as_second";
+    const classifierCallsBefore = providerControl.classifierCalls;
     const first = (
       await postChat({
         action: "message",
@@ -1076,14 +1181,9 @@ describe("TASK-05 real Route Handler integration", () => {
       availablePeriods: [1],
       modePreference: "offline",
     });
-    expect(first.diagnostics?.classifierCandidate?.studentConstraints)
-      .toMatchObject({ availablePeriods: [2] });
-    expect(first.diagnostics?.corrections).toContainEqual({
-      reasonCode: "explicit_constraint_overrode_classifier",
-      field: "student.availablePeriods",
-      candidateValue: [2],
-      confirmedValue: [1],
-    });
+    expect(first.diagnostics?.classifierCandidate).toBeUndefined();
+    expect(first.diagnostics?.classifierMs).toBe(0);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
     expect(JSON.stringify(first.diagnostics)).not.toMatch(
       /evidence|我是广州家长|system prompt|api.?key/iu,
     );
@@ -1277,6 +1377,7 @@ describe("TASK-05 real Route Handler integration", () => {
       })
     ).response;
     providerControl.classifierMode = "travel_answer_as_beijing";
+    const classifierCallsBefore = providerControl.classifierCalls;
     const second = (
       await postChat({
         action: "message",
@@ -1296,13 +1397,9 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(second.entityIds).toEqual(["camp-p1-online"]);
     expect(JSON.stringify(second)).toContain("深圳");
     expect(JSON.stringify(second)).not.toContain("广州");
-    expect(second.diagnostics?.corrections).toContainEqual(
-      expect.objectContaining({
-        field: "student.region",
-        candidateValue: "beijing",
-        confirmedValue: "other",
-      }),
-    );
+    expect(second.diagnostics?.classifierCandidate).toBeUndefined();
+    expect(second.diagnostics?.classifierMs).toBe(0);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
   });
 
   it("keeps Chengdu distinct from Shenzhen and Guangzhou", async () => {
@@ -1420,6 +1517,7 @@ describe("TASK-05 real Route Handler integration", () => {
         testMode: false,
       })
     ).response;
+    const classifierCallsBefore = providerControl.classifierCalls;
     const callsBefore = providerControl.composerCalls;
     const historyBefore = structuredClone(procurement.state.shortHistory);
     const unrelated = (
@@ -1442,8 +1540,12 @@ describe("TASK-05 real Route Handler integration", () => {
     );
     expect(unrelated.state.shortHistory).toEqual(historyBefore);
     expect(unrelated.message).not.toMatch(/20人|5万元|2980/u);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
     expect(providerControl.composerCalls).toBe(callsBefore);
-    expect(unrelated.diagnostics?.effectiveIntent).toBe("unrelated");
+    expect(unrelated.diagnostics).toMatchObject({
+      effectiveIntent: "unrelated",
+      externalModelCalls: 0,
+    });
   });
 
   it("does not accept a classifier unrelated result without explicit out-of-domain evidence", async () => {
@@ -1456,6 +1558,7 @@ describe("TASK-05 real Route Handler integration", () => {
       })
     ).response;
     providerControl.classifierMode = "unrelated_without_evidence";
+    const classifierCallsBefore = providerControl.classifierCalls;
     const callsBefore = providerControl.composerCalls;
     const unrelated = (
       await postChat({
@@ -1467,12 +1570,12 @@ describe("TASK-05 real Route Handler integration", () => {
       })
     ).response;
 
-    expect(unrelated.diagnostics?.classifierCandidate?.intent).toBe(
-      "unrelated",
-    );
+    expect(unrelated.diagnostics?.classifierCandidate).toBeUndefined();
+    expect(unrelated.diagnostics?.classifierMs).toBe(0);
     expect(unrelated.diagnostics?.effectiveIntent).toBe("new_consultation");
     expect(unrelated.status).toBe("institution_info");
     expect(unrelated.entityIds).toEqual(["platform-school-procurement"]);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
     expect(providerControl.composerCalls).toBe(callsBefore);
   });
 
