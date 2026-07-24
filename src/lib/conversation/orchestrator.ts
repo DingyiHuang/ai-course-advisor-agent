@@ -1340,6 +1340,43 @@ export async function runConversationTurn(
     const routingState = deterministic.domain
       ? transitionConversationDomain(originalState, deterministic.domain)
       : originalState;
+    if (
+      deterministic.domain === "platform" &&
+      deterministic.institutionNeed === "school_procurement" &&
+      deterministic.intent === "institution_service"
+    ) {
+      routingState.institutionNeed = deterministic.institutionNeed;
+      if (dependencies.diagnostics) {
+        dependencies.diagnostics.effectiveIntent = deterministic.intent;
+      }
+      const workingState = appendHistory(routingState, {
+        role: "user",
+        content: message,
+      });
+      const plan = buildVerifiedComposerPlan({
+        state: workingState,
+        intent: deterministic.intent,
+        factTopics: deterministic.factTopics,
+        currentDate: scenarioBusinessDate(message, dependencies.currentDate),
+        crossDomainFrom: deterministicCrossDomainFrom,
+      });
+      recordPlanDiagnostics(dependencies, workingState, plan);
+      const response = await completeComposerPlan({
+        workingState,
+        plan,
+        userMessage: message,
+        dependencies,
+      });
+      if (deterministicCrossDomainFrom) {
+        response.notices.push(
+          identitySwitchNotice(
+            deterministicCrossDomainFrom,
+            "platform",
+          ),
+        );
+      }
+      return response;
+    }
     const candidate = await dependencies.classifier.classify(
       message,
       routingState,

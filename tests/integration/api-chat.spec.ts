@@ -30,6 +30,7 @@ const providerControl = vi.hoisted(() => ({
     | "other_region_boundary_first_guangzhou_then_ok"
     | "always_ungrounded"
     | "valid_chinese_amount",
+  classifierCalls: 0,
   composerCalls: 0,
   retryFeedbacks: [] as unknown[],
 }));
@@ -515,6 +516,9 @@ vi.mock("@/lib/llm/runtime", () => ({
         string,
         unknown
       >;
+      if (system.includes("结构化分类器")) {
+        providerControl.classifierCalls += 1;
+      }
       return completion(
         JSON.stringify(
           system.includes("结构化分类器")
@@ -562,6 +566,7 @@ async function selectDomain(
 beforeEach(() => {
   providerControl.classifierMode = "normal";
   providerControl.composerMode = "normal";
+  providerControl.classifierCalls = 0;
   providerControl.composerCalls = 0;
   providerControl.retryFeedbacks = [];
 });
@@ -1773,10 +1778,11 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(response.error).toBeUndefined();
     expect(response.message).toContain("5万元起");
     expect(response.message).not.toContain("五万元");
+    expect(providerControl.classifierCalls).toBe(0);
     expect(providerControl.composerCalls).toBe(0);
   });
 
-  it("answers school procurement deterministically on the first composer attempt", async () => {
+  it("answers school procurement without classifier or model provider calls", async () => {
     const { response } = await postChat({
       action: "message",
       message: "学校计划采购20人的教师培训",
@@ -1788,6 +1794,7 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(response.message).toContain("20人起");
     expect(response.message).toContain("5万元起");
     expect(response.message).not.toContain("2980");
+    expect(providerControl.classifierCalls).toBe(0);
     expect(providerControl.composerCalls).toBe(0);
     expect(response.diagnostics).toMatchObject({
       composerAttempts: 1,
