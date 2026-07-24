@@ -10,6 +10,7 @@ import {
   assertFollowUpUsesClosedDimensions,
   assertHighRiskValuesGrounded,
   assertPlanMatchesConfirmedState,
+  inferFactIdsForMentionedHighRiskValues,
   GroundingError,
   validateUsedFactIds,
 } from "@/lib/validation/grounding";
@@ -232,6 +233,37 @@ describe("programmatic grounding gates", () => {
         calculations: [],
       }),
     ).toThrow();
+  });
+
+  it("infers only plan facts that exactly ground mentioned dates and amounts", () => {
+    const facts: GroundedFact[] = [
+      {
+        id: "teacher-l1-weekend.schedule",
+        label: "课程安排",
+        value: ["8月2日线上课程", "8月9日线下工作坊"],
+      },
+      {
+        id: "teacher-l1-weekend.standardPrice",
+        label: "标准价格",
+        value: 2980,
+      },
+    ];
+
+    expect(
+      inferFactIdsForMentionedHighRiskValues(
+        "8月2日开始，标准价格2980元。",
+        facts,
+      ),
+    ).toEqual([
+      "teacher-l1-weekend.schedule",
+      "teacher-l1-weekend.standardPrice",
+    ]);
+    expect(
+      inferFactIdsForMentionedHighRiskValues(
+        "8月3日开始，标准价格2990元。",
+        facts,
+      ),
+    ).toEqual([]);
   });
 
   it("rejects source metadata written by the model but allows 第5天", () => {

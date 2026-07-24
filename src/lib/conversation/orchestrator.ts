@@ -39,6 +39,7 @@ import {
   assertFollowUpUsesClosedDimensions,
   assertHighRiskValuesGrounded,
   assertPlanMatchesConfirmedState,
+  inferFactIdsForMentionedHighRiskValues,
   GroundingError,
   validateUsedFactIds,
 } from "@/lib/validation/grounding";
@@ -968,8 +969,21 @@ function validateComposerOutput(input: {
     input.plan.requiredPrefix !== undefined || input.plan.status === "catalog"
       ? input.plan.decisionTrace.flatMap(({ factIds }) => factIds)
       : [];
+  const inferredHighRiskFactIds = inferFactIdsForMentionedHighRiskValues(
+    [
+      input.output.message,
+      ...input.output.recommendationReasons.flatMap((group) =>
+        group.reasons.map(({ reason }) => reason),
+      ),
+    ].join("\n"),
+    input.plan.facts,
+  );
   const usedFactIds = validateUsedFactIds(
-    [...modelUsedFactIds, ...programmaticFactIds],
+    [
+      ...modelUsedFactIds,
+      ...programmaticFactIds,
+      ...inferredHighRiskFactIds,
+    ],
     input.plan.facts,
   );
   if (input.plan.facts.length && usedFactIds.length === 0) {

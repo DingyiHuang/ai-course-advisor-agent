@@ -111,6 +111,32 @@ function collectAllowedRisks(
   }
 }
 
+export function inferFactIdsForMentionedHighRiskValues(
+  message: string,
+  facts: GroundedFact[],
+): string[] {
+  const mentionedAmounts = new Set(extractMoneyAmounts(message));
+  const mentionedDates = new Set(extractDates(message));
+  if (mentionedAmounts.size === 0 && mentionedDates.size === 0) return [];
+
+  return facts
+    .filter((fact) => {
+      const factAmounts = new Set<number>();
+      const factDates = new Set<string>();
+      collectAllowedRisks(
+        fact.value,
+        `${fact.id}.${fact.label}`,
+        factAmounts,
+        factDates,
+      );
+      return (
+        [...mentionedAmounts].some((amount) => factAmounts.has(amount)) ||
+        [...mentionedDates].some((date) => factDates.has(date))
+      );
+    })
+    .map(({ id }) => id);
+}
+
 export function assertHighRiskValuesGrounded(input: {
   message: string;
   userMessage?: string;
