@@ -120,6 +120,62 @@ crossDomainNotice由程序在正文前追加，不要自行复述。actions只�
 不得虚构价格、日期、地点、余位、联系方式、报名状态或支付状态。capacity和minimumToOpen不是实时余位。
 只输出JSON对象：{"message":"正文","usedFactIds":["实际使用的fact id"],"actions":["可选操作"],"recommendationReasons":[{"entityId":"班型id","reasons":[{"constraintKey":"约束键","reason":"动态理由"}]}]}。不要Markdown代码块或其他前后缀。usedFactIds只能取自facts中的id。`;
 
+const SCHOOL_PROCUREMENT_ID = "platform-school-procurement";
+const SCHOOL_PROCUREMENT_FACT_IDS = [
+  `${SCHOOL_PROCUREMENT_ID}.category`,
+  `${SCHOOL_PROCUREMENT_ID}.audience`,
+  `${SCHOOL_PROCUREMENT_ID}.boundary`,
+  `${SCHOOL_PROCUREMENT_ID}.pricingRule`,
+  `${SCHOOL_PROCUREMENT_ID}.minimumPeople`,
+  `${SCHOOL_PROCUREMENT_ID}.minimumTotalPrice`,
+] as const;
+
+function deterministicSchoolProcurementOutput(
+  plan: ComposerPlan,
+): ComposerOutput | undefined {
+  if (
+    plan.status !== "institution_info" ||
+    plan.entityIds.length !== 1 ||
+    plan.entityIds[0] !== SCHOOL_PROCUREMENT_ID
+  ) {
+    return undefined;
+  }
+
+  const facts = new Map(plan.facts.map((fact) => [fact.id, fact.value]));
+  const category = facts.get(`${SCHOOL_PROCUREMENT_ID}.category`);
+  const audience = facts.get(`${SCHOOL_PROCUREMENT_ID}.audience`);
+  const boundary = facts.get(`${SCHOOL_PROCUREMENT_ID}.boundary`);
+  const pricingRule = facts.get(`${SCHOOL_PROCUREMENT_ID}.pricingRule`);
+  const minimumPeople = facts.get(`${SCHOOL_PROCUREMENT_ID}.minimumPeople`);
+  const minimumTotalPrice = facts.get(
+    `${SCHOOL_PROCUREMENT_ID}.minimumTotalPrice`,
+  );
+  if (
+    typeof category !== "string" ||
+    typeof audience !== "string" ||
+    typeof boundary !== "string" ||
+    typeof pricingRule !== "string" ||
+    typeof minimumPeople !== "number" ||
+    typeof minimumTotalPrice !== "number" ||
+    !pricingRule.includes(`${minimumPeople}人起`) ||
+    !pricingRule.includes(`${minimumTotalPrice / 10_000}万元起`)
+  ) {
+    throw new LlmError(
+      "invalid_response",
+      "School procurement facts are incomplete or inconsistent",
+    );
+  }
+
+  return {
+    message:
+      `${category}面向${audience}，${pricingRule}。${boundary}。` +
+      "可继续查看模拟咨询流程，或整理采购需求清单。",
+    usedFactIds: [...SCHOOL_PROCUREMENT_FACT_IDS],
+    actions: [...plan.actions],
+    recommendationReasons: [],
+  };
+}
+
 export function recommendationReasonRequirements(plan: ComposerPlan): Array<{
   entityId: string;
   constraintKeys: string[];
@@ -144,6 +200,9 @@ export function createComposer(client: LlmClient): {
 } {
   return {
     async composeOnce(plan, history) {
+      const deterministicOutput = deterministicSchoolProcurementOutput(plan);
+      if (deterministicOutput) return deterministicOutput;
+
       const route = resolveComposerRoute(plan);
       const result = await client.complete({
         temperature: 0.6,

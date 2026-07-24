@@ -1719,7 +1719,7 @@ describe("TASK-05 real Route Handler integration", () => {
     providerControl.composerMode = "first_ungrounded_then_ok";
     const { httpStatus, response } = await postChat({
       action: "message",
-      message: "学校计划采购20人的教师培训",
+      message: "家长，北京，可参加第一期，希望线下",
       state: createInitialConversationState(),
       testMode: false,
       diagnostics: true,
@@ -1736,7 +1736,7 @@ describe("TASK-05 real Route Handler integration", () => {
       groundingFailures: [
         { attempt: 1, reasonCode: "ungrounded_amount" },
       ],
-      finalStatus: "institution_info",
+      finalStatus: "recommended",
     });
   });
 
@@ -1744,7 +1744,7 @@ describe("TASK-05 real Route Handler integration", () => {
     providerControl.composerMode = "always_ungrounded";
     const { httpStatus, response } = await postChat({
       action: "message",
-      message: "学校计划采购20人的教师培训",
+      message: "家长，北京，可参加第一期，希望线下",
       state: createInitialConversationState(),
       testMode: false,
       diagnostics: true,
@@ -1762,7 +1762,7 @@ describe("TASK-05 real Route Handler integration", () => {
     ]);
   });
 
-  it("normalizes 五万元 and passes on the first composer attempt", async () => {
+  it("keeps canonical school pricing when provider wording is configured differently", async () => {
     providerControl.composerMode = "valid_chinese_amount";
     const { response } = await postChat({
       action: "message",
@@ -1771,11 +1771,12 @@ describe("TASK-05 real Route Handler integration", () => {
       testMode: false,
     });
     expect(response.error).toBeUndefined();
-    expect(response.message).toContain("五万元");
-    expect(providerControl.composerCalls).toBe(1);
+    expect(response.message).toContain("5万元起");
+    expect(response.message).not.toContain("五万元");
+    expect(providerControl.composerCalls).toBe(0);
   });
 
-  it("accepts 20人起 and 5万元 on the first composer attempt", async () => {
+  it("answers school procurement deterministically on the first composer attempt", async () => {
     const { response } = await postChat({
       action: "message",
       message: "学校计划采购20人的教师培训",
@@ -1785,8 +1786,9 @@ describe("TASK-05 real Route Handler integration", () => {
     });
     expect(response.error).toBeUndefined();
     expect(response.message).toContain("20人起");
-    expect(response.message).toContain("5万元");
-    expect(providerControl.composerCalls).toBe(1);
+    expect(response.message).toContain("5万元起");
+    expect(response.message).not.toContain("2980");
+    expect(providerControl.composerCalls).toBe(0);
     expect(response.diagnostics).toMatchObject({
       composerAttempts: 1,
       groundingFailures: [],
@@ -1802,7 +1804,7 @@ describe("TASK-05 real Route Handler integration", () => {
     );
   });
 
-  it("silently retries a school answer that omits required minimums", async () => {
+  it("does not let provider omissions affect deterministic school minimums", async () => {
     providerControl.composerMode =
       "first_missing_procurement_minimum_then_ok";
     const { httpStatus, response } = await postChat({
@@ -1815,17 +1817,15 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(httpStatus).toBe(200);
     expect(response.message).toContain("20人起");
     expect(response.message).toContain("5万元起");
-    expect(response.diagnostics?.groundingFailures).toEqual([
-      { attempt: 1, reasonCode: "missing_required_fact" },
-    ]);
-    expect(providerControl.composerCalls).toBe(2);
+    expect(response.diagnostics?.groundingFailures).toEqual([]);
+    expect(providerControl.composerCalls).toBe(0);
   });
 
   it("silently retries an attempted human-advisor impersonation", async () => {
     providerControl.composerMode = "first_impersonation_then_ok";
     const { response } = await postChat({
       action: "message",
-      message: "学校计划采购20人的教师培训",
+      message: "家长，北京，可参加第一期，希望线下",
       state: createInitialConversationState(),
       testMode: false,
     });
@@ -1838,7 +1838,7 @@ describe("TASK-05 real Route Handler integration", () => {
     providerControl.composerMode = "first_external_commitment_then_ok";
     const { response } = await postChat({
       action: "message",
-      message: "学校计划采购20人的教师培训",
+      message: "家长，北京，可参加第一期，希望线下",
       state: createInitialConversationState(),
       testMode: false,
       diagnostics: true,

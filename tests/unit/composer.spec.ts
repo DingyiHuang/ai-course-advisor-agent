@@ -78,6 +78,59 @@ describe("composer routing and contracts", () => {
       formatSourceFootnotes(second.usedFactIds),
     );
   });
+
+  it("answers school procurement from deterministic facts without calling the model", async () => {
+    const client = new ScriptedLlmClient([]);
+    const plan = emptyPlan({
+      status: "institution_info",
+      route: "institution",
+      domain: "platform",
+      confirmedConstraints: { institutionNeed: "school_procurement" },
+      facts: [
+        {
+          id: "platform-school-procurement.category",
+          label: "服务类型",
+          value: "学校教师培训采购",
+        },
+        {
+          id: "platform-school-procurement.audience",
+          label: "适用对象",
+          value: "学校或教育局统一采购",
+        },
+        {
+          id: "platform-school-procurement.boundary",
+          label: "边界",
+          value: "个人教师报名价格不适用于学校统一采购",
+        },
+        {
+          id: "platform-school-procurement.pricingRule",
+          label: "计价规则",
+          value: "20人起，项目总价5万元起",
+        },
+        {
+          id: "platform-school-procurement.minimumPeople",
+          label: "最低人数",
+          value: 20,
+        },
+        {
+          id: "platform-school-procurement.minimumTotalPrice",
+          label: "最低项目总价",
+          value: 50_000,
+        },
+      ],
+      actions: ["查看模拟咨询流程", "整理采购需求清单", "返回菜单"],
+      entityIds: ["platform-school-procurement"],
+    });
+
+    const output = await createComposer(client).composeOnce(plan, []);
+
+    expect(client.calls).toHaveLength(0);
+    expect(output.message).toContain("20人起");
+    expect(output.message).toContain("5万元起");
+    expect(output.message).not.toContain("2980");
+    expect(output.usedFactIds).toEqual(plan.facts.map(({ id }) => id));
+    expect(output.actions).toEqual(plan.actions);
+  });
 });
 
 describe("programmatic grounding gates", () => {
