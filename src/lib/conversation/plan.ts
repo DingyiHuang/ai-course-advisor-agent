@@ -496,11 +496,7 @@ export function buildComposerPlan(input: {
   currentDate: BusinessDate;
   crossDomainFrom?: "student" | "teacher" | "platform";
 }): ComposerPlan {
-  if (
-    input.intent === "unrelated" ||
-    ((input.intent === "unclear" || input.intent === "unknown") &&
-      input.state.domain !== "unknown")
-  ) {
+  if (input.intent === "unrelated") {
     const hasCurrentContext = Boolean(
       input.state.selectedEntityId ||
       input.state.lastRecommendationIds.length ||
@@ -534,11 +530,15 @@ export function buildComposerPlan(input: {
     });
     if (plan) return plan;
   }
+  const businessIntent =
+    input.intent === "unclear" || input.intent === "unknown"
+      ? "new_consultation"
+      : input.intent;
   if (
-    input.intent !== "identity_selection" &&
-    input.intent !== "new_consultation" &&
-    input.intent !== "recommendation" &&
-    input.intent !== "institution_service"
+    businessIntent !== "identity_selection" &&
+    businessIntent !== "new_consultation" &&
+    businessIntent !== "recommendation" &&
+    businessIntent !== "institution_service"
   ) {
     return basePlan({
       state: input.state,

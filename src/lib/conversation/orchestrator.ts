@@ -186,7 +186,15 @@ function effectiveIntent(input: {
 }): ConversationIntent {
   if (input.deterministicIntent) return input.deterministicIntent;
   const intent = input.appliedIntent;
-  if (intent === "unrelated" || intent === "unclear") return intent;
+  if (
+    intent === "unrelated" ||
+    intent === "unclear" ||
+    intent === "unknown"
+  ) {
+    return input.originalState.domain === "unknown"
+      ? "unknown"
+      : "new_consultation";
+  }
   if (intent === "contextual_followup" || intent === "fact_question") {
     return hasCurrentBusinessContext(input.originalState) &&
       input.factTopics.length > 0
@@ -243,7 +251,7 @@ function prepareStateForPlan(
   const next = structuredClone(state);
   next.pendingQuestionKeys = [...plan.nextQuestionKeys];
   next.pendingQuestionOptions = [...plan.nextQuestionOptions];
-  if (plan.status === "recommended") {
+  if (plan.status === "recommended" || plan.status === "catalog") {
     next.lastRecommendationIds = [...plan.entityIds];
     next.selectedEntityId =
       plan.entityIds.length === 1 ? plan.entityIds[0] : undefined;
@@ -1421,6 +1429,29 @@ export async function runConversationTurn(
       ? transitionConversationDomain(originalState, deterministic.domain)
       : originalState;
     if (
+      deterministic.catalogRequested &&
+      routingState.domain !== "unknown" &&
+      collectedConstraintKeys(routingState).length === 0
+    ) {
+      const workingState = appendHistory(routingState, {
+        role: "user",
+        content: message,
+      });
+      const plan = measureRuleExecution(dependencies, () =>
+        buildCatalogPlan({ state: workingState }),
+      );
+      if (dependencies.diagnostics) {
+        dependencies.diagnostics.effectiveIntent = "new_consultation";
+      }
+      recordPlanDiagnostics(dependencies, workingState, plan);
+      return await completeComposerPlan({
+        workingState,
+        plan,
+        userMessage: message,
+        dependencies,
+      });
+    }
+    if (
       deterministic.domain === "platform" &&
       deterministic.institutionNeed === "school_procurement" &&
       deterministic.intent === "institution_service"
@@ -1550,11 +1581,7 @@ export async function runConversationTurn(
         state,
       });
     }
-    if (
-      intent === "unrelated" ||
-      ((intent === "unclear" || intent === "unknown") &&
-        originalState.domain !== "unknown")
-    ) {
+    if (intent === "unrelated") {
       const plan = measureRuleExecution(dependencies, () =>
         buildVerifiedComposerPlan({
           state: originalState,

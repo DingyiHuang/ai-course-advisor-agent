@@ -27,6 +27,7 @@ export type DeterministicTurnRouting = {
   factTopics: FactTopic[];
   referencedEntityIds?: string[];
   boundaryCode?: "unsupported_external_claims";
+  catalogRequested?: boolean;
 };
 
 function normalized(message: string): string {
@@ -158,6 +159,32 @@ function explicitUnrelatedIntent(message: string): boolean {
   const text = normalized(message);
   if (/(?:今天天气|天气怎么样|天气预报)/u.test(text)) return true;
   if (
+    /(?:足球|篮球|网球|乒乓球|羽毛球|世界杯|奥运会|中超|英超|nba).{0,12}(?:比赛|赛程|比分|冠军|结果|直播)/iu.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+  if (
+    /(?:时政|政治|选举|总统|总理|外交|国际局势).{0,12}(?:新闻|消息|评论|分析|怎么样)/u.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+  if (
+    /^(?:你好|您好|在吗|谢谢|讲个笑话|说个笑话|写一首诗|请写一首诗)[。！？!?]*$/u.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+  if (
+    /(?:苹果|手机|房价|菜价|汽油).{0,8}(?:多少钱|价格|报价)/u.test(text)
+  ) {
+    return true;
+  }
+  if (
     /(?:分析|预测|判断).{0,8}(?:股票|股价|大盘|证券).{0,8}(?:走势|行情)?/u.test(
       text,
     )
@@ -168,6 +195,14 @@ function explicitUnrelatedIntent(message: string): boolean {
     /(?:项目开发进度|git提交|git操作|代码提交|部署要求|部署操作|测试操作|系统开发)/iu.test(
       text,
     )
+  ) {
+    return true;
+  }
+  if (
+    /(?:编写|开发|部署|上线).{0,10}(?:其他)?(?:软件|网站|应用|app|系统|代码)/iu.test(
+      text,
+    ) &&
+    !/(?:课程|培训|学习|报名)/u.test(text)
   ) {
     return true;
   }
@@ -186,6 +221,16 @@ function explicitUnrelatedIntent(message: string): boolean {
     infrastructureSignals >= 2 &&
     !courseSignals &&
     /(?:分析|报告|建设|数据|规划|统计|增长)/u.test(text)
+  );
+}
+
+function generalCourseIntent(message: string): boolean {
+  const text = normalized(message);
+  return (
+    /(?:有什么课程推荐|有什么课程|有哪些班|有什么适合我的|我该选哪个|推荐一个课程|我想学习ai|怎么报名学习|有什么可以学的)/iu.test(
+      text,
+    ) ||
+    /(?:课程|班型).{0,6}(?:推荐|适合|选择|有哪些|有什么)/u.test(text)
   );
 }
 
@@ -601,6 +646,7 @@ export function resolveDeterministicTurnRouting(input: {
   const explicitPersonal = personalDomain(input.message);
   const identity = pendingIdentity(input.message, input.state);
   const institutionNeed = pendingInstitutionNeed(input.message, input.state);
+  const catalogRequested = generalCourseIntent(input.message);
   const domain =
     institutionNeed
       ? "platform"
@@ -638,6 +684,7 @@ export function resolveDeterministicTurnRouting(input: {
     teacherConstraints,
     factTopics,
     referencedEntityIds: factReference?.entityIds,
+    catalogRequested,
     intent: institutionNeed
       ? "institution_service"
       : currentInstitutionOperation
@@ -650,10 +697,12 @@ export function resolveDeterministicTurnRouting(input: {
         ? domain === "platform"
           ? "institution_service"
           : "new_consultation"
-        : factTopics.length
+      : factTopics.length
       ? "contextual_followup"
       : acceptedPending
         ? "new_consultation"
+        : catalogRequested
+          ? "new_consultation"
         : undefined,
   };
 }

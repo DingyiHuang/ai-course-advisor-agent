@@ -215,7 +215,7 @@ export function buildChatPresentation(input: {
   sources: CollectedSource[];
 }): ChatPresentation {
   const recommendations =
-    input.plan.status === "recommended"
+    input.plan.status === "recommended" || input.plan.status === "catalog"
       ? input.plan.entityIds.flatMap((entityId) => {
           const card = recommendationCard({ ...input, entityId });
           return card ? [card] : [];

@@ -76,7 +76,7 @@ function classify(message: string): Record<string, unknown> {
 
   if (
     providerControl.classifierMode === "unrelated_without_evidence" &&
-    message.includes("写一首诗")
+    message.includes("请帮我看看")
   ) {
     result.intent = "unrelated";
     return result;
@@ -1383,7 +1383,7 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(unrelated.diagnostics?.effectiveIntent).toBe("unrelated");
   });
 
-  it("preserves a safe unrelated classifier result even without intent evidence", async () => {
+  it("does not accept a classifier unrelated result without explicit out-of-domain evidence", async () => {
     const procurement = (
       await postChat({
         action: "message",
@@ -1397,7 +1397,7 @@ describe("TASK-05 real Route Handler integration", () => {
     const unrelated = (
       await postChat({
         action: "message",
-        message: "请写一首诗。",
+        message: "请帮我看看。",
         state: procurement.state,
         testMode: false,
         diagnostics: true,
@@ -1407,12 +1407,61 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(unrelated.diagnostics?.classifierCandidate?.intent).toBe(
       "unrelated",
     );
-    expect(unrelated.diagnostics?.effectiveIntent).toBe("unrelated");
-    expect(unrelated.status).toBe("unrelated");
-    expect(unrelated.entityIds).toEqual([]);
-    expect(unrelated.sources).toEqual([]);
-    expect(unrelated.presentation).toEqual({ recommendations: [] });
+    expect(unrelated.diagnostics?.effectiveIntent).toBe("new_consultation");
+    expect(unrelated.status).toBe("institution_info");
+    expect(unrelated.entityIds).toEqual(["platform-school-procurement"]);
     expect(providerControl.composerCalls).toBe(callsBefore);
+  });
+
+  it("keeps an explicit non-course poetry request unrelated without classifier or business composer", async () => {
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+    const classifierCallsBefore = providerControl.classifierCalls;
+    const composerCallsBefore = providerControl.composerCalls;
+
+    const { response } = await postChat({
+      action: "message",
+      message: "请写一首诗。",
+      state,
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(response.status).toBe("unrelated");
+    expect(response.entityIds).toEqual([]);
+    expect(response.presentation).toEqual({ recommendations: [] });
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(providerControl.composerCalls).toBe(composerCallsBefore);
+    expect(response.diagnostics?.effectiveIntent).toBe("unrelated");
+  });
+
+  it("shows the complete teacher catalog for a general course request without classifier routing", async () => {
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+    const classifierCallsBefore = providerControl.classifierCalls;
+    const composerCallsBefore = providerControl.composerCalls;
+
+    const { response } = await postChat({
+      action: "message",
+      message: "有什么课程推荐",
+      state,
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(response.status).toBe("catalog");
+    expect(response.entityIds).toHaveLength(6);
+    expect(response.entityIds.every((id) => id.startsWith("teacher-"))).toBe(
+      true,
+    );
+    expect(response.presentation.recommendations).toHaveLength(6);
+    expect(response.state.lastRecommendationIds).toEqual(response.entityIds);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(providerControl.composerCalls).toBe(composerCallsBefore + 1);
+    expect(response.diagnostics).toMatchObject({
+      effectiveIntent: "new_consultation",
+      externalModelCalls: 1,
+    });
   });
 
   it("keeps a short unrelated price question outside the current institution product", async () => {
