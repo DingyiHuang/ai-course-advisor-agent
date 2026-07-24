@@ -526,7 +526,7 @@ vi.mock("@/lib/llm/runtime", () => ({
   }),
 }));
 
-import { POST } from "@/app/api/chat/route";
+import { maxDuration, POST } from "@/app/api/chat/route";
 
 async function postChat(body: Record<string, unknown>): Promise<{
   httpStatus: number;
@@ -567,6 +567,10 @@ beforeEach(() => {
 });
 
 describe("TASK-05 real Route Handler integration", () => {
+  it("exports a Vercel duration that covers the verified model latency", () => {
+    expect(maxDuration).toBe(300);
+  });
+
   it("R01 recommends the canonical period-1 Beijing offline camp", async () => {
     const { httpStatus, response } = await postChat({
       action: "message",
@@ -1914,7 +1918,7 @@ describe("TASK-05 real Route Handler integration", () => {
     }
   });
 
-  it("ignores a client-supplied simulated failure flag in production", async () => {
+  it("ignores a stale simulated failure flag on normal production requests", async () => {
     vi.stubEnv("NODE_ENV", "production");
     try {
       const state = createInitialConversationState();
@@ -1923,12 +1927,48 @@ describe("TASK-05 real Route Handler integration", () => {
         action: "message",
         message: "我想学AI",
         state,
-        testMode: true,
+        testMode: false,
       });
       expect(httpStatus).toBe(200);
       expect(response.status).toBe("needs_identity");
       expect(response.error).toBeUndefined();
       expect(response.state.test.failNextModelCall).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("allows an explicit production test session to fail once and recover", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const armed = (
+        await postChat({
+          action: "inject_next_failure",
+          state: createInitialConversationState(),
+          testMode: true,
+        })
+      ).response;
+      expect(armed.state.test.failNextModelCall).toBe(true);
+
+      const failed = await postChat({
+        action: "message",
+        message: "我想学AI",
+        state: armed.state,
+        testMode: true,
+      });
+      expect(failed.httpStatus).toBe(503);
+      expect(failed.response.error?.code).toBe("simulated_model_failure");
+      expect(failed.response.state.test.failNextModelCall).toBe(false);
+
+      const retried = await postChat({
+        action: "message",
+        message: "我想学AI",
+        state: failed.response.state,
+        testMode: false,
+      });
+      expect(retried.httpStatus).toBe(200);
+      expect(retried.response.status).toBe("needs_identity");
+      expect(retried.response.error).toBeUndefined();
     } finally {
       vi.unstubAllEnvs();
     }

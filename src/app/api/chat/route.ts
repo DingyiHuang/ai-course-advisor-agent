@@ -6,10 +6,12 @@ import { shanghaiToday } from "@/lib/time/shanghai";
 import type { ConversationState, TurnDiagnostics } from "@/lib/domain/conversation";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 function productionSafeRequest(
   body: Record<string, unknown>,
 ): Record<string, unknown> {
+  const explicitTestMode = body.testMode === true;
   const rawState =
     body.state && typeof body.state === "object" && !Array.isArray(body.state)
       ? (body.state as Record<string, unknown>)
@@ -22,13 +24,14 @@ function productionSafeRequest(
       : {};
   return {
     ...body,
-    testMode: false,
+    testMode: explicitTestMode,
     state: rawState
       ? {
           ...rawState,
           test: {
             ...rawTest,
-            failNextModelCall: false,
+            failNextModelCall:
+              explicitTestMode && rawTest.failNextModelCall === true,
           },
         }
       : body.state,

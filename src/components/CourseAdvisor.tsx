@@ -295,7 +295,10 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
     request: ChatRequest,
     options: RequestOptions = {},
   ): Promise<ChatResponse | undefined> {
-    let identifiedRequest = identifyChatRequest(request);
+    let identifiedRequest = identifyChatRequest({
+      ...request,
+      testMode: request.testMode ?? testMode,
+    });
     const lease = acquireRequestLease(
       requestInFlightRef.current,
       identifiedRequest.clientRequestId,
