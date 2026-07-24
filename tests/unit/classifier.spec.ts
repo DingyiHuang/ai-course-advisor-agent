@@ -381,6 +381,83 @@ describe("classifier candidates are evidence-gated", () => {
     });
   });
 
+  it("collects teacher identity, foundation, leave constraint, flexible dates and original city in one turn", () => {
+    const routing = resolveDeterministicTurnRouting({
+      message:
+        "我是教师，零基础，工作日不能脱岗，人在深圳，日期没有要求，想学习AI课程",
+      state: createInitialConversationState(),
+    });
+
+    expect(routing.domain).toBe("teacher");
+    expect(routing.teacherConstraints).toMatchObject({
+      startingLevel: "beginner",
+      canTakeContinuousLeave: false,
+      city: "深圳",
+    });
+    expect(routing.teacherConstraints.availableProductIds).toHaveLength(6);
+  });
+
+  it("fills all supported teacher pending answers from one natural response", () => {
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+    state.pendingQuestionKeys = [
+      "canTakeContinuousLeave",
+      "availableDates",
+      "city",
+    ];
+
+    const routing = resolveDeterministicTurnRouting({
+      message: "可以连续参加，日期没有要求，在深圳",
+      state,
+    });
+
+    expect(routing.intent).toBe("new_consultation");
+    expect(routing.teacherConstraints).toMatchObject({
+      canTakeContinuousLeave: true,
+      city: "深圳",
+    });
+    expect(routing.teacherConstraints.availableProductIds).toHaveLength(6);
+  });
+
+  it("recognizes flexible dates, weekend-only availability and Chengdu without replacing the city", () => {
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+
+    const routing = resolveDeterministicTurnRouting({
+      message: "日期都行，只能周末，我在成都",
+      state,
+    });
+
+    expect(routing.teacherConstraints).toMatchObject({
+      canTakeContinuousLeave: false,
+      city: "成都",
+    });
+    expect(routing.teacherConstraints.availableProductIds).toHaveLength(6);
+  });
+
+  it.each([
+    ["没学过", "beginner", undefined],
+    ["刚入门", "beginner", undefined],
+    ["学过一点", "beginner", undefined],
+    ["完成过L1", "L1", "met"],
+    ["已经完成L2", "L2", "met"],
+  ])(
+    "maps teacher foundation phrase %s to the existing level fields",
+    (phrase, startingLevel, prerequisiteStatus) => {
+      const state = createInitialConversationState();
+      state.domain = "teacher";
+      const routing = resolveDeterministicTurnRouting({
+        message: phrase,
+        state,
+      });
+
+      expect(routing.teacherConstraints.startingLevel).toBe(startingLevel);
+      expect(routing.teacherConstraints.prerequisiteStatus).toBe(
+        prerequisiteStatus,
+      );
+    },
+  );
+
   it("normalizes a Beijing district and explicit mode change over adversarial classifier values", () => {
     const state = createInitialConversationState();
     state.domain = "student";

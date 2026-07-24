@@ -379,12 +379,19 @@ function explicitStudentConstraints(
 function explicitTeacherConstraints(
   message: string,
   state: ConversationState,
+  effectiveDomain: KnownDomain | undefined,
 ): Partial<TeacherConstraints> {
-  if (state.domain !== "teacher") return {};
+  if (effectiveDomain !== "teacher") return {};
   const keys = new Set(state.pendingQuestionKeys);
   const text = normalized(message);
   const patch: Partial<TeacherConstraints> = {};
-  if (/零基础/u.test(text)) {
+  if (/(?:完成过|已经完成|已完成|学完)l2/iu.test(text)) {
+    patch.startingLevel = "L2";
+    patch.prerequisiteStatus = "met";
+  } else if (/(?:完成过|已经完成|已完成|学完)l1/iu.test(text)) {
+    patch.startingLevel = "L1";
+    patch.prerequisiteStatus = "met";
+  } else if (/(?:零基础|没学过|刚入门|学过一点)/u.test(text)) {
     patch.startingLevel = "beginner";
   }
   if (/(?:已|已经)?具备l1同等能力|通过l1同等能力测评/iu.test(text)) {
@@ -411,21 +418,39 @@ function explicitTeacherConstraints(
     /8月3日?(?:至|到|—|-)?5日|8月3日至5日/u.test(text)
   ) {
     patch.availableProductIds = ["teacher-l2-intensive"];
-  }
-  if (
-    /(?:可以|能|可).{0,12}(?:连续|脱岗|请假|参加)|连续参加/u.test(text)
+  } else if (
+    /(?:日期(?:没有要求|没要求|不限|都行)|时间都可以|哪一期都行|看安排)/u.test(
+      text,
+    )
   ) {
-    patch.canTakeContinuousLeave = true;
+    patch.availableProductIds = TEACHER_PRODUCTS.map(({ id }) => id);
   }
   if (
-    /(?:不能|不便|无法).{0,8}(?:连续|脱岗|请假)/u.test(text)
+    /(?:工作日)?(?:不能|不便|无法).{0,8}(?:连续|脱岗|请假|参加)|只能周末|平时没有时间|只能分段上课/u.test(
+      text,
+    )
   ) {
     patch.canTakeContinuousLeave = false;
   } else if (
-    keys.has("canTakeContinuousLeave") &&
-    /(?:可以|能).{0,8}(?:连续|脱岗|请假|参加)/u.test(text)
+    /(?:可以|能|可).{0,12}(?:连续参加|连续脱岗|连续安排|脱岗|请假)|连续几天没问题|都可以参加|可以连续参加|时间可以连续安排/u.test(
+      text,
+    ) ||
+    (keys.has("canTakeContinuousLeave") &&
+      /(?:可以|能).{0,8}(?:连续|脱岗|请假|参加)/u.test(text))
   ) {
     patch.canTakeContinuousLeave = true;
+  }
+  const city = extractExplicitStudentRegion(message);
+  if (city) {
+    const cityName =
+      city.regionDisplayName ??
+      {
+        beijing: "北京",
+        shanghai: "上海",
+        guangzhou: "广州",
+        other: undefined,
+      }[city.region];
+    if (cityName) patch.city = cityName;
   }
   return patch;
 }
@@ -661,9 +686,8 @@ export function resolveDeterministicTurnRouting(input: {
   );
   const teacherConstraints = explicitTeacherConstraints(
     input.message,
-    input.state.domain === "teacher" || factReference?.domain === "teacher"
-      ? { ...input.state, domain: "teacher" }
-      : input.state,
+    input.state,
+    effectiveDomain,
   );
   const factTopics =
     factReference?.factTopics ??
