@@ -29,6 +29,7 @@ const providerControl = vi.hoisted(() => ({
     | "other_region_first_guangzhou_then_ok"
     | "other_region_boundary_first_guangzhou_then_ok"
     | "always_ungrounded"
+    | "programmatic_content_omits_fact_ids"
     | "valid_chinese_amount",
   classifierCalls: 0,
   composerCalls: 0,
@@ -76,7 +77,7 @@ function classify(message: string): Record<string, unknown> {
 
   if (
     providerControl.classifierMode === "unrelated_without_evidence" &&
-    message.includes("写一首诗")
+    message.includes("请帮我看看")
   ) {
     result.intent = "unrelated";
     return result;
@@ -288,7 +289,18 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
       constraintKeys: string[];
     }>;
   };
-  const usedFactIds = facts.map(({ id }) => id);
+  const traceCodes = new Set(
+    ((payload.decisionTrace as Array<{ code?: string }>) ?? [])
+      .map(({ code }) => code)
+      .filter((code): code is string => typeof code === "string"),
+  );
+  const usedFactIds =
+    providerControl.composerMode === "programmatic_content_omits_fact_ids" &&
+    (plan.status === "catalog" ||
+      (plan.status === "boundary_follow_up" &&
+        traceCodes.has("teacher_outside_city_travel_required")))
+      ? []
+      : facts.map(({ id }) => id);
   const recommendationReasons =
     plan.recommendationReasonRequirements?.map((group) => ({
       entityId: group.entityId,
@@ -297,11 +309,6 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
         reason: `该班型与已确认的${constraintKey}约束相符。`,
       })),
     })) ?? [];
-  const traceCodes = new Set(
-    ((payload.decisionTrace as Array<{ code?: string }>) ?? [])
-      .map(({ code }) => code)
-      .filter((code): code is string => typeof code === "string"),
-  );
   const hasOfflineFallback =
     traceCodes.has("guangzhou_student_offline_not_provided") ||
     traceCodes.has("other_region_student_offline_not_provided");
@@ -672,11 +679,14 @@ describe("TASK-05 real Route Handler integration", () => {
   });
 
   it("R04 recommends only the L1 weekend teacher product", async () => {
+    const classifierCallsBefore = providerControl.classifierCalls;
+    const composerCallsBefore = providerControl.composerCalls;
     const { response } = await postChat({
       action: "message",
       message: "零基础教师，周末有空，工作日不能脱岗",
       state: createInitialConversationState(),
       testMode: false,
+      diagnostics: true,
     });
     expect(response.state.domain).toBe("teacher");
     expect(response.entityIds).toEqual(["teacher-l1-weekend"]);
@@ -686,6 +696,13 @@ describe("TASK-05 real Route Handler integration", () => {
     });
     expect(JSON.stringify(response)).not.toContain("teacher-l1-intensive");
     expect(JSON.stringify(response)).not.toContain("platform-school-procurement");
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(providerControl.composerCalls).toBe(composerCallsBefore + 1);
+    expect(response.diagnostics).toMatchObject({
+      classifierMs: 0,
+      composerAttempts: 1,
+      externalModelCalls: 1,
+    });
   });
 
   it("R05 recommends L2 intensive with prerequisite, time and goal traces", async () => {
@@ -716,6 +733,187 @@ describe("TASK-05 real Route Handler integration", () => {
         "availableProductIds",
       ]),
     );
+  });
+
+  it("keeps an outside teacher city and asks only whether travel to a course city is possible", async () => {
+    const classifierCallsBefore = providerControl.classifierCalls;
+    const composerCallsBefore = providerControl.composerCalls;
+    const first = (
+      await postChat({
+        action: "message",
+        message:
+          "我是教师，零基础，可以连续参加，日期没有要求，人在深圳，想学习AI课程",
+        state: createInitialConversationState(),
+        testMode: false,
+        diagnostics: true,
+      })
+    ).response;
+
+    expect(first.status).toBe("boundary_follow_up");
+    expect(first.boundaryCode).toBe("teacher_outside_city_travel_required");
+    expect(first.state.teacherConstraints).toMatchObject({
+      startingLevel: "beginner",
+      canTakeContinuousLeave: true,
+      city: "深圳",
+    });
+    expect(first.state.teacherConstraints.availableProductIds).toHaveLength(6);
+    expect(first.state.pendingQuestionKeys).toEqual([
+      "canTravelToCourseCity",
+    ]);
+    expect(first.message).toContain("深圳");
+    expect(first.message).toContain("北京、上海和广州");
+    expect(first.message).toContain("腾讯会议");
+    expect(first.message).toContain("线下工作坊");
+    expect(first.presentation.recommendations).toEqual([]);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(providerControl.composerCalls).toBe(composerCallsBefore + 1);
+    expect(first.diagnostics).toMatchObject({
+      classifierMs: 0,
+      composerAttempts: 1,
+      externalModelCalls: 1,
+    });
+  });
+
+  it("counts code-generated teacher boundary facts without forcing a composer retry", async () => {
+    providerControl.composerMode = "programmatic_content_omits_fact_ids";
+    const { response } = await postChat({
+      action: "message",
+      message:
+        "我是教师，零基础，可以连续参加，日期没有要求，人在深圳，想学习AI课程",
+      state: createInitialConversationState(),
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(response.status).toBe("boundary_follow_up");
+    expect(response.sources.length).toBeGreaterThan(0);
+    expect(response.sources.every(({ document }) => document === "B")).toBe(
+      true,
+    );
+    expect(response.diagnostics).toMatchObject({
+      composerAttempts: 1,
+      composerRetries: 0,
+      groundingFailures: [],
+      externalModelCalls: 1,
+    });
+  });
+
+  it("fills all pending teacher answers in one turn without classifier routing", async () => {
+    const setup = (
+      await postChat({
+        action: "message",
+        message: "我是教师，零基础，想学习AI课程",
+        state: createInitialConversationState(),
+        testMode: false,
+      })
+    ).response;
+    expect(setup.state.pendingQuestionKeys).toEqual(
+      expect.arrayContaining([
+        "canTakeContinuousLeave",
+        "availableDates",
+        "city",
+      ]),
+    );
+    const classifierCallsBefore = providerControl.classifierCalls;
+    const composerCallsBefore = providerControl.composerCalls;
+
+    const answer = (
+      await postChat({
+        action: "message",
+        message: "可以连续参加，日期没有要求，在深圳",
+        state: setup.state,
+        testMode: false,
+        diagnostics: true,
+      })
+    ).response;
+
+    expect(answer.status).toBe("boundary_follow_up");
+    expect(answer.boundaryCode).toBe(
+      "teacher_outside_city_travel_required",
+    );
+    expect(answer.state.teacherConstraints).toMatchObject({
+      startingLevel: "beginner",
+      canTakeContinuousLeave: true,
+      city: "深圳",
+    });
+    expect(answer.state.teacherConstraints.availableProductIds).toHaveLength(6);
+    expect(answer.state.pendingQuestionKeys).toEqual([
+      "canTravelToCourseCity",
+    ]);
+    expect(answer.message).not.toMatch(/日期|所在城市/u);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(providerControl.composerCalls).toBe(composerCallsBefore + 1);
+    expect(answer.diagnostics).toMatchObject({
+      classifierMs: 0,
+      composerAttempts: 1,
+      externalModelCalls: 1,
+    });
+  });
+
+  it("preserves Chengdu while extracting flexible dates and weekend-only availability", async () => {
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+    state.pendingQuestionKeys = [
+      "canTakeContinuousLeave",
+      "availableDates",
+      "city",
+    ];
+    const classifierCallsBefore = providerControl.classifierCalls;
+
+    const { response } = await postChat({
+      action: "message",
+      message: "日期都行，只能周末，我在成都",
+      state,
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(response.status).toBe("boundary_follow_up");
+    expect(response.state.teacherConstraints).toMatchObject({
+      canTakeContinuousLeave: false,
+      city: "成都",
+    });
+    expect(response.state.teacherConstraints.availableProductIds).toHaveLength(
+      6,
+    );
+    expect(response.state.pendingQuestionKeys).toEqual([
+      "canTravelToCourseCity",
+    ]);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(response.diagnostics?.classifierMs).toBe(0);
+  });
+
+  it("does not repeat the outside city question after a teacher declines all supported travel cities", async () => {
+    const first = (
+      await postChat({
+        action: "message",
+        message:
+          "我是教师，零基础，只能周末，日期都行，我在深圳，想学习AI课程",
+        state: createInitialConversationState(),
+        testMode: false,
+      })
+    ).response;
+    const second = (
+      await postChat({
+        action: "message",
+        message: "北京、上海、广州均不便前往",
+        state: first.state,
+        testMode: false,
+        diagnostics: true,
+      })
+    ).response;
+
+    expect(second.status).toBe("boundary_follow_up");
+    expect(second.boundaryCode).toBe("teacher_no_fully_online_product");
+    expect(second.state.teacherConstraints).toMatchObject({
+      city: "深圳",
+      canTravelToCourseCity: false,
+    });
+    expect(second.state.pendingQuestionKeys).toEqual([]);
+    expect(second.message).toContain("没有完全线上的教师班型");
+    expect(second.message).toContain("下午仍需");
+    expect(second.message).not.toMatch(/您在哪|所在城市是|哪个城市/u);
+    expect(second.presentation.recommendations).toEqual([]);
   });
 
   it("M01 and M02 preserve the selected student camp and use only material A", async () => {
@@ -995,8 +1193,9 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(second.message).toContain("30天回放");
   });
 
-  it("overrides a classifier that changes the explicit first period to the second", async () => {
+  it("skips the classifier when explicit student constraints are sufficient", async () => {
     providerControl.classifierMode = "first_period_as_second";
+    const classifierCallsBefore = providerControl.classifierCalls;
     const first = (
       await postChat({
         action: "message",
@@ -1013,14 +1212,9 @@ describe("TASK-05 real Route Handler integration", () => {
       availablePeriods: [1],
       modePreference: "offline",
     });
-    expect(first.diagnostics?.classifierCandidate?.studentConstraints)
-      .toMatchObject({ availablePeriods: [2] });
-    expect(first.diagnostics?.corrections).toContainEqual({
-      reasonCode: "explicit_constraint_overrode_classifier",
-      field: "student.availablePeriods",
-      candidateValue: [2],
-      confirmedValue: [1],
-    });
+    expect(first.diagnostics?.classifierCandidate).toBeUndefined();
+    expect(first.diagnostics?.classifierMs).toBe(0);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
     expect(JSON.stringify(first.diagnostics)).not.toMatch(
       /evidence|我是广州家长|system prompt|api.?key/iu,
     );
@@ -1046,7 +1240,7 @@ describe("TASK-05 real Route Handler integration", () => {
     );
   });
 
-  it("retries a Guangzhou fallback that claims all constraints fully match", async () => {
+  it("normalizes a Guangzhou fallback that claims all constraints fully match without recomposition", async () => {
     providerControl.composerMode = "guangzhou_first_full_match_then_ok";
     const first = (
       await postChat({
@@ -1070,7 +1264,9 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(second.entityIds).toEqual(["camp-p1-online"]);
     expect(second.message).not.toMatch(/(?:完全|全部).{0,6}(?:符合|匹配)/u);
     expect(second.diagnostics).toMatchObject({
-      composerAttempts: 2,
+      composerAttempts: 1,
+      composerRetries: 0,
+      externalModelCalls: 1,
       groundingFailures: [
         { attempt: 1, reasonCode: "recommendation_reason_mismatch" },
       ],
@@ -1102,7 +1298,9 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(second.message).toContain("线下偏好未满足");
     expect(second.message).not.toMatch(/(?:完全|全部).{0,6}(?:符合|匹配)/u);
     expect(second.diagnostics).toMatchObject({
-      composerAttempts: 2,
+      composerAttempts: 1,
+      composerRetries: 0,
+      externalModelCalls: 1,
       groundingFailures: [
         {
           attempt: 1,
@@ -1214,6 +1412,7 @@ describe("TASK-05 real Route Handler integration", () => {
       })
     ).response;
     providerControl.classifierMode = "travel_answer_as_beijing";
+    const classifierCallsBefore = providerControl.classifierCalls;
     const second = (
       await postChat({
         action: "message",
@@ -1233,13 +1432,9 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(second.entityIds).toEqual(["camp-p1-online"]);
     expect(JSON.stringify(second)).toContain("深圳");
     expect(JSON.stringify(second)).not.toContain("广州");
-    expect(second.diagnostics?.corrections).toContainEqual(
-      expect.objectContaining({
-        field: "student.region",
-        candidateValue: "beijing",
-        confirmedValue: "other",
-      }),
-    );
+    expect(second.diagnostics?.classifierCandidate).toBeUndefined();
+    expect(second.diagnostics?.classifierMs).toBe(0);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
   });
 
   it("keeps Chengdu distinct from Shenzhen and Guangzhou", async () => {
@@ -1357,6 +1552,7 @@ describe("TASK-05 real Route Handler integration", () => {
         testMode: false,
       })
     ).response;
+    const classifierCallsBefore = providerControl.classifierCalls;
     const callsBefore = providerControl.composerCalls;
     const historyBefore = structuredClone(procurement.state.shortHistory);
     const unrelated = (
@@ -1379,11 +1575,15 @@ describe("TASK-05 real Route Handler integration", () => {
     );
     expect(unrelated.state.shortHistory).toEqual(historyBefore);
     expect(unrelated.message).not.toMatch(/20人|5万元|2980/u);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
     expect(providerControl.composerCalls).toBe(callsBefore);
-    expect(unrelated.diagnostics?.effectiveIntent).toBe("unrelated");
+    expect(unrelated.diagnostics).toMatchObject({
+      effectiveIntent: "unrelated",
+      externalModelCalls: 0,
+    });
   });
 
-  it("preserves a safe unrelated classifier result even without intent evidence", async () => {
+  it("does not accept a classifier unrelated result without explicit out-of-domain evidence", async () => {
     const procurement = (
       await postChat({
         action: "message",
@@ -1393,26 +1593,103 @@ describe("TASK-05 real Route Handler integration", () => {
       })
     ).response;
     providerControl.classifierMode = "unrelated_without_evidence";
+    const classifierCallsBefore = providerControl.classifierCalls;
     const callsBefore = providerControl.composerCalls;
     const unrelated = (
       await postChat({
         action: "message",
-        message: "请写一首诗。",
+        message: "请帮我看看。",
         state: procurement.state,
         testMode: false,
         diagnostics: true,
       })
     ).response;
 
-    expect(unrelated.diagnostics?.classifierCandidate?.intent).toBe(
-      "unrelated",
-    );
-    expect(unrelated.diagnostics?.effectiveIntent).toBe("unrelated");
-    expect(unrelated.status).toBe("unrelated");
-    expect(unrelated.entityIds).toEqual([]);
-    expect(unrelated.sources).toEqual([]);
-    expect(unrelated.presentation).toEqual({ recommendations: [] });
+    expect(unrelated.diagnostics?.classifierCandidate).toBeUndefined();
+    expect(unrelated.diagnostics?.classifierMs).toBe(0);
+    expect(unrelated.diagnostics?.effectiveIntent).toBe("new_consultation");
+    expect(unrelated.status).toBe("institution_info");
+    expect(unrelated.entityIds).toEqual(["platform-school-procurement"]);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
     expect(providerControl.composerCalls).toBe(callsBefore);
+  });
+
+  it("keeps an explicit non-course poetry request unrelated without classifier or business composer", async () => {
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+    const classifierCallsBefore = providerControl.classifierCalls;
+    const composerCallsBefore = providerControl.composerCalls;
+
+    const { response } = await postChat({
+      action: "message",
+      message: "请写一首诗。",
+      state,
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(response.status).toBe("unrelated");
+    expect(response.entityIds).toEqual([]);
+    expect(response.presentation).toEqual({ recommendations: [] });
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(providerControl.composerCalls).toBe(composerCallsBefore);
+    expect(response.diagnostics?.effectiveIntent).toBe("unrelated");
+  });
+
+  it("shows the complete teacher catalog for a general course request without classifier routing", async () => {
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+    const classifierCallsBefore = providerControl.classifierCalls;
+    const composerCallsBefore = providerControl.composerCalls;
+
+    const { response } = await postChat({
+      action: "message",
+      message: "有什么课程推荐",
+      state,
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(response.status).toBe("catalog");
+    expect(response.entityIds).toHaveLength(6);
+    expect(response.entityIds.every((id) => id.startsWith("teacher-"))).toBe(
+      true,
+    );
+    expect(response.presentation.recommendations).toHaveLength(6);
+    expect(response.state.lastRecommendationIds).toEqual(response.entityIds);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(providerControl.composerCalls).toBe(composerCallsBefore + 1);
+    expect(response.diagnostics).toMatchObject({
+      effectiveIntent: "new_consultation",
+      externalModelCalls: 1,
+    });
+  });
+
+  it("counts structured catalog card facts without forcing a composer retry", async () => {
+    providerControl.composerMode = "programmatic_content_omits_fact_ids";
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+
+    const { response } = await postChat({
+      action: "message",
+      message: "有什么课程推荐",
+      state,
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(response.status).toBe("catalog");
+    expect(response.presentation.recommendations).toHaveLength(6);
+    expect(response.sources.length).toBeGreaterThan(0);
+    expect(response.sources.every(({ document }) => document === "B")).toBe(
+      true,
+    );
+    expect(response.diagnostics).toMatchObject({
+      composerAttempts: 1,
+      composerRetries: 0,
+      groundingFailures: [],
+      externalModelCalls: 1,
+    });
   });
 
   it("keeps a short unrelated price question outside the current institution product", async () => {

@@ -62,6 +62,7 @@ const PENDING_QUESTION_KEYS: Record<ConversationDomain, ReadonlySet<string>> = {
     "goal",
     "startingLevel",
     "canTakeContinuousLeave",
+    "canTravelToCourseCity",
     "availableProductIds",
     "city",
     "prerequisiteStatus",
@@ -200,6 +201,9 @@ function sanitizeTeacherConstraints(value: unknown): TeacherConstraints {
   }
   if (typeof input.canTakeContinuousLeave === "boolean") {
     output.canTakeContinuousLeave = input.canTakeContinuousLeave;
+  }
+  if (typeof input.canTravelToCourseCity === "boolean") {
+    output.canTravelToCourseCity = input.canTravelToCourseCity;
   }
   if (Array.isArray(input.availableProductIds)) {
     const known = new Set(TEACHER_PRODUCTS.map(({ id }) => id));

@@ -51,9 +51,11 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
   const bodyRecord = body as Record<string, unknown>;
-  const isNonProduction = process.env.NODE_ENV !== "production";
+  const diagnosticsAllowed =
+    process.env.NODE_ENV !== "production" ||
+    process.env.VERCEL_ENV === "preview";
   const diagnosticsEnabled =
-    isNonProduction && bodyRecord.diagnostics === true;
+    diagnosticsAllowed && bodyRecord.diagnostics === true;
   const diagnostics: TurnDiagnostics | undefined = diagnosticsEnabled
     ? {
         corrections: [],
@@ -64,15 +66,31 @@ export async function POST(request: Request): Promise<Response> {
         decisionTrace: [],
         groundingFailures: [],
         composerAttempts: 0,
+        composerRetries: 0,
+        externalModelCalls: 0,
+        contextParsingMs: 0,
+        constraintExtractionMs: 0,
+        classifierMs: 0,
+        ruleExecutionMs: 0,
+        composerMs: 0,
+        groundingMs: 0,
       }
     : undefined;
-  const safeBody = isNonProduction
+  const safeBody = process.env.NODE_ENV !== "production"
     ? bodyRecord
     : productionSafeRequest(bodyRecord);
 
   let runtimeClient: ReturnType<typeof createRuntimeLlmClient> | undefined;
   const getClient = () => {
-    runtimeClient ??= createRuntimeLlmClient();
+    if (!runtimeClient) {
+      const client = createRuntimeLlmClient();
+      runtimeClient = {
+        async complete(request) {
+          if (diagnostics) diagnostics.externalModelCalls += 1;
+          return client.complete(request);
+        },
+      };
+    }
     return runtimeClient;
   };
   const response = await runConversationTurn(safeBody, {
@@ -105,6 +123,16 @@ export async function POST(request: Request): Promise<Response> {
     diagnostics.entityIds = [...response.entityIds];
     diagnostics.finalStatus = response.status;
     diagnostics.routeLatencyMs = Math.round(performance.now() - startedAt);
+    for (const field of [
+      "contextParsingMs",
+      "constraintExtractionMs",
+      "classifierMs",
+      "ruleExecutionMs",
+      "composerMs",
+      "groundingMs",
+    ] as const) {
+      diagnostics[field] = Math.round(diagnostics[field]);
+    }
     response.diagnostics = diagnostics;
   } else {
     delete response.diagnostics;

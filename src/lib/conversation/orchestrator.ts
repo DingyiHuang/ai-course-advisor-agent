@@ -39,6 +39,7 @@ import {
   assertFollowUpUsesClosedDimensions,
   assertHighRiskValuesGrounded,
   assertPlanMatchesConfirmedState,
+  inferFactIdsForMentionedHighRiskValues,
   GroundingError,
   validateUsedFactIds,
 } from "@/lib/validation/grounding";
@@ -186,7 +187,15 @@ function effectiveIntent(input: {
 }): ConversationIntent {
   if (input.deterministicIntent) return input.deterministicIntent;
   const intent = input.appliedIntent;
-  if (intent === "unrelated" || intent === "unclear") return intent;
+  if (
+    intent === "unrelated" ||
+    intent === "unclear" ||
+    intent === "unknown"
+  ) {
+    return input.originalState.domain === "unknown"
+      ? "unknown"
+      : "new_consultation";
+  }
   if (intent === "contextual_followup" || intent === "fact_question") {
     return hasCurrentBusinessContext(input.originalState) &&
       input.factTopics.length > 0
@@ -220,6 +229,25 @@ function effectiveIntent(input: {
   return input.originalState.domain === "unknown" ? "unknown" : "unclear";
 }
 
+function deterministicCandidate(input: {
+  routingState: ConversationState;
+  deterministicIntent?: ConversationIntent;
+}): ClassifierCandidate {
+  return {
+    intent:
+      input.deterministicIntent ??
+      (input.routingState.domain === "unknown"
+        ? "unknown"
+        : "new_consultation"),
+    studentConstraints: {},
+    teacherConstraints: {},
+    studentReference: {},
+    teacherReference: {},
+    factTopics: [],
+    evidence: {},
+  };
+}
+
 function incrementStalledTurns(
   state: ConversationState,
   madeProgress: boolean,
@@ -243,7 +271,7 @@ function prepareStateForPlan(
   const next = structuredClone(state);
   next.pendingQuestionKeys = [...plan.nextQuestionKeys];
   next.pendingQuestionOptions = [...plan.nextQuestionOptions];
-  if (plan.status === "recommended") {
+  if (plan.status === "recommended" || plan.status === "catalog") {
     next.lastRecommendationIds = [...plan.entityIds];
     next.selectedEntityId =
       plan.entityIds.length === 1 ? plan.entityIds[0] : undefined;
@@ -265,6 +293,34 @@ function recordPlanDiagnostics(
   diagnostics.pendingQuestionKeys = [...plan.nextQuestionKeys];
   diagnostics.entityIds = [...plan.entityIds];
   diagnostics.decisionTrace = structuredClone(plan.decisionTrace);
+}
+
+function addDiagnosticDuration(
+  dependencies: ConversationDependencies,
+  field:
+    | "contextParsingMs"
+    | "constraintExtractionMs"
+    | "classifierMs"
+    | "ruleExecutionMs"
+    | "composerMs"
+    | "groundingMs",
+  startedAt: number,
+): void {
+  const diagnostics = dependencies.diagnostics;
+  if (!diagnostics) return;
+  diagnostics[field] += performance.now() - startedAt;
+}
+
+function measureRuleExecution<T>(
+  dependencies: ConversationDependencies,
+  operation: () => T,
+): T {
+  const startedAt = performance.now();
+  try {
+    return operation();
+  } finally {
+    addDiagnosticDuration(dependencies, "ruleExecutionMs", startedAt);
+  }
 }
 
 function buildVerifiedComposerPlan(
@@ -905,8 +961,29 @@ function validateComposerOutput(input: {
     ].join("\n"),
     input.plan.entityIds,
   );
-  const usedFactIds = validateUsedFactIds(
+  const modelUsedFactIds = validateUsedFactIds(
     input.output.usedFactIds,
+    input.plan.facts,
+  );
+  const programmaticFactIds =
+    input.plan.requiredPrefix !== undefined || input.plan.status === "catalog"
+      ? input.plan.decisionTrace.flatMap(({ factIds }) => factIds)
+      : [];
+  const inferredHighRiskFactIds = inferFactIdsForMentionedHighRiskValues(
+    [
+      input.output.message,
+      ...input.output.recommendationReasons.flatMap((group) =>
+        group.reasons.map(({ reason }) => reason),
+      ),
+    ].join("\n"),
+    input.plan.facts,
+  );
+  const usedFactIds = validateUsedFactIds(
+    [
+      ...modelUsedFactIds,
+      ...programmaticFactIds,
+      ...inferredHighRiskFactIds,
+    ],
     input.plan.facts,
   );
   if (input.plan.facts.length && usedFactIds.length === 0) {
@@ -1029,11 +1106,20 @@ async function completeComposerPlan(input: {
   userMessage: string;
   dependencies: ConversationDependencies;
 }): Promise<ChatResponse> {
-  assertPlanMatchesConfirmedState(input.workingState, input.plan);
-  assertDecisionTraceConstraints(
-    input.plan.decisionTrace,
-    collectedConstraintKeys(input.workingState),
-  );
+  const initialGroundingStartedAt = performance.now();
+  try {
+    assertPlanMatchesConfirmedState(input.workingState, input.plan);
+    assertDecisionTraceConstraints(
+      input.plan.decisionTrace,
+      collectedConstraintKeys(input.workingState),
+    );
+  } finally {
+    addDiagnosticDuration(
+      input.dependencies,
+      "groundingMs",
+      initialGroundingStartedAt,
+    );
+  }
   let generated:
     | { output: LlmComposerOutput; usedFactIds: string[] }
     | undefined;
@@ -1042,23 +1128,79 @@ async function completeComposerPlan(input: {
   for (const attempt of [1, 2] as const) {
     if (input.dependencies.diagnostics) {
       input.dependencies.diagnostics.composerAttempts += 1;
+      if (attempt === 2) {
+        input.dependencies.diagnostics.composerRetries += 1;
+      }
     }
     try {
-      const rawOutput = await input.dependencies.composer.composeOnce(
-        retryFeedback
-          ? { ...input.plan, retryFeedback }
-          : input.plan,
-        input.workingState.shortHistory,
-      );
+      const composerStartedAt = performance.now();
+      let rawOutput: LlmComposerOutput;
+      try {
+        rawOutput = await input.dependencies.composer.composeOnce(
+          retryFeedback
+            ? { ...input.plan, retryFeedback }
+            : input.plan,
+          input.workingState.shortHistory,
+        );
+      } finally {
+        addDiagnosticDuration(
+          input.dependencies,
+          "composerMs",
+          composerStartedAt,
+        );
+      }
       const output =
         attempt === 2
           ? normalizeSecondAttemptOfflineFallback(input.plan, rawOutput)
           : rawOutput;
-      generated = validateComposerOutput({
-        output,
-        plan: input.plan,
-        userMessage: input.userMessage,
-      });
+      const groundingStartedAt = performance.now();
+      try {
+        try {
+          generated = validateComposerOutput({
+            output,
+            plan: input.plan,
+            userMessage: input.userMessage,
+          });
+        } catch (error) {
+          const canNormalizeLocally =
+            attempt === 1 &&
+            error instanceof GroundingError &&
+            error.reasonCode === "recommendation_reason_mismatch" &&
+            hasOfflineFallbackTrace(
+              new Set(input.plan.decisionTrace.map(({ code }) => code)),
+            );
+          if (!canNormalizeLocally) throw error;
+
+          const normalizedOutput = normalizeSecondAttemptOfflineFallback(
+            input.plan,
+            output,
+          );
+          try {
+            generated = validateComposerOutput({
+              output: normalizedOutput,
+              plan: input.plan,
+              userMessage: input.userMessage,
+            });
+          } catch {
+            throw error;
+          }
+          if (input.dependencies.diagnostics) {
+            input.dependencies.diagnostics.groundingFailures.push({
+              attempt,
+              reasonCode: error.reasonCode,
+              ...(error.detailCode
+                ? { detailCode: error.detailCode }
+                : {}),
+            });
+          }
+        }
+      } finally {
+        addDiagnosticDuration(
+          input.dependencies,
+          "groundingMs",
+          groundingStartedAt,
+        );
+      }
       break;
     } catch (error) {
       lastError = error;
@@ -1148,6 +1290,7 @@ export async function runConversationTurn(
   request: ConversationRequest,
   dependencies: ConversationDependencies,
 ): Promise<ChatResponse> {
+  const contextParsingStartedAt = performance.now();
   const originalState = sanitizeConversationState(request.state);
   const action = request.action ?? "message";
 
@@ -1270,6 +1413,11 @@ export async function runConversationTurn(
   try {
     message = validateUserMessage(request.message);
   } catch (error) {
+    addDiagnosticDuration(
+      dependencies,
+      "contextParsingMs",
+      contextParsingStartedAt,
+    );
     return errorResponse({
       state: originalState,
       code: "invalid_input",
@@ -1280,6 +1428,11 @@ export async function runConversationTurn(
           : "输入无法处理。",
     });
   }
+  addDiagnosticDuration(
+    dependencies,
+    "contextParsingMs",
+    contextParsingStartedAt,
+  );
 
   if (originalState.test.failNextModelCall) {
     const state = structuredClone(originalState);
@@ -1298,7 +1451,9 @@ export async function runConversationTurn(
         role: "user",
         content: message,
       });
-      const plan = buildCatalogPlan({ state: workingState });
+      const plan = measureRuleExecution(dependencies, () =>
+        buildCatalogPlan({ state: workingState }),
+      );
       recordPlanDiagnostics(dependencies, workingState, plan);
       return await completeComposerPlan({
         workingState,
@@ -1308,10 +1463,16 @@ export async function runConversationTurn(
       });
     }
 
+    const constraintExtractionStartedAt = performance.now();
     const deterministic = resolveDeterministicTurnRouting({
       message,
       state: originalState,
     });
+    addDiagnosticDuration(
+      dependencies,
+      "constraintExtractionMs",
+      constraintExtractionStartedAt,
+    );
     if (deterministic.boundaryCode === "unsupported_external_claims") {
       if (dependencies.diagnostics) {
         dependencies.diagnostics.effectiveIntent = "unrelated";
@@ -1319,12 +1480,14 @@ export async function runConversationTurn(
       return unsupportedExternalClaimsResponse(originalState);
     }
     if (deterministic.intent === "unrelated") {
-      const plan = buildVerifiedComposerPlan({
-        state: originalState,
-        intent: "unrelated",
-        factTopics: [],
-        currentDate: dependencies.currentDate,
-      });
+      const plan = measureRuleExecution(dependencies, () =>
+        buildVerifiedComposerPlan({
+          state: originalState,
+          intent: "unrelated",
+          factTopics: [],
+          currentDate: dependencies.currentDate,
+        }),
+      );
       if (dependencies.diagnostics) {
         dependencies.diagnostics.effectiveIntent = "unrelated";
       }
@@ -1341,6 +1504,29 @@ export async function runConversationTurn(
       ? transitionConversationDomain(originalState, deterministic.domain)
       : originalState;
     if (
+      deterministic.catalogRequested &&
+      routingState.domain !== "unknown" &&
+      collectedConstraintKeys(routingState).length === 0
+    ) {
+      const workingState = appendHistory(routingState, {
+        role: "user",
+        content: message,
+      });
+      const plan = measureRuleExecution(dependencies, () =>
+        buildCatalogPlan({ state: workingState }),
+      );
+      if (dependencies.diagnostics) {
+        dependencies.diagnostics.effectiveIntent = "new_consultation";
+      }
+      recordPlanDiagnostics(dependencies, workingState, plan);
+      return await completeComposerPlan({
+        workingState,
+        plan,
+        userMessage: message,
+        dependencies,
+      });
+    }
+    if (
       deterministic.domain === "platform" &&
       deterministic.institutionNeed === "school_procurement" &&
       deterministic.intent === "institution_service"
@@ -1353,13 +1539,16 @@ export async function runConversationTurn(
         role: "user",
         content: message,
       });
-      const plan = buildVerifiedComposerPlan({
-        state: workingState,
-        intent: deterministic.intent,
-        factTopics: deterministic.factTopics,
-        currentDate: scenarioBusinessDate(message, dependencies.currentDate),
-        crossDomainFrom: deterministicCrossDomainFrom,
-      });
+      const deterministicIntent = deterministic.intent;
+      const plan = measureRuleExecution(dependencies, () =>
+        buildVerifiedComposerPlan({
+          state: workingState,
+          intent: deterministicIntent,
+          factTopics: deterministic.factTopics,
+          currentDate: scenarioBusinessDate(message, dependencies.currentDate),
+          crossDomainFrom: deterministicCrossDomainFrom,
+        }),
+      );
       recordPlanDiagnostics(dependencies, workingState, plan);
       const response = await completeComposerPlan({
         workingState,
@@ -1377,18 +1566,38 @@ export async function runConversationTurn(
       }
       return response;
     }
-    const candidate = await dependencies.classifier.classify(
-      message,
-      routingState,
-    );
-    if (dependencies.diagnostics) {
-      dependencies.diagnostics.classifierCandidate = {
-        domainCandidate: candidate.domainCandidate,
-        intent: candidate.intent,
-        studentConstraints: structuredClone(candidate.studentConstraints),
-        institutionNeed: candidate.institutionNeed,
-        factTopics: [...candidate.factTopics],
-      };
+    let candidate: ClassifierCandidate;
+    const skipClassifier =
+      routingState.domain !== "unknown" ||
+      deterministic.intent !== undefined;
+    if (skipClassifier) {
+      candidate = deterministicCandidate({
+        routingState,
+        deterministicIntent: deterministic.intent,
+      });
+    } else {
+      const classifierStartedAt = performance.now();
+      try {
+        candidate = await dependencies.classifier.classify(
+          message,
+          routingState,
+        );
+      } finally {
+        addDiagnosticDuration(
+          dependencies,
+          "classifierMs",
+          classifierStartedAt,
+        );
+      }
+      if (dependencies.diagnostics) {
+        dependencies.diagnostics.classifierCandidate = {
+          domainCandidate: candidate.domainCandidate,
+          intent: candidate.intent,
+          studentConstraints: structuredClone(candidate.studentConstraints),
+          institutionNeed: candidate.institutionNeed,
+          factTopics: [...candidate.factTopics],
+        };
+      }
     }
     if (deterministic.domain || deterministic.factTopics.length > 0) {
       candidate.domainCandidate = undefined;
@@ -1457,17 +1666,15 @@ export async function runConversationTurn(
         state,
       });
     }
-    if (
-      intent === "unrelated" ||
-      ((intent === "unclear" || intent === "unknown") &&
-        originalState.domain !== "unknown")
-    ) {
-      const plan = buildVerifiedComposerPlan({
-        state: originalState,
-        intent: intent === "unrelated" ? "unrelated" : "unclear",
-        factTopics: [],
-        currentDate: dependencies.currentDate,
-      });
+    if (intent === "unrelated") {
+      const plan = measureRuleExecution(dependencies, () =>
+        buildVerifiedComposerPlan({
+          state: originalState,
+          intent: intent === "unrelated" ? "unrelated" : "unclear",
+          factTopics: [],
+          currentDate: dependencies.currentDate,
+        }),
+      );
       recordPlanDiagnostics(dependencies, originalState, plan);
       return scopeClarificationResponse(originalState);
     }
@@ -1487,13 +1694,15 @@ export async function runConversationTurn(
       role: "user",
       content: message,
     });
-    const plan = buildVerifiedComposerPlan({
-      state: workingState,
-      intent,
-      factTopics,
-      currentDate: scenarioBusinessDate(message, dependencies.currentDate),
-      crossDomainFrom,
-    });
+    const plan = measureRuleExecution(dependencies, () =>
+      buildVerifiedComposerPlan({
+        state: workingState,
+        intent,
+        factTopics,
+        currentDate: scenarioBusinessDate(message, dependencies.currentDate),
+        crossDomainFrom,
+      }),
+    );
     recordPlanDiagnostics(dependencies, workingState, plan);
     const response = await completeComposerPlan({
       workingState,

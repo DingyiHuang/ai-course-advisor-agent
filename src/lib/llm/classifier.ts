@@ -258,6 +258,7 @@ export function parseClassifierCandidate(content: string): ClassifierCandidate {
       goal: readEnum(teacher.goal, ["tools", "web-app", "rag-project"]),
       startingLevel: readEnum(teacher.startingLevel, ["beginner", "L1", "L2"]),
       canTakeContinuousLeave: readBoolean(teacher.canTakeContinuousLeave),
+      canTravelToCourseCity: readBoolean(teacher.canTravelToCourseCity),
       availableProductIds: readTeacherProductIds(teacher.availableProductIds),
       city: readShortString(teacher.city, 20),
       prerequisiteStatus: readEnum(teacher.prerequisiteStatus, ["met", "not_met", "unknown"]),
@@ -673,7 +674,7 @@ const CLASSIFIER_SYSTEM_PROMPT = `你是AI课程顾问的结构化分类器。�
 身份domainCandidate只能是student、teacher、platform或null。
 intent只能是identity_selection、new_consultation、contextual_followup、institution_service、unrelated、unclear、reset或menu。只有明确继承当前产品并询问其时间、地点、费用、报名、设备、课程内容或人数规则时才是contextual_followup；无法安全归入课程或机构服务时输出unrelated，语义不足时输出unclear，禁止把unknown默认解释为继续当前产品。
 studentConstraints只允许region(beijing/shanghai/guangzhou/other)、regionDisplayName、availablePeriods(仅含1/2/3的数组)、modePreference(offline/online/any)、canTravel、needsReplay、refusesMoreQuestions；不得输出district、learningGoal或其他键。regionDisplayName只能抄录用户本轮明确提及的实际城市或地区名称；北京各区统一输出region=beijing、regionDisplayName=北京；成都、深圳、杭州、武汉、天津等映射region=other并保留实际名称。无法确认具体名称时region=other且不输出regionDisplayName。availablePeriods只能来自用户明确说出的第一期、第二期或第三期，“周末可以上课”等泛化时间不得映射成营期。modePreference只能表示线上、线下或均可，“录播回放”不是授课形式。
-teacherConstraints允许level(L1/L2/L3)、goal(tools/web-app/rag-project)、startingLevel(beginner/L1/L2)、canTakeContinuousLeave、availableProductIds、city、prerequisiteStatus(met/not_met/unknown)、refusesMoreQuestions。
+teacherConstraints允许level(L1/L2/L3)、goal(tools/web-app/rag-project)、startingLevel(beginner/L1/L2)、canTakeContinuousLeave、canTravelToCourseCity、availableProductIds、city、prerequisiteStatus(met/not_met/unknown)、refusesMoreQuestions。
 “零基础”只提取startingLevel=beginner，除非用户另有明确目标原话，否则不得生成goal。
 institutionNeed只能是membership、enterprise_training、school_procurement、basic_agent、ai_web、rag或null。
 studentReference用于事实查询，可包含period(1/2/3)和campus(bj/sh/online)；teacherReference可包含level(L1/L2/L3)和format(intensive/weekend)。引用字段也必须提供用户原话证据，不能把班型引用当成用户时间约束。

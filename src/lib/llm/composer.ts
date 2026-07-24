@@ -230,7 +230,7 @@ export function createComposer(client: LlmClient): {
               shortContext:
                 route === "recommendation" || route === "unrelated"
                   ? []
-                  : history.slice(-4),
+                  : history.slice(-2),
             }),
           },
         ],

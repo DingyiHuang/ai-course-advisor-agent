@@ -10,6 +10,7 @@ import {
   assertFollowUpUsesClosedDimensions,
   assertHighRiskValuesGrounded,
   assertPlanMatchesConfirmedState,
+  inferFactIdsForMentionedHighRiskValues,
   GroundingError,
   validateUsedFactIds,
 } from "@/lib/validation/grounding";
@@ -77,6 +78,51 @@ describe("composer routing and contracts", () => {
     expect(formatSourceFootnotes(first.usedFactIds)).toBe(
       formatSourceFootnotes(second.usedFactIds),
     );
+  });
+
+  it("omits history for recommendations and limits other routes to two recent turns", async () => {
+    const recommendationClient = new ScriptedLlmClient([
+      completion(
+        '{"message":"推荐结果已核对。","usedFactIds":[],"actions":[],"recommendationReasons":[]}',
+      ),
+    ]);
+    const factClient = new ScriptedLlmClient([
+      completion(
+        '{"message":"课程信息已核对。","usedFactIds":[],"actions":[],"recommendationReasons":[]}',
+      ),
+    ]);
+    const history = [
+      { role: "user" as const, content: "较早的学生问题" },
+      { role: "assistant" as const, content: "较早的学生回答" },
+      { role: "user" as const, content: "最近的教师问题" },
+      { role: "assistant" as const, content: "最近的教师回答" },
+    ];
+
+    await createComposer(recommendationClient).composeOnce(
+      emptyPlan({
+        status: "recommended",
+        route: "recommendation",
+        domain: "teacher",
+      }),
+      history,
+    );
+    await createComposer(factClient).composeOnce(
+      emptyPlan({
+        status: "fact_answer",
+        route: "fact_answer",
+        domain: "teacher",
+      }),
+      history,
+    );
+
+    const recommendationPayload = JSON.parse(
+      recommendationClient.calls[0].messages[1].content,
+    ) as { shortContext: unknown[] };
+    const factPayload = JSON.parse(
+      factClient.calls[0].messages[1].content,
+    ) as { shortContext: unknown[] };
+    expect(recommendationPayload.shortContext).toEqual([]);
+    expect(factPayload.shortContext).toEqual(history.slice(-2));
   });
 
   it("answers school procurement from deterministic facts without calling the model", async () => {
@@ -187,6 +233,37 @@ describe("programmatic grounding gates", () => {
         calculations: [],
       }),
     ).toThrow();
+  });
+
+  it("infers only plan facts that exactly ground mentioned dates and amounts", () => {
+    const facts: GroundedFact[] = [
+      {
+        id: "teacher-l1-weekend.schedule",
+        label: "课程安排",
+        value: ["8月2日线上课程", "8月9日线下工作坊"],
+      },
+      {
+        id: "teacher-l1-weekend.standardPrice",
+        label: "标准价格",
+        value: 2980,
+      },
+    ];
+
+    expect(
+      inferFactIdsForMentionedHighRiskValues(
+        "8月2日开始，标准价格2980元。",
+        facts,
+      ),
+    ).toEqual([
+      "teacher-l1-weekend.schedule",
+      "teacher-l1-weekend.standardPrice",
+    ]);
+    expect(
+      inferFactIdsForMentionedHighRiskValues(
+        "8月3日开始，标准价格2990元。",
+        facts,
+      ),
+    ).toEqual([]);
   });
 
   it("rejects source metadata written by the model but allows 第5天", () => {

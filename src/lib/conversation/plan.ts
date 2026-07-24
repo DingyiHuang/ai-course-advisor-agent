@@ -235,6 +235,25 @@ function teacherRecommendationPlan(
   crossDomainFrom?: "student" | "teacher" | "platform",
 ): ComposerPlan {
   const result = recommendTeacherProducts(state.teacherConstraints);
+  if (result.status === "boundary_follow_up") {
+    const city = state.teacherConstraints.city ?? "您所在城市";
+    const requiredPrefix =
+      result.boundaryCode === "teacher_no_fully_online_product"
+        ? `已记录您在${city}，且不便前往北京、上海或广州。当前资料范围内没有完全线上的教师班型；L1周末研修班上午为腾讯会议线上课程，下午仍需到指定城市参加线下工作坊。`
+        : `已记录您在${city}。当前教师课程的线下开课城市为北京、上海和广州；L1周末研修班上午为腾讯会议线上课程，下午仍需到指定城市参加线下工作坊。`;
+    return basePlan({
+      state,
+      status: "boundary_follow_up",
+      facts: groundedFactsFromIds(result.factIds),
+      decisionTrace: result.decisionTrace,
+      nextQuestionKeys: result.nextQuestionKeys,
+      nextQuestionOptions: result.nextQuestionOptions,
+      actions: ["返回菜单"],
+      boundaryCode: result.boundaryCode,
+      requiredPrefix,
+      crossDomainFrom,
+    });
+  }
   if (result.status === "recommended") {
     const traces = result.recommendations.flatMap(({ decisionTrace }) => decisionTrace);
     const factIds = result.recommendations.flatMap(({ item, factIds: reasonFacts }) => [
@@ -496,11 +515,7 @@ export function buildComposerPlan(input: {
   currentDate: BusinessDate;
   crossDomainFrom?: "student" | "teacher" | "platform";
 }): ComposerPlan {
-  if (
-    input.intent === "unrelated" ||
-    ((input.intent === "unclear" || input.intent === "unknown") &&
-      input.state.domain !== "unknown")
-  ) {
+  if (input.intent === "unrelated") {
     const hasCurrentContext = Boolean(
       input.state.selectedEntityId ||
       input.state.lastRecommendationIds.length ||
@@ -534,11 +549,15 @@ export function buildComposerPlan(input: {
     });
     if (plan) return plan;
   }
+  const businessIntent =
+    input.intent === "unclear" || input.intent === "unknown"
+      ? "new_consultation"
+      : input.intent;
   if (
-    input.intent !== "identity_selection" &&
-    input.intent !== "new_consultation" &&
-    input.intent !== "recommendation" &&
-    input.intent !== "institution_service"
+    businessIntent !== "identity_selection" &&
+    businessIntent !== "new_consultation" &&
+    businessIntent !== "recommendation" &&
+    businessIntent !== "institution_service"
   ) {
     return basePlan({
       state: input.state,

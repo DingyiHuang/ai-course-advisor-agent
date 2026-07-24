@@ -61,6 +61,7 @@ export type TeacherConstraints = {
   goal?: TeacherGoal;
   startingLevel?: TeacherStartingLevel;
   canTakeContinuousLeave?: boolean;
+  canTravelToCourseCity?: boolean;
   availableProductIds?: string[];
   city?: string;
   prerequisiteStatus?: PrerequisiteStatus;

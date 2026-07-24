@@ -241,6 +241,65 @@ describe("student deterministic recommendation mappings", () => {
 });
 
 describe("teacher deterministic recommendation and prerequisites", () => {
+  it("asks one cross-city question for a teacher in an unsupported city", () => {
+    expect(
+      recommendTeacherProducts({
+        startingLevel: "beginner",
+        canTakeContinuousLeave: true,
+        availableProductIds: [
+          "teacher-l1-intensive",
+          "teacher-l1-weekend",
+        ],
+        city: "深圳",
+      }),
+    ).toMatchObject({
+      status: "boundary_follow_up",
+      boundaryCode: "teacher_outside_city_travel_required",
+      nextQuestionKeys: ["canTravelToCourseCity"],
+      nextQuestionOptions: [
+        "可以前往北京、上海或广州",
+        "北京、上海、广州均不便前往",
+      ],
+    });
+  });
+
+  it("states that no fully online teacher product exists after cross-city travel is declined", () => {
+    expect(
+      recommendTeacherProducts({
+        startingLevel: "beginner",
+        canTakeContinuousLeave: false,
+        city: "深圳",
+        canTravelToCourseCity: false,
+      }),
+    ).toMatchObject({
+      status: "boundary_follow_up",
+      boundaryCode: "teacher_no_fully_online_product",
+      nextQuestionKeys: [],
+    });
+  });
+
+  it("continues into the existing recommendation after cross-city travel is accepted", () => {
+    const result = recommendTeacherProducts({
+      startingLevel: "beginner",
+      canTakeContinuousLeave: false,
+      availableProductIds: ["teacher-l1-weekend"],
+      city: "成都",
+      canTravelToCourseCity: true,
+    });
+
+    expect(result.status).toBe("recommended");
+    if (result.status !== "recommended") return;
+    expect(result.recommendations[0].item.id).toBe("teacher-l1-weekend");
+    expect(result.recommendations[0].decisionTrace).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "teacher_travel_to_course_city_confirmed",
+          constraintKeys: ["city", "canTravelToCourseCity"],
+        }),
+      ]),
+    );
+  });
+
   it("maps inability to leave work continuously to L1 weekend, including Guangzhou", () => {
     const result = recommendTeacherProducts({
       goal: "tools",
