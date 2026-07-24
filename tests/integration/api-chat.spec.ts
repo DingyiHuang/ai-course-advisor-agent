@@ -1749,6 +1749,87 @@ describe("TASK-05 real Route Handler integration", () => {
     );
   });
 
+  it("HOTFIX-01B keeps the complete 7b transport brief outside school procurement and resumes context", async () => {
+    const procurement = (
+      await postChat({
+        action: "message",
+        message: "学校计划采购20人的教师培训",
+        state: createInitialConversationState(),
+        testMode: false,
+      })
+    ).response;
+    const classifierCallsBefore = providerControl.classifierCalls;
+    const composerCallsBefore = providerControl.composerCalls;
+    const historyBefore = structuredClone(procurement.state.shortHistory);
+    const unrelated = (
+      await postChat({
+        action: "message",
+        message: `港航：龙沙港占全区吞吐量50%+、莲花山港“港区直验”、280平方公里渔港经济区、2024大学城示范岛17公里环岛线
+枢纽：地面公交客流1646万→525万人次、安检互认、化龙三处货运场站
+公路：一/二/三级公路里程结构、二级以上占98.4%、管养经费2851→5046万元、连续两年全国示范县
+城市道路：分等级里程、“两横五纵+九横八纵”、南大干线30km等6项重点工程
+问题二页：补齐“广明高速以南缺东西向通道”“亚运大道未全线贯通”“次干路缺失、上得去下不来”“17.3% vs 全市38.8%”“轨道内部出行仅28.5%”“高峰发车间隔≥20分钟”等原文关键论据
+五大行动页：改为「分类表 + 三项投资口径 + 一句话小结 + 代表性项目名」，项目名全部取自项目库（南站联络线、8号线东延段18km/8站、莲花山通道及东延`,
+        state: procurement.state,
+        testMode: false,
+        diagnostics: true,
+      })
+    ).response;
+
+    expect(unrelated.status).toBe("unrelated");
+    expect(unrelated.entityIds).toEqual([]);
+    expect(unrelated.sources).toEqual([]);
+    expect(unrelated.presentation).toEqual({ recommendations: [] });
+    expect(unrelated.state.domain).toBe("platform");
+    expect(unrelated.state.institutionNeed).toBe("school_procurement");
+    expect(unrelated.state.selectedEntityId).toBe(
+      "platform-school-procurement",
+    );
+    expect(unrelated.state.shortHistory).toEqual(historyBefore);
+    expect(unrelated.message).not.toMatch(
+      /教师培训采购|20人|5万元|2980/u,
+    );
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(providerControl.composerCalls).toBe(composerCallsBefore);
+    expect(unrelated.diagnostics).toMatchObject({
+      effectiveIntent: "unrelated",
+      externalModelCalls: 0,
+    });
+
+    const resumed = (
+      await postChat({
+        action: "message",
+        message: "这个方案至少多少人",
+        state: unrelated.state,
+        testMode: false,
+      })
+    ).response;
+
+    expect(resumed.status).toBe("contextual_followup");
+    expect(resumed.message).toContain("20人起");
+    expect(resumed.entityIds).toEqual(["platform-school-procurement"]);
+    expect(resumed.presentation).toEqual({ recommendations: [] });
+    expect(resumed.state.institutionNeed).toBe("school_procurement");
+    expect(resumed.sources.every(({ document }) => document === "C")).toBe(
+      true,
+    );
+  });
+
+  it.each([
+    "我在深圳，交通不便，想选择线上课程",
+    "线下交通不方便，有没有线上班",
+    "去北京交通不方便，能否参加周末班",
+  ])("HOTFIX-01B keeps course travel constraint in scope: %s", async (message) => {
+    const { response } = await postChat({
+      action: "message",
+      message,
+      state: createInitialConversationState(),
+      testMode: false,
+    });
+
+    expect(response.status).not.toBe("unrelated");
+  });
+
   it("E04-C does not repeat a selected student course for a stock request", async () => {
     const student = (
       await postChat({

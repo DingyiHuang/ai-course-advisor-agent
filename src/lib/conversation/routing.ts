@@ -219,10 +219,36 @@ function explicitUnrelatedIntent(message: string): boolean {
     /(?:学生课程|教师培训|学校采购|企业培训|ai课程|夏令营|班型|报名条件|平台服务)/iu.test(
       text,
     );
+  const longInfrastructureSignals = [
+    /(?:港航|港区|吞吐量|渔港)/u.test(text),
+    /(?:公路|高速|干线|通道)/u.test(text),
+    /(?:城市道路|次干路|路网)/u.test(text),
+    /(?:公交|客流|发车间隔)/u.test(text),
+    /(?:枢纽|货运场站|场站)/u.test(text),
+    /(?:轨道|地铁|\d+号线|车站)/u.test(text),
+    /(?:重点工程|项目库|代表性项目)/u.test(text),
+  ].filter(Boolean).length;
+  const businessSignals =
+    /(?:课程|班型|线上班|线下班|周末班|学习|培训|费用|学费|报名|学校采购|教师|老师|学生|家长)/u.test(
+      text,
+    );
+  const currentBusinessReference =
+    /(?:这个|该|当前|刚才|之前推荐的).{0,6}(?:课程|班型|培训|采购|方案|服务)/u.test(
+      text,
+    );
+  const longInfrastructureBrief =
+    text.length >= 120 &&
+    longInfrastructureSignals >= 3 &&
+    /(?:问题.{0,4}页|行动页|分类表|补齐|原文关键论据|投资口径|一句话小结|项目库|项目名)/u.test(
+      text,
+    ) &&
+    !businessSignals &&
+    !currentBusinessReference;
   return (
-    infrastructureSignals >= 2 &&
-    !courseSignals &&
-    /(?:分析|报告|建设|数据|规划|统计|增长)/u.test(text)
+    longInfrastructureBrief ||
+    (infrastructureSignals >= 2 &&
+      !courseSignals &&
+      /(?:分析|报告|建设|数据|规划|统计|增长)/u.test(text))
   );
 }
 
