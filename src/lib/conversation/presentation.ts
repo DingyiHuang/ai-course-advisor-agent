@@ -26,6 +26,7 @@ const CONSTRAINT_LABELS: Record<string, string> = {
   goal: "培训目标",
   startingLevel: "当前基础",
   canTakeContinuousLeave: "时间安排",
+  canTravelToCourseCity: "跨城条件",
   availableProductIds: "可参加班型",
   city: "所在城市",
   prerequisiteStatus: "前置条件",

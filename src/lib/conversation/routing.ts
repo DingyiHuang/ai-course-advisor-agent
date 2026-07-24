@@ -440,6 +440,21 @@ function explicitTeacherConstraints(
   ) {
     patch.canTakeContinuousLeave = true;
   }
+  if (
+    /(?:北京.{0,4}上海.{0,4}广州|北京、上海、广州).{0,10}(?:均|都)?(?:不便|不能|无法|不方便)(?:前往|去)?|(?:均|都)(?:不便|不能|无法|不方便).{0,8}(?:前往|去)(?:北京|上海|广州)/u.test(
+      text,
+    ) ||
+    (keys.has("canTravelToCourseCity") &&
+      /(?:均|都)?(?:不便|不能|无法|不方便)(?:前往|去)?$/u.test(text))
+  ) {
+    patch.canTravelToCourseCity = false;
+  } else if (
+    /(?:可以|能|方便).{0,8}(?:前往|去)(?:北京|上海|广州)/u.test(text) ||
+    (keys.has("canTravelToCourseCity") &&
+      /^(?:可以|能|方便|可以前往|能前往)$/u.test(text))
+  ) {
+    patch.canTravelToCourseCity = true;
+  }
   const city = extractExplicitStudentRegion(message);
   if (city) {
     const cityName =

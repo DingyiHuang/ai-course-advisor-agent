@@ -718,6 +718,69 @@ describe("TASK-05 real Route Handler integration", () => {
     );
   });
 
+  it("keeps an outside teacher city and asks only whether travel to a course city is possible", async () => {
+    const first = (
+      await postChat({
+        action: "message",
+        message:
+          "我是教师，零基础，可以连续参加，日期没有要求，人在深圳，想学习AI课程",
+        state: createInitialConversationState(),
+        testMode: false,
+        diagnostics: true,
+      })
+    ).response;
+
+    expect(first.status).toBe("boundary_follow_up");
+    expect(first.boundaryCode).toBe("teacher_outside_city_travel_required");
+    expect(first.state.teacherConstraints).toMatchObject({
+      startingLevel: "beginner",
+      canTakeContinuousLeave: true,
+      city: "深圳",
+    });
+    expect(first.state.teacherConstraints.availableProductIds).toHaveLength(6);
+    expect(first.state.pendingQuestionKeys).toEqual([
+      "canTravelToCourseCity",
+    ]);
+    expect(first.message).toContain("深圳");
+    expect(first.message).toContain("北京、上海和广州");
+    expect(first.message).toContain("腾讯会议");
+    expect(first.message).toContain("线下工作坊");
+    expect(first.presentation.recommendations).toEqual([]);
+  });
+
+  it("does not repeat the outside city question after a teacher declines all supported travel cities", async () => {
+    const first = (
+      await postChat({
+        action: "message",
+        message:
+          "我是教师，零基础，只能周末，日期都行，我在深圳，想学习AI课程",
+        state: createInitialConversationState(),
+        testMode: false,
+      })
+    ).response;
+    const second = (
+      await postChat({
+        action: "message",
+        message: "北京、上海、广州均不便前往",
+        state: first.state,
+        testMode: false,
+        diagnostics: true,
+      })
+    ).response;
+
+    expect(second.status).toBe("boundary_follow_up");
+    expect(second.boundaryCode).toBe("teacher_no_fully_online_product");
+    expect(second.state.teacherConstraints).toMatchObject({
+      city: "深圳",
+      canTravelToCourseCity: false,
+    });
+    expect(second.state.pendingQuestionKeys).toEqual([]);
+    expect(second.message).toContain("没有完全线上的教师班型");
+    expect(second.message).toContain("下午仍需");
+    expect(second.message).not.toMatch(/您在哪|所在城市是|哪个城市/u);
+    expect(second.presentation.recommendations).toEqual([]);
+  });
+
   it("M01 and M02 preserve the selected student camp and use only material A", async () => {
     const recommended = (
       await postChat({

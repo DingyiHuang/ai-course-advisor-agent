@@ -22,6 +22,36 @@ const STARTING_LEVEL_TARGET: Record<
   L2: "L3",
 };
 
+const TEACHER_OFFLINE_CITIES = ["北京", "上海", "广州"] as const;
+
+function isOutsideTeacherOfflineCities(city: string | undefined): boolean {
+  return Boolean(
+    city &&
+      !TEACHER_OFFLINE_CITIES.includes(
+        city as (typeof TEACHER_OFFLINE_CITIES)[number],
+      ),
+  );
+}
+
+function teacherTravelBoundaryFactIds(): string[] {
+  return [
+    "teacher-l1-weekend.cities",
+    "teacher-l1-weekend.locationsOrPlatforms",
+    "teacher-l1-weekend.schedule",
+  ];
+}
+
+function teacherNoFullyOnlineFactIds(): string[] {
+  return [
+    ...new Set(
+      TEACHER_PRODUCTS.flatMap((product) => [
+        `${product.id}.cities`,
+        `${product.id}.locationsOrPlatforms`,
+      ]),
+    ),
+  ];
+}
+
 function resolveTargetLevel(constraints: TeacherConstraints): {
   level: TeacherProduct["level"] | undefined;
   constraintKeys: string[];
@@ -47,6 +77,7 @@ function countTeacherConstraints(constraints: TeacherConstraints): number {
     constraints.goal,
     constraints.startingLevel,
     constraints.canTakeContinuousLeave,
+    constraints.canTravelToCourseCity,
     constraints.availableProductIds?.length,
     constraints.city,
     constraints.prerequisiteStatus === "met" ||
@@ -68,6 +99,12 @@ function missingTeacherConstraints(
   }
   if (!constraints.availableProductIds?.length) missing.push("availableDates");
   if (!constraints.city) missing.push("city");
+  if (
+    isOutsideTeacherOfflineCities(constraints.city) &&
+    constraints.canTravelToCourseCity === undefined
+  ) {
+    missing.push("canTravelToCourseCity");
+  }
   const targetLevel = resolveTargetLevel(constraints).level;
   if (
     targetLevel &&
@@ -129,13 +166,24 @@ function toTeacherRecommendation(
   }
 
   if (constraints.city) {
-    decisionTrace.push({
-      code: product.cities.includes(constraints.city)
-        ? "city_confirmed"
-        : "city_not_specified_in_material",
-      constraintKeys: ["city"],
-      factIds: [`${product.id}.cities`, `${product.id}.locationsOrPlatforms`],
-    });
+    if (
+      isOutsideTeacherOfflineCities(constraints.city) &&
+      constraints.canTravelToCourseCity === true
+    ) {
+      decisionTrace.push({
+        code: "teacher_travel_to_course_city_confirmed",
+        constraintKeys: ["city", "canTravelToCourseCity"],
+        factIds: [`${product.id}.cities`, `${product.id}.locationsOrPlatforms`],
+      });
+    } else {
+      decisionTrace.push({
+        code: product.cities.includes(constraints.city)
+          ? "city_confirmed"
+          : "city_not_specified_in_material",
+        constraintKeys: ["city"],
+        factIds: [`${product.id}.cities`, `${product.id}.locationsOrPlatforms`],
+      });
+    }
   }
 
   return {
@@ -150,6 +198,56 @@ export function recommendTeacherProducts(
 ): RecommendationResult<TeacherProduct> {
   const effectiveConstraintCount = countTeacherConstraints(constraints);
   const missingConstraintKeys = missingTeacherConstraints(constraints);
+  if (
+    isOutsideTeacherOfflineCities(constraints.city) &&
+    constraints.canTravelToCourseCity === undefined
+  ) {
+    const factIds = teacherTravelBoundaryFactIds();
+    return {
+      status: "boundary_follow_up",
+      boundaryCode: "teacher_outside_city_travel_required",
+      factIds,
+      decisionTrace: [
+        {
+          code: "teacher_outside_city_travel_required",
+          constraintKeys: ["city"],
+          constraintValues: { city: constraints.city },
+          factIds,
+        },
+      ],
+      nextQuestionKeys: ["canTravelToCourseCity"],
+      nextQuestionOptions: [
+        "可以前往北京、上海或广州",
+        "北京、上海、广州均不便前往",
+      ],
+      effectiveConstraintCount,
+    };
+  }
+  if (
+    isOutsideTeacherOfflineCities(constraints.city) &&
+    constraints.canTravelToCourseCity === false
+  ) {
+    const factIds = teacherNoFullyOnlineFactIds();
+    return {
+      status: "boundary_follow_up",
+      boundaryCode: "teacher_no_fully_online_product",
+      factIds,
+      decisionTrace: [
+        {
+          code: "teacher_no_fully_online_product",
+          constraintKeys: ["city", "canTravelToCourseCity"],
+          constraintValues: {
+            city: constraints.city,
+            canTravelToCourseCity: false,
+          },
+          factIds,
+        },
+      ],
+      nextQuestionKeys: [],
+      nextQuestionOptions: [],
+      effectiveConstraintCount,
+    };
+  }
 
   if (effectiveConstraintCount < 2) {
     const shouldExit =

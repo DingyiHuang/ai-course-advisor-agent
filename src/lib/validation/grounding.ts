@@ -352,6 +352,7 @@ const NEXT_QUESTION_KEYS: Record<
     "goal",
     "startingLevel",
     "canTakeContinuousLeave",
+    "canTravelToCourseCity",
     "availableProductIds",
     "city",
     "prerequisiteStatus",
