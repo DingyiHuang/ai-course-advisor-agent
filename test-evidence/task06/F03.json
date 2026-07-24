@@ -1,0 +1,229 @@
+{
+  "id": "F03",
+  "category": "官方25组/资料事实",
+  "title": "线上直播班费用",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:44:32",
+  "finishedAt": "2026-07-23 18:44:45",
+  "originalInput": "线上直播班多少钱？",
+  "expected": "标准价3980元、早鸟价3280元及适用条件正确，引用素材A第五章。",
+  "turns": [
+    {
+      "caseId": "F03",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "线上直播班多少钱？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:44:45",
+          "httpStatus": 200,
+          "latencyMs": 13368
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "fact_answer",
+        "message": "目前线上直播班共有三个期次：第一期、第二期和第三期。每期标准价格均为3980元。第三期目前享受早鸟优惠，价格仅3280元（早鸟截止2026-07-30），而第一、二期早鸟已结束，当前价格为3980元。各期报名截止时间分别为：第一期2026-07-25、第二期2026-08-03、第三期2026-08-13。请问您对哪一期感兴趣？\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章；素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "modePreference": "online",
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-online",
+            "camp-p2-online",
+            "camp-p3-online"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "线上直播班多少钱？"
+            },
+            {
+              "role": "assistant",
+              "content": "目前线上直播班共有三个期次：第一期、第二期和第三期。每期标准价格均为3980元。第三期目前享受早鸟优惠，价格仅3280元（早鸟截止2026-07-30），而第一、二期早鸟已结束，当前价格为3980元。各期报名截止时间分别为：第一期2026-07-25、第二期2026-08-03、第三期2026-08-13。请问您对哪一期感兴趣？"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第五章",
+            "factIds": [
+              "camp-p1-online.standardPrice",
+              "camp-p1-online.earlyBirdPrice",
+              "camp-p1-online.earlyBirdDeadline",
+              "camp-p2-online.standardPrice",
+              "camp-p2-online.earlyBirdPrice",
+              "camp-p2-online.earlyBirdDeadline",
+              "camp-p3-online.standardPrice",
+              "camp-p3-online.earlyBirdPrice",
+              "camp-p3-online.earlyBirdDeadline"
+            ]
+          },
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p1-online.registrationDeadline",
+              "camp-p2-online.registrationDeadline",
+              "camp-p3-online.registrationDeadline"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p1-online",
+          "camp-p2-online",
+          "camp-p3-online"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "fact_question",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "modePreference": "online"
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p1-online",
+            "camp-p2-online",
+            "camp-p3-online"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "fact_answer",
+          "routeLatencyMs": 13340,
+          "classifierCandidate": {
+            "domainCandidate": "student",
+            "intent": "contextual_followup",
+            "studentConstraints": {
+              "modePreference": "online"
+            },
+            "factTopics": [
+              "price"
+            ]
+          }
+        }
+      },
+      "latencyMs": 13368,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "fact_answer"
+  ],
+  "actualAnswers": [
+    "目前线上直播班共有三个期次：第一期、第二期和第三期。每期标准价格均为3980元。第三期目前享受早鸟优惠，价格仅3280元（早鸟截止2026-07-30），而第一、二期早鸟已结束，当前价格为3980元。各期报名截止时间分别为：第一期2026-07-25、第二期2026-08-03、第三期2026-08-13。请问您对哪一期感兴趣？\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章；素材A《2026暑期AI素养夏令营课程手册》第三章"
+  ],
+  "entities": [
+    "camp-p1-online",
+    "camp-p2-online",
+    "camp-p3-online"
+  ],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [
+      "3980元",
+      "3280元"
+    ],
+    "dates": [
+      "2026-07-30",
+      "2026-07-25",
+      "2026-08-03",
+      "2026-08-13",
+      "7月30日",
+      "7月25日",
+      "8月3日",
+      "8月13日"
+    ],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第五章",
+      "factIds": [
+        "camp-p1-online.standardPrice",
+        "camp-p1-online.earlyBirdPrice",
+        "camp-p1-online.earlyBirdDeadline",
+        "camp-p2-online.standardPrice",
+        "camp-p2-online.earlyBirdPrice",
+        "camp-p2-online.earlyBirdDeadline",
+        "camp-p3-online.standardPrice",
+        "camp-p3-online.earlyBirdPrice",
+        "camp-p3-online.earlyBirdDeadline"
+      ]
+    },
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p1-online.registrationDeadline",
+        "camp-p2-online.registrationDeadline",
+        "camp-p3-online.registrationDeadline"
+      ]
+    }
+  ],
+  "totalLatencyMs": 13368,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "标准价与早鸟价准确",
+      "passed": true
+    },
+    {
+      "label": "说明早鸟条件",
+      "passed": true
+    },
+    {
+      "label": "引用素材A第五章",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "F03.json"
+}

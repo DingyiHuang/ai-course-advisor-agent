@@ -181,6 +181,24 @@ export function recommendTeacherProducts(
     };
   }
 
+  if (level !== "L1" && constraints.prerequisiteStatus === "not_met") {
+    const blockedProduct = TEACHER_PRODUCTS.find(
+      (product) =>
+        product.level === level &&
+        (!constraints.availableProductIds?.length ||
+          constraints.availableProductIds.includes(product.id)),
+    );
+    if (blockedProduct) {
+      return {
+        status: "prerequisite_blocked",
+        product: blockedProduct,
+        nextActions: nextActionsForLevel(blockedProduct.level),
+        factIds: [`${blockedProduct.id}.prerequisite`],
+        effectiveConstraintCount,
+      };
+    }
+  }
+
   const format =
     constraints.canTakeContinuousLeave === true
       ? "intensive"
@@ -229,19 +247,6 @@ export function recommendTeacherProducts(
           factIds,
         },
       ],
-      effectiveConstraintCount,
-    };
-  }
-
-  if (
-    product.prerequisite &&
-    constraints.prerequisiteStatus === "not_met"
-  ) {
-    return {
-      status: "prerequisite_blocked",
-      product,
-      nextActions: nextActionsForLevel(product.level),
-      factIds: [`${product.id}.prerequisite`],
       effectiveConstraintCount,
     };
   }

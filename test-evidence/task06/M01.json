@@ -1,0 +1,558 @@
+{
+  "id": "M01",
+  "category": "官方25组/多轮",
+  "title": "学生当前班型时间追问",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:48:38",
+  "finishedAt": "2026-07-23 18:48:56",
+  "originalInput": "家长，北京，可参加第一期，希望线下 → 选择推荐班型 → 这个班什么时候？",
+  "expected": "继承camp-p1-bj，不重新询问身份，仅用素材A回答第一期时间。",
+  "turns": [
+    {
+      "caseId": "M01",
+      "step": "建立推荐",
+      "request": {
+        "action": "message",
+        "message": "家长，北京，可参加第一期，希望线下",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:48:50",
+          "httpStatus": 200,
+          "latencyMs": 12400
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "recommended",
+        "message": "根据您的需求，为您推荐北京第一期线下AI编程营。该营期时间与您选择的第一营期一致，地点位于北京市海淀区，方便您线下参加。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "家长，北京，可参加第一期，希望线下"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，为您推荐北京第一期线下AI编程营。该营期时间与您选择的第一营期一致，地点位于北京市海淀区，方便您线下参加。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p1-bj.startDate",
+              "camp-p1-bj.endDate",
+              "camp-p1-bj.campus",
+              "camp-p1-bj.deliveryMode",
+              "camp-p1-bj.addressOrPlatform"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p1-bj"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "查看其他营期",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": [
+            {
+              "entityId": "camp-p1-bj",
+              "kind": "student",
+              "name": "2026暑期AI素养夏令营·第1期·北京线下班",
+              "date": "2026-08-01 至 2026-08-07",
+              "delivery": "AI教育中心北京教学基地｜北京市海淀区中关村南大街5号，AI教育中心北京教学基地（模拟地址）",
+              "standardPrice": 6980,
+              "actualPrice": 6980,
+              "discountLabel": "本次按标准价计算",
+              "reasons": [
+                {
+                  "constraintKey": "availablePeriods",
+                  "reason": "您希望参加第一营期，本班型于2026年8月1日至8月7日举办，与第一营期时间完全吻合。",
+                  "constraintLabel": "可参加营期",
+                  "constraintValue": "1"
+                },
+                {
+                  "constraintKey": "region",
+                  "reason": "您位于北京，本班型教学地址在北京市海淀区，方便您线下参与。",
+                  "constraintLabel": "所在地区",
+                  "constraintValue": "北京"
+                },
+                {
+                  "constraintKey": "modePreference",
+                  "reason": "您偏好线下学习，本班型为线下授课，充分满足您的需求。",
+                  "constraintLabel": "授课形式",
+                  "constraintValue": "偏好线下"
+                }
+              ],
+              "sources": [
+                {
+                  "document": "A",
+                  "chapter": "第三章",
+                  "factIds": [
+                    "camp-p1-bj.startDate",
+                    "camp-p1-bj.endDate",
+                    "camp-p1-bj.campus",
+                    "camp-p1-bj.deliveryMode",
+                    "camp-p1-bj.addressOrPlatform"
+                  ]
+                }
+              ],
+              "availabilityNote": "资料未提供实时余位；班型规模和最低开班人数均不代表剩余名额。"
+            }
+          ]
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "new_consultation",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "region": "beijing",
+            "regionDisplayName": "北京"
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p1-bj"
+          ],
+          "decisionTrace": [
+            {
+              "code": "period_available",
+              "constraintKeys": [
+                "availablePeriods"
+              ],
+              "constraintValues": {
+                "availablePeriods": [
+                  1
+                ]
+              },
+              "factIds": [
+                "camp-p1-bj.startDate",
+                "camp-p1-bj.endDate"
+              ]
+            },
+            {
+              "code": "region_match_bj",
+              "constraintKeys": [
+                "region",
+                "modePreference"
+              ],
+              "constraintValues": {
+                "region": "beijing",
+                "modePreference": "offline"
+              },
+              "factIds": [
+                "camp-p1-bj.campus",
+                "camp-p1-bj.deliveryMode",
+                "camp-p1-bj.addressOrPlatform"
+              ]
+            }
+          ],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "recommended",
+          "routeLatencyMs": 12384,
+          "classifierCandidate": {
+            "domainCandidate": "student",
+            "intent": "new_consultation",
+            "studentConstraints": {
+              "region": "beijing",
+              "regionDisplayName": "北京",
+              "availablePeriods": [
+                1
+              ],
+              "modePreference": "offline"
+            },
+            "factTopics": []
+          }
+        }
+      },
+      "latencyMs": 12400,
+      "silentRetry": false
+    },
+    {
+      "caseId": "M01",
+      "step": "选择当前班型",
+      "request": {
+        "action": "select_entity",
+        "entityId": "camp-p1-bj",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "家长，北京，可参加第一期，希望线下"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，为您推荐北京第一期线下AI编程营。该营期时间与您选择的第一营期一致，地点位于北京市海淀区，方便您线下参加。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:48:50",
+          "httpStatus": 200,
+          "latencyMs": 10
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "selection",
+        "message": "已将该班型设为当前咨询对象，可以继续询问时间、费用、地点或准备事项。",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "家长，北京，可参加第一期，希望线下"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，为您推荐北京第一期线下AI编程营。该营期时间与您选择的第一营期一致，地点位于北京市海淀区，方便您线下参加。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        },
+        "sources": [],
+        "entityIds": [],
+        "actions": [],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "stalledTurns": 0
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 0,
+          "finalStatus": "selection",
+          "routeLatencyMs": 1
+        }
+      },
+      "latencyMs": 10,
+      "silentRetry": false
+    },
+    {
+      "caseId": "M01",
+      "step": "追问时间",
+      "request": {
+        "action": "message",
+        "message": "这个班什么时候？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "家长，北京，可参加第一期，希望线下"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，为您推荐北京第一期线下AI编程营。该营期时间与您选择的第一营期一致，地点位于北京市海淀区，方便您线下参加。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:48:56",
+          "httpStatus": 200,
+          "latencyMs": 6294
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "contextual_followup",
+        "message": "北京第一期线下AI编程营的课程时间为2026年8月1日（星期六）至8月7日（星期五），报名截止时间为2026年7月25日24:00。请问您还需要了解其他信息吗？\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "家长，北京，可参加第一期，希望线下"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，为您推荐北京第一期线下AI编程营。该营期时间与您选择的第一营期一致，地点位于北京市海淀区，方便您线下参加。"
+            },
+            {
+              "role": "user",
+              "content": "这个班什么时候？"
+            },
+            {
+              "role": "assistant",
+              "content": "北京第一期线下AI编程营的课程时间为2026年8月1日（星期六）至8月7日（星期五），报名截止时间为2026年7月25日24:00。请问您还需要了解其他信息吗？"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p1-bj.startDate",
+              "camp-p1-bj.endDate",
+              "camp-p1-bj.registrationDeadline"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p1-bj"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "contextual_followup",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline"
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p1-bj"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "contextual_followup",
+          "routeLatencyMs": 6276,
+          "classifierCandidate": {
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "schedule"
+            ]
+          }
+        }
+      },
+      "latencyMs": 6294,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200,
+    200,
+    200
+  ],
+  "actualStatuses": [
+    "recommended",
+    "selection",
+    "contextual_followup"
+  ],
+  "actualAnswers": [
+    "根据您的需求，为您推荐北京第一期线下AI编程营。该营期时间与您选择的第一营期一致，地点位于北京市海淀区，方便您线下参加。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章",
+    "已将该班型设为当前咨询对象，可以继续询问时间、费用、地点或准备事项。",
+    "北京第一期线下AI编程营的课程时间为2026年8月1日（星期六）至8月7日（星期五），报名截止时间为2026年7月25日24:00。请问您还需要了解其他信息吗？\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章"
+  ],
+  "entities": [
+    "camp-p1-bj"
+  ],
+  "currentEntities": [
+    "camp-p1-bj"
+  ],
+  "facts": {
+    "amounts": [],
+    "dates": [
+      "2026-08-01",
+      "2026-08-07",
+      "8月1日",
+      "8月7日",
+      "7月25日"
+    ],
+    "keyFacts": [
+      "资料未提供",
+      "实时余位"
+    ]
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p1-bj.startDate",
+        "camp-p1-bj.endDate",
+        "camp-p1-bj.campus",
+        "camp-p1-bj.deliveryMode",
+        "camp-p1-bj.addressOrPlatform"
+      ]
+    }
+  ],
+  "totalLatencyMs": 18704,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "三轮均HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "继承当前学生班型",
+      "passed": true
+    },
+    {
+      "label": "未重新询问身份",
+      "passed": true
+    },
+    {
+      "label": "时间回答只用素材A",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "M01.json"
+}

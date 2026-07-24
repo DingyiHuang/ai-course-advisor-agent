@@ -56,7 +56,15 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 const TOPIC_FIELDS: Record<FactTopic, string[]> = {
-  schedule: ["startDate", "endDate", "schedule"],
+  schedule: [
+    "startDate",
+    "endDate",
+    "schedule",
+    "registrationDeadline",
+    "format",
+    "cities",
+    "locationsOrPlatforms",
+  ],
   registration: [
     "registrationDeadline",
     "earlyBirdDeadline",

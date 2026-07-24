@@ -1,0 +1,794 @@
+{
+  "id": "M03",
+  "category": "官方25组/多轮",
+  "title": "教师产品地点费用报名连续追问",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:49:06",
+  "finishedAt": "2026-07-23 18:50:08",
+  "originalInput": "零基础教师，周末有空，工作日不能脱岗 → 在哪里上课？ → 多少钱？ → 怎么报名？",
+  "expected": "四轮继承teacher-l1-weekend，只用素材B，不混学生退款或机构价格。",
+  "turns": [
+    {
+      "caseId": "M03",
+      "step": "建立教师推荐",
+      "request": {
+        "action": "message",
+        "message": "零基础教师，周末有空，工作日不能脱岗",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:49:40",
+          "httpStatus": 200,
+          "latencyMs": 33897
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "recommended",
+        "message": "根据您的需求，推荐您参加教师L1周末班。该班型采用周末上课模式（8月2日上午线上、下午线下工作坊），无需您连续请假，符合您无法连续请假的要求；同时课程为L1入门级别，覆盖提示词、AI备课等模块，学习产出一套AI辅助教学资源包，非常适合零基础的您。如需了解更多细节，欢迎继续提问。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二章；素材B《初高中教师AI素养培训体系介绍》第一章；素材B《初高中教师AI素养培训体系介绍》第三章",
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {
+            "startingLevel": "beginner",
+            "canTakeContinuousLeave": false,
+            "stalledTurns": 0
+          },
+          "lastRecommendationIds": [
+            "teacher-l1-weekend"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "零基础教师，周末有空，工作日不能脱岗"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，推荐您参加教师L1周末班。该班型采用周末上课模式（8月2日上午线上、下午线下工作坊），无需您连续请假，符合您无法连续请假的要求；同时课程为L1入门级别，覆盖提示词、AI备课等模块，学习产出一套AI辅助教学资源包，非常适合零基础的您。如需了解更多细节，欢迎继续提问。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "teacher-l1-weekend"
+        },
+        "sources": [
+          {
+            "document": "B",
+            "chapter": "第二章",
+            "factIds": [
+              "teacher-l1-weekend.format",
+              "teacher-l1-weekend.schedule"
+            ]
+          },
+          {
+            "document": "B",
+            "chapter": "第一章",
+            "factIds": [
+              "teacher-l1-weekend.level"
+            ]
+          },
+          {
+            "document": "B",
+            "chapter": "第三章",
+            "factIds": [
+              "teacher-l1-weekend.curriculumModules",
+              "teacher-l1-weekend.outcome"
+            ]
+          }
+        ],
+        "entityIds": [
+          "teacher-l1-weekend"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "查看其他班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": [
+            {
+              "entityId": "teacher-l1-weekend",
+              "kind": "teacher",
+              "name": "初高中教师AI素养培训·L1·周末研修班",
+              "date": "8月2日上午4课时线上、下午4课时线下工作坊",
+              "delivery": "腾讯会议；北京教学基地；上海工作坊；广州工作坊",
+              "standardPrice": 2980,
+              "actualPrice": 2980,
+              "discountLabel": "本次按标准价计算",
+              "reasons": [
+                {
+                  "constraintKey": "canTakeContinuousLeave",
+                  "reason": "该班型为周末上课，包含8月2日一天线上线下课程，不需要连续请假，满足您无法连续请假的条件。",
+                  "constraintLabel": "时间安排",
+                  "constraintValue": "否"
+                },
+                {
+                  "constraintKey": "startingLevel",
+                  "reason": "课程为L1级别，从提示词、AI备课等基础模块开始，适合零基础初学者，与您的起始水平匹配。",
+                  "constraintLabel": "当前基础",
+                  "constraintValue": "零基础"
+                }
+              ],
+              "sources": [
+                {
+                  "document": "B",
+                  "chapter": "第二章",
+                  "factIds": [
+                    "teacher-l1-weekend.format",
+                    "teacher-l1-weekend.schedule"
+                  ]
+                },
+                {
+                  "document": "B",
+                  "chapter": "第一章",
+                  "factIds": [
+                    "teacher-l1-weekend.level"
+                  ]
+                },
+                {
+                  "document": "B",
+                  "chapter": "第三章",
+                  "factIds": [
+                    "teacher-l1-weekend.curriculumModules",
+                    "teacher-l1-weekend.outcome"
+                  ]
+                }
+              ],
+              "availabilityNote": "资料未提供实时余位；班型规模和最低开班人数均不代表剩余名额。"
+            }
+          ]
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "new_consultation",
+          "corrections": [],
+          "confirmedDomain": "teacher",
+          "confirmedConstraints": {
+            "startingLevel": "beginner",
+            "canTakeContinuousLeave": false
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "teacher-l1-weekend"
+          ],
+          "decisionTrace": [
+            {
+              "code": "weekend_time",
+              "constraintKeys": [
+                "canTakeContinuousLeave"
+              ],
+              "factIds": [
+                "teacher-l1-weekend.format",
+                "teacher-l1-weekend.schedule"
+              ]
+            },
+            {
+              "code": "level_l1",
+              "constraintKeys": [
+                "startingLevel"
+              ],
+              "factIds": [
+                "teacher-l1-weekend.level",
+                "teacher-l1-weekend.curriculumModules",
+                "teacher-l1-weekend.outcome"
+              ]
+            }
+          ],
+          "groundingFailures": [
+            {
+              "attempt": 1,
+              "reasonCode": "unsupported_follow_up"
+            }
+          ],
+          "composerAttempts": 2,
+          "finalStatus": "recommended",
+          "routeLatencyMs": 33874,
+          "classifierCandidate": {
+            "intent": "unknown",
+            "studentConstraints": {},
+            "factTopics": []
+          }
+        }
+      },
+      "latencyMs": 33897,
+      "silentRetry": true
+    },
+    {
+      "caseId": "M03",
+      "step": "追问地点",
+      "request": {
+        "action": "message",
+        "message": "在哪里上课？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {
+            "startingLevel": "beginner",
+            "canTakeContinuousLeave": false,
+            "stalledTurns": 0
+          },
+          "lastRecommendationIds": [
+            "teacher-l1-weekend"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "零基础教师，周末有空，工作日不能脱岗"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，推荐您参加教师L1周末班。该班型采用周末上课模式（8月2日上午线上、下午线下工作坊），无需您连续请假，符合您无法连续请假的要求；同时课程为L1入门级别，覆盖提示词、AI备课等模块，学习产出一套AI辅助教学资源包，非常适合零基础的您。如需了解更多细节，欢迎继续提问。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "teacher-l1-weekend"
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:49:46",
+          "httpStatus": 200,
+          "latencyMs": 5659
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "contextual_followup",
+        "message": "教师L1周末班在北京、上海、广州设有线下工作坊，同时提供腾讯会议线上直播平台。具体线下地点为：北京教学基地、上海工作坊、广州工作坊。您可以根据所在城市选择线下参与，或通过腾讯会议远程上课。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二、四章",
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {
+            "startingLevel": "beginner",
+            "canTakeContinuousLeave": false,
+            "stalledTurns": 0
+          },
+          "lastRecommendationIds": [
+            "teacher-l1-weekend"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "零基础教师，周末有空，工作日不能脱岗"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，推荐您参加教师L1周末班。该班型采用周末上课模式（8月2日上午线上、下午线下工作坊），无需您连续请假，符合您无法连续请假的要求；同时课程为L1入门级别，覆盖提示词、AI备课等模块，学习产出一套AI辅助教学资源包，非常适合零基础的您。如需了解更多细节，欢迎继续提问。"
+            },
+            {
+              "role": "user",
+              "content": "在哪里上课？"
+            },
+            {
+              "role": "assistant",
+              "content": "教师L1周末班在北京、上海、广州设有线下工作坊，同时提供腾讯会议线上直播平台。具体线下地点为：北京教学基地、上海工作坊、广州工作坊。您可以根据所在城市选择线下参与，或通过腾讯会议远程上课。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "teacher-l1-weekend"
+        },
+        "sources": [
+          {
+            "document": "B",
+            "chapter": "第二、四章",
+            "factIds": [
+              "teacher-l1-weekend.cities",
+              "teacher-l1-weekend.locationsOrPlatforms"
+            ]
+          }
+        ],
+        "entityIds": [
+          "teacher-l1-weekend"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "contextual_followup",
+          "corrections": [],
+          "confirmedDomain": "teacher",
+          "confirmedConstraints": {
+            "startingLevel": "beginner",
+            "canTakeContinuousLeave": false
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "teacher-l1-weekend"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "contextual_followup",
+          "routeLatencyMs": 5651,
+          "classifierCandidate": {
+            "domainCandidate": "teacher",
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "location"
+            ]
+          }
+        }
+      },
+      "latencyMs": 5659,
+      "silentRetry": false
+    },
+    {
+      "caseId": "M03",
+      "step": "追问费用",
+      "request": {
+        "action": "message",
+        "message": "多少钱？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {
+            "startingLevel": "beginner",
+            "canTakeContinuousLeave": false,
+            "stalledTurns": 0
+          },
+          "lastRecommendationIds": [
+            "teacher-l1-weekend"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "零基础教师，周末有空，工作日不能脱岗"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，推荐您参加教师L1周末班。该班型采用周末上课模式（8月2日上午线上、下午线下工作坊），无需您连续请假，符合您无法连续请假的要求；同时课程为L1入门级别，覆盖提示词、AI备课等模块，学习产出一套AI辅助教学资源包，非常适合零基础的您。如需了解更多细节，欢迎继续提问。"
+            },
+            {
+              "role": "user",
+              "content": "在哪里上课？"
+            },
+            {
+              "role": "assistant",
+              "content": "教师L1周末班在北京、上海、广州设有线下工作坊，同时提供腾讯会议线上直播平台。具体线下地点为：北京教学基地、上海工作坊、广州工作坊。您可以根据所在城市选择线下参与，或通过腾讯会议远程上课。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "teacher-l1-weekend"
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:49:53",
+          "httpStatus": 200,
+          "latencyMs": 7139
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "contextual_followup",
+        "message": "目前教师L1周末班的标准价格为2980元。早鸟优惠已于2026年7月19日截止，当前无额外优惠。报名截止日期为2026年7月26日，目前仍可报名。如需了解团报优惠（3人起，每人减300元），可进一步咨询。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第五章；素材B《初高中教师AI素养培训体系介绍》第二章",
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {
+            "startingLevel": "beginner",
+            "canTakeContinuousLeave": false,
+            "stalledTurns": 0
+          },
+          "lastRecommendationIds": [
+            "teacher-l1-weekend"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "零基础教师，周末有空，工作日不能脱岗"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，推荐您参加教师L1周末班。该班型采用周末上课模式（8月2日上午线上、下午线下工作坊），无需您连续请假，符合您无法连续请假的要求；同时课程为L1入门级别，覆盖提示词、AI备课等模块，学习产出一套AI辅助教学资源包，非常适合零基础的您。如需了解更多细节，欢迎继续提问。"
+            },
+            {
+              "role": "user",
+              "content": "在哪里上课？"
+            },
+            {
+              "role": "assistant",
+              "content": "教师L1周末班在北京、上海、广州设有线下工作坊，同时提供腾讯会议线上直播平台。具体线下地点为：北京教学基地、上海工作坊、广州工作坊。您可以根据所在城市选择线下参与，或通过腾讯会议远程上课。"
+            },
+            {
+              "role": "user",
+              "content": "多少钱？"
+            },
+            {
+              "role": "assistant",
+              "content": "目前教师L1周末班的标准价格为2980元。早鸟优惠已于2026年7月19日截止，当前无额外优惠。报名截止日期为2026年7月26日，目前仍可报名。如需了解团报优惠（3人起，每人减300元），可进一步咨询。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "teacher-l1-weekend"
+        },
+        "sources": [
+          {
+            "document": "B",
+            "chapter": "第五章",
+            "factIds": [
+              "teacher-l1-weekend.standardPrice",
+              "teacher-l1-weekend.earlyBirdDeadline",
+              "teacher-l1-weekend.groupDiscount",
+              "teacher-l1-weekend.groupMinimum"
+            ]
+          },
+          {
+            "document": "B",
+            "chapter": "第二章",
+            "factIds": [
+              "teacher-l1-weekend.registrationDeadline"
+            ]
+          }
+        ],
+        "entityIds": [
+          "teacher-l1-weekend"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "contextual_followup",
+          "corrections": [],
+          "confirmedDomain": "teacher",
+          "confirmedConstraints": {
+            "startingLevel": "beginner",
+            "canTakeContinuousLeave": false
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "teacher-l1-weekend"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "contextual_followup",
+          "routeLatencyMs": 7129,
+          "classifierCandidate": {
+            "domainCandidate": "teacher",
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "price"
+            ]
+          }
+        }
+      },
+      "latencyMs": 7139,
+      "silentRetry": false
+    },
+    {
+      "caseId": "M03",
+      "step": "追问报名",
+      "request": {
+        "action": "message",
+        "message": "怎么报名？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {
+            "startingLevel": "beginner",
+            "canTakeContinuousLeave": false,
+            "stalledTurns": 0
+          },
+          "lastRecommendationIds": [
+            "teacher-l1-weekend"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "零基础教师，周末有空，工作日不能脱岗"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，推荐您参加教师L1周末班。该班型采用周末上课模式（8月2日上午线上、下午线下工作坊），无需您连续请假，符合您无法连续请假的要求；同时课程为L1入门级别，覆盖提示词、AI备课等模块，学习产出一套AI辅助教学资源包，非常适合零基础的您。如需了解更多细节，欢迎继续提问。"
+            },
+            {
+              "role": "user",
+              "content": "在哪里上课？"
+            },
+            {
+              "role": "assistant",
+              "content": "教师L1周末班在北京、上海、广州设有线下工作坊，同时提供腾讯会议线上直播平台。具体线下地点为：北京教学基地、上海工作坊、广州工作坊。您可以根据所在城市选择线下参与，或通过腾讯会议远程上课。"
+            },
+            {
+              "role": "user",
+              "content": "多少钱？"
+            },
+            {
+              "role": "assistant",
+              "content": "目前教师L1周末班的标准价格为2980元。早鸟优惠已于2026年7月19日截止，当前无额外优惠。报名截止日期为2026年7月26日，目前仍可报名。如需了解团报优惠（3人起，每人减300元），可进一步咨询。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "teacher-l1-weekend"
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:50:08",
+          "httpStatus": 200,
+          "latencyMs": 15068
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "contextual_followup",
+        "message": "目前教师L1周末班报名仍在开放中，您可以直接参加。报名截止日期为2026年7月26日，标准价格为2980元。如需了解具体报名步骤或团报优惠，请进一步咨询。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二章；素材B《初高中教师AI素养培训体系介绍》第五章",
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {
+            "startingLevel": "beginner",
+            "canTakeContinuousLeave": false,
+            "stalledTurns": 0
+          },
+          "lastRecommendationIds": [
+            "teacher-l1-weekend"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "在哪里上课？"
+            },
+            {
+              "role": "assistant",
+              "content": "教师L1周末班在北京、上海、广州设有线下工作坊，同时提供腾讯会议线上直播平台。具体线下地点为：北京教学基地、上海工作坊、广州工作坊。您可以根据所在城市选择线下参与，或通过腾讯会议远程上课。"
+            },
+            {
+              "role": "user",
+              "content": "多少钱？"
+            },
+            {
+              "role": "assistant",
+              "content": "目前教师L1周末班的标准价格为2980元。早鸟优惠已于2026年7月19日截止，当前无额外优惠。报名截止日期为2026年7月26日，目前仍可报名。如需了解团报优惠（3人起，每人减300元），可进一步咨询。"
+            },
+            {
+              "role": "user",
+              "content": "怎么报名？"
+            },
+            {
+              "role": "assistant",
+              "content": "目前教师L1周末班报名仍在开放中，您可以直接参加。报名截止日期为2026年7月26日，标准价格为2980元。如需了解具体报名步骤或团报优惠，请进一步咨询。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "teacher-l1-weekend"
+        },
+        "sources": [
+          {
+            "document": "B",
+            "chapter": "第二章",
+            "factIds": [
+              "teacher-l1-weekend.registrationDeadline"
+            ]
+          },
+          {
+            "document": "B",
+            "chapter": "第五章",
+            "factIds": [
+              "teacher-l1-weekend.standardPrice"
+            ]
+          }
+        ],
+        "entityIds": [
+          "teacher-l1-weekend"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "contextual_followup",
+          "corrections": [],
+          "confirmedDomain": "teacher",
+          "confirmedConstraints": {
+            "startingLevel": "beginner",
+            "canTakeContinuousLeave": false
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "teacher-l1-weekend"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [
+            {
+              "attempt": 1,
+              "reasonCode": "missing_required_fact"
+            }
+          ],
+          "composerAttempts": 2,
+          "finalStatus": "contextual_followup",
+          "routeLatencyMs": 15058,
+          "classifierCandidate": {
+            "domainCandidate": "teacher",
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "registration"
+            ]
+          }
+        }
+      },
+      "latencyMs": 15068,
+      "silentRetry": true
+    }
+  ],
+  "httpStatuses": [
+    200,
+    200,
+    200,
+    200
+  ],
+  "actualStatuses": [
+    "recommended",
+    "contextual_followup",
+    "contextual_followup",
+    "contextual_followup"
+  ],
+  "actualAnswers": [
+    "根据您的需求，推荐您参加教师L1周末班。该班型采用周末上课模式（8月2日上午线上、下午线下工作坊），无需您连续请假，符合您无法连续请假的要求；同时课程为L1入门级别，覆盖提示词、AI备课等模块，学习产出一套AI辅助教学资源包，非常适合零基础的您。如需了解更多细节，欢迎继续提问。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二章；素材B《初高中教师AI素养培训体系介绍》第一章；素材B《初高中教师AI素养培训体系介绍》第三章",
+    "教师L1周末班在北京、上海、广州设有线下工作坊，同时提供腾讯会议线上直播平台。具体线下地点为：北京教学基地、上海工作坊、广州工作坊。您可以根据所在城市选择线下参与，或通过腾讯会议远程上课。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二、四章",
+    "目前教师L1周末班的标准价格为2980元。早鸟优惠已于2026年7月19日截止，当前无额外优惠。报名截止日期为2026年7月26日，目前仍可报名。如需了解团报优惠（3人起，每人减300元），可进一步咨询。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第五章；素材B《初高中教师AI素养培训体系介绍》第二章",
+    "目前教师L1周末班报名仍在开放中，您可以直接参加。报名截止日期为2026年7月26日，标准价格为2980元。如需了解具体报名步骤或团报优惠，请进一步咨询。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二章；素材B《初高中教师AI素养培训体系介绍》第五章"
+  ],
+  "entities": [
+    "teacher-l1-weekend"
+  ],
+  "currentEntities": [
+    "teacher-l1-weekend"
+  ],
+  "facts": {
+    "amounts": [
+      "2980元",
+      "300元"
+    ],
+    "dates": [
+      "8月2日",
+      "7月19日",
+      "7月26日"
+    ],
+    "keyFacts": [
+      "资料未提供",
+      "实时余位"
+    ]
+  },
+  "sources": [
+    {
+      "document": "B",
+      "chapter": "第二章",
+      "factIds": [
+        "teacher-l1-weekend.format",
+        "teacher-l1-weekend.schedule"
+      ]
+    },
+    {
+      "document": "B",
+      "chapter": "第一章",
+      "factIds": [
+        "teacher-l1-weekend.level"
+      ]
+    },
+    {
+      "document": "B",
+      "chapter": "第三章",
+      "factIds": [
+        "teacher-l1-weekend.curriculumModules",
+        "teacher-l1-weekend.outcome"
+      ]
+    },
+    {
+      "document": "B",
+      "chapter": "第二、四章",
+      "factIds": [
+        "teacher-l1-weekend.cities",
+        "teacher-l1-weekend.locationsOrPlatforms"
+      ]
+    },
+    {
+      "document": "B",
+      "chapter": "第五章",
+      "factIds": [
+        "teacher-l1-weekend.standardPrice",
+        "teacher-l1-weekend.earlyBirdDeadline",
+        "teacher-l1-weekend.groupDiscount",
+        "teacher-l1-weekend.groupMinimum"
+      ]
+    }
+  ],
+  "totalLatencyMs": 61763,
+  "silentRetry": true,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "四轮均HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "持续继承同一教师产品",
+      "passed": true
+    },
+    {
+      "label": "所有追问仅用素材B",
+      "passed": true
+    },
+    {
+      "label": "不混机构或学生资料",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "M03.json"
+}

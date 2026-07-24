@@ -1,0 +1,211 @@
+{
+  "id": "X06",
+  "category": "补充14组",
+  "title": "学校20人采购费用",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:52:04",
+  "finishedAt": "2026-07-23 18:52:20",
+  "originalInput": "机构询问学校20人采购教师培训需要多少钱？",
+  "expected": "素材C学校采购：20人起，项目总价5万元起。",
+  "turns": [
+    {
+      "caseId": "X06",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "机构询问学校20人采购教师培训需要多少钱？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "platform",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:52:20",
+          "httpStatus": 200,
+          "latencyMs": 15910
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "institution_info",
+        "message": "针对学校或教育局统一采购教师培训，我们的服务方案为：20人起，项目总价5万元起。具体可根据实际需求定制方案。您可以通过以下操作继续了解：查看模拟咨询流程、整理采购需求清单或返回菜单。\n\n来源：素材C《OPC超级个体赋能平台产品白皮书》第六章",
+        "state": {
+          "version": 1,
+          "domain": "platform",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "机构询问学校20人采购教师培训需要多少钱？"
+            },
+            {
+              "role": "assistant",
+              "content": "针对学校或教育局统一采购教师培训，我们的服务方案为：20人起，项目总价5万元起。具体可根据实际需求定制方案。您可以通过以下操作继续了解：查看模拟咨询流程、整理采购需求清单或返回菜单。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "institutionNeed": "school_procurement",
+          "selectedEntityId": "platform-school-procurement"
+        },
+        "sources": [
+          {
+            "document": "C",
+            "chapter": "第六章",
+            "factIds": [
+              "platform-school-procurement.pricingRule",
+              "platform-school-procurement.minimumPeople",
+              "platform-school-procurement.minimumTotalPrice"
+            ]
+          }
+        ],
+        "entityIds": [
+          "platform-school-procurement"
+        ],
+        "actions": [
+          "查看模拟咨询流程",
+          "整理采购需求清单",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": [],
+          "institutionService": {
+            "entityId": "platform-school-procurement",
+            "name": "学校教师培训采购",
+            "audience": "学校或教育局统一采购",
+            "pricingRule": "20人起，项目总价5万元起",
+            "boundary": "个人教师报名价格不适用于学校统一采购",
+            "sources": [
+              {
+                "document": "C",
+                "chapter": "第六章",
+                "factIds": [
+                  "platform-school-procurement.pricingRule",
+                  "platform-school-procurement.minimumPeople",
+                  "platform-school-procurement.minimumTotalPrice"
+                ]
+              }
+            ]
+          }
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "institution_service",
+          "corrections": [],
+          "confirmedDomain": "platform",
+          "confirmedConstraints": {
+            "institutionNeed": "school_procurement"
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "platform-school-procurement"
+          ],
+          "decisionTrace": [
+            {
+              "code": "institution_school_procurement",
+              "constraintKeys": [
+                "institutionNeed"
+              ],
+              "constraintValues": {
+                "institutionNeed": "school_procurement"
+              },
+              "factIds": [
+                "platform-school-procurement.category",
+                "platform-school-procurement.audience",
+                "platform-school-procurement.boundary",
+                "platform-school-procurement.pricingRule",
+                "platform-school-procurement.minimumPeople",
+                "platform-school-procurement.minimumTotalPrice"
+              ]
+            }
+          ],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "institution_info",
+          "routeLatencyMs": 15894,
+          "classifierCandidate": {
+            "intent": "unknown",
+            "studentConstraints": {},
+            "factTopics": []
+          }
+        }
+      },
+      "latencyMs": 15910,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "institution_info"
+  ],
+  "actualAnswers": [
+    "针对学校或教育局统一采购教师培训，我们的服务方案为：20人起，项目总价5万元起。具体可根据实际需求定制方案。您可以通过以下操作继续了解：查看模拟咨询流程、整理采购需求清单或返回菜单。\n\n来源：素材C《OPC超级个体赋能平台产品白皮书》第六章"
+  ],
+  "entities": [
+    "platform-school-procurement"
+  ],
+  "currentEntities": [
+    "platform-school-procurement"
+  ],
+  "facts": {
+    "amounts": [
+      "5万元"
+    ],
+    "dates": [],
+    "keyFacts": [
+      "20人起",
+      "5万元起"
+    ]
+  },
+  "sources": [
+    {
+      "document": "C",
+      "chapter": "第六章",
+      "factIds": [
+        "platform-school-procurement.pricingRule",
+        "platform-school-procurement.minimumPeople",
+        "platform-school-procurement.minimumTotalPrice"
+      ]
+    }
+  ],
+  "totalLatencyMs": 15910,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "人数和总价准确",
+      "passed": true
+    },
+    {
+      "label": "来源只为素材C",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "X06.json"
+}

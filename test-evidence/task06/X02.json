@@ -1,0 +1,281 @@
+{
+  "id": "X02",
+  "category": "补充14组",
+  "title": "资料不足且拒绝补充",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:51:03",
+  "finishedAt": "2026-07-23 18:51:19",
+  "originalInput": "我是学生，第一期有空 → 我不想再补充信息了",
+  "expected": "说明资料不足并提供退出/返回入口，不无限追问。",
+  "turns": [
+    {
+      "caseId": "X02",
+      "step": "只提供一个条件",
+      "request": {
+        "action": "message",
+        "message": "我是学生，第一期有空",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:51:09",
+          "httpStatus": 200,
+          "latencyMs": 6532
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "needs_more_information",
+        "message": "好的，您第一期有空。请问您所在的地区是北京、上海、广州还是其他城市？另外，您偏好线上还是线下上课，或者都可以？",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [
+            "region",
+            "modePreference"
+          ],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "我是学生，第一期有空"
+            },
+            {
+              "role": "assistant",
+              "content": "好的，您第一期有空。请问您所在的地区是北京、上海、广州还是其他城市？另外，您偏好线上还是线下上课，或者都可以？"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [],
+        "entityIds": [],
+        "actions": [
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "new_consultation",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "availablePeriods": [
+              1
+            ]
+          },
+          "pendingQuestionKeys": [
+            "region",
+            "modePreference"
+          ],
+          "entityIds": [],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "needs_more_information",
+          "routeLatencyMs": 6523,
+          "classifierCandidate": {
+            "domainCandidate": "student",
+            "intent": "identity_selection",
+            "studentConstraints": {
+              "availablePeriods": [
+                1
+              ]
+            },
+            "factTopics": []
+          }
+        }
+      },
+      "latencyMs": 6532,
+      "silentRetry": false
+    },
+    {
+      "caseId": "X02",
+      "step": "拒绝继续补充",
+      "request": {
+        "action": "message",
+        "message": "我不想再补充信息了",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [
+            "region",
+            "modePreference"
+          ],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "我是学生，第一期有空"
+            },
+            {
+              "role": "assistant",
+              "content": "好的，您第一期有空。请问您所在的地区是北京、上海、广州还是其他城市？另外，您偏好线上还是线下上课，或者都可以？"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:51:19",
+          "httpStatus": 200,
+          "latencyMs": 9738
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "insufficient_information",
+        "message": "目前信息不足以推荐课程。为了给您准确建议，需要知道您的地区（北京、上海、广州或其他城市）以及上课偏好（线上/线下）。您可以继续补充信息，或选择“重新选择身份”或“返回菜单”。",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "stalledTurns": 0,
+            "refusesMoreQuestions": true
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "我是学生，第一期有空"
+            },
+            {
+              "role": "assistant",
+              "content": "好的，您第一期有空。请问您所在的地区是北京、上海、广州还是其他城市？另外，您偏好线上还是线下上课，或者都可以？"
+            },
+            {
+              "role": "user",
+              "content": "我不想再补充信息了"
+            },
+            {
+              "role": "assistant",
+              "content": "目前信息不足以推荐课程。为了给您准确建议，需要知道您的地区（北京、上海、广州或其他城市）以及上课偏好（线上/线下）。您可以继续补充信息，或选择“重新选择身份”或“返回菜单”。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [],
+        "entityIds": [],
+        "actions": [
+          "重新选择身份",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "new_consultation",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "availablePeriods": [
+              1
+            ]
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "insufficient_information",
+          "routeLatencyMs": 9728,
+          "classifierCandidate": {
+            "intent": "reset",
+            "studentConstraints": {},
+            "factTopics": []
+          }
+        }
+      },
+      "latencyMs": 9738,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200,
+    200
+  ],
+  "actualStatuses": [
+    "needs_more_information",
+    "insufficient_information"
+  ],
+  "actualAnswers": [
+    "好的，您第一期有空。请问您所在的地区是北京、上海、广州还是其他城市？另外，您偏好线上还是线下上课，或者都可以？",
+    "目前信息不足以推荐课程。为了给您准确建议，需要知道您的地区（北京、上海、广州或其他城市）以及上课偏好（线上/线下）。您可以继续补充信息，或选择“重新选择身份”或“返回菜单”。"
+  ],
+  "entities": [],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [],
+    "dates": [],
+    "keyFacts": []
+  },
+  "sources": [],
+  "totalLatencyMs": 16270,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "两轮均HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "最终为资料不足",
+      "passed": true
+    },
+    {
+      "label": "提供退出入口",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "X02.json"
+}

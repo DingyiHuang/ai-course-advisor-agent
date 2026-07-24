@@ -1,0 +1,230 @@
+{
+  "id": "X11",
+  "category": "补充14组",
+  "title": "广州学生本地线下边界",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:53:41",
+  "finishedAt": "2026-07-23 18:53:55",
+  "originalInput": "我是广州家长，想参加广州本地的学生线下班。",
+  "expected": "明确素材A没有广州学生线下班，不误用素材B广州教师工作坊，询问能否出行。",
+  "turns": [
+    {
+      "caseId": "X11",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "我是广州家长，想参加广州本地的学生线下班。",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:53:55",
+          "httpStatus": 200,
+          "latencyMs": 14183
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "boundary_follow_up",
+        "message": "素材A没有广州学生线下班。\n广州目前没有开设线下学生班。不过，我们在北京和上海都有线下课程。请问您是否方便前往北京或上海参加呢？\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "modePreference": "offline",
+            "region": "guangzhou",
+            "regionDisplayName": "广州",
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [
+            "canTravel"
+          ],
+          "pendingQuestionOptions": [
+            "可以前往北京",
+            "可以前往上海",
+            "均不便出行"
+          ],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "我是广州家长，想参加广州本地的学生线下班。"
+            },
+            {
+              "role": "assistant",
+              "content": "素材A没有广州学生线下班。\n广州目前没有开设线下学生班。不过，我们在北京和上海都有线下课程。请问您是否方便前往北京或上海参加呢？"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p1-bj.campus",
+              "camp-p1-sh.campus",
+              "camp-p1-online.campus",
+              "camp-p2-bj.campus",
+              "camp-p2-sh.campus",
+              "camp-p2-online.campus",
+              "camp-p3-bj.campus",
+              "camp-p3-sh.campus",
+              "camp-p3-online.campus"
+            ]
+          }
+        ],
+        "entityIds": [],
+        "actions": [
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "boundaryCode": "student_guangzhou_offline_not_provided",
+        "diagnostics": {
+          "effectiveIntent": "new_consultation",
+          "corrections": [
+            {
+              "reasonCode": "explicit_constraint_overrode_classifier",
+              "field": "student.region",
+              "candidateValue": "other",
+              "confirmedValue": "guangzhou"
+            }
+          ],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "modePreference": "offline",
+            "region": "guangzhou",
+            "regionDisplayName": "广州"
+          },
+          "pendingQuestionKeys": [
+            "canTravel"
+          ],
+          "entityIds": [],
+          "decisionTrace": [
+            {
+              "code": "student_guangzhou_offline_not_provided",
+              "constraintKeys": [
+                "region",
+                "modePreference"
+              ],
+              "constraintValues": {
+                "region": "guangzhou",
+                "regionDisplayName": "广州",
+                "modePreference": "offline"
+              },
+              "factIds": [
+                "camp-p1-bj.campus",
+                "camp-p1-sh.campus",
+                "camp-p1-online.campus",
+                "camp-p2-bj.campus",
+                "camp-p2-sh.campus",
+                "camp-p2-online.campus",
+                "camp-p3-bj.campus",
+                "camp-p3-sh.campus",
+                "camp-p3-online.campus"
+              ]
+            }
+          ],
+          "groundingFailures": [
+            {
+              "attempt": 1,
+              "reasonCode": "missing_required_fact"
+            }
+          ],
+          "composerAttempts": 2,
+          "finalStatus": "boundary_follow_up",
+          "routeLatencyMs": 14174,
+          "classifierCandidate": {
+            "intent": "new_consultation",
+            "studentConstraints": {
+              "region": "other",
+              "regionDisplayName": "广州",
+              "modePreference": "offline"
+            },
+            "factTopics": []
+          }
+        }
+      },
+      "latencyMs": 14183,
+      "silentRetry": true
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "boundary_follow_up"
+  ],
+  "actualAnswers": [
+    "素材A没有广州学生线下班。\n广州目前没有开设线下学生班。不过，我们在北京和上海都有线下课程。请问您是否方便前往北京或上海参加呢？\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章"
+  ],
+  "entities": [],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [],
+    "dates": [],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p1-bj.campus",
+        "camp-p1-sh.campus",
+        "camp-p1-online.campus",
+        "camp-p2-bj.campus",
+        "camp-p2-sh.campus",
+        "camp-p2-online.campus",
+        "camp-p3-bj.campus",
+        "camp-p3-sh.campus",
+        "camp-p3-online.campus"
+      ]
+    }
+  ],
+  "totalLatencyMs": 14183,
+  "silentRetry": true,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200且为边界追问",
+      "passed": true
+    },
+    {
+      "label": "明确无广州学生线下班",
+      "passed": true
+    },
+    {
+      "label": "不引用教师资料",
+      "passed": true
+    },
+    {
+      "label": "不把广州教师工作坊当学生班",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "X11.json"
+}

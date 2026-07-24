@@ -2,7 +2,7 @@ import type {
   InstitutionNeed,
   InstitutionRoute,
 } from "@/lib/domain/rules";
-import { getPlatformService } from "@/lib/knowledge";
+import { getPlatformService, getTeacherProduct } from "@/lib/knowledge";
 
 const SERVICE_IDS: Record<InstitutionNeed, string> = {
   membership: "platform-membership",
@@ -31,9 +31,14 @@ export function routeInstitutionNeed(need: InstitutionNeed): InstitutionRoute {
     );
   }
   if (need === "membership") {
+    const contest = getPlatformService("platform-contest");
+    const teacherL2 = getTeacherProduct("L2", "intensive");
     factIds.push(
       `${service.id}.priceProvided`,
       `${service.id}.grantsOrderPermission`,
+      `${contest.id}.grantsDirectOrderPermission`,
+      `${contest.id}.boundary`,
+      `${teacherL2.id}.standardPrice`,
     );
   }
 

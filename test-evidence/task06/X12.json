@@ -1,0 +1,211 @@
+{
+  "id": "X12",
+  "category": "补充14组",
+  "title": "第一期报名与早鸟过期",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:53:55",
+  "finishedAt": "2026-07-23 18:54:10",
+  "originalInput": "2026年7月22日，第一期北京线下班还能报名吗？还能享受早鸟吗？每人多少钱？",
+  "expected": "7月25日24:00前可报名，7月11日早鸟已过，标准价6980元。",
+  "turns": [
+    {
+      "caseId": "X12",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "2026年7月22日，第一期北京线下班还能报名吗？还能享受早鸟吗？每人多少钱？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:54:10",
+          "httpStatus": 200,
+          "latencyMs": 14492
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "fact_answer",
+        "message": "您好，第一期北京线下班目前仍可报名，报名截止时间为2026年7月25日24:00。早鸟优惠已于2026年7月11日截止，无法享受。当前标准价格为每人6980元，暂无其他折扣。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章；素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "availablePeriods": [
+              1
+            ],
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "2026年7月22日，第一期北京线下班还能报名吗？还能享受早鸟吗？每人多少钱？"
+            },
+            {
+              "role": "assistant",
+              "content": "您好，第一期北京线下班目前仍可报名，报名截止时间为2026年7月25日24:00。早鸟优惠已于2026年7月11日截止，无法享受。当前标准价格为每人6980元，暂无其他折扣。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第五章",
+            "factIds": [
+              "camp-p1-bj.standardPrice",
+              "camp-p1-bj.earlyBirdDeadline"
+            ]
+          },
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p1-bj.registrationDeadline"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p1-bj"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "fact_question",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "availablePeriods": [
+              1
+            ]
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p1-bj"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [
+            {
+              "attempt": 1,
+              "reasonCode": "missing_required_fact",
+              "detailCode": "registration_cutoff_incomplete"
+            }
+          ],
+          "composerAttempts": 2,
+          "finalStatus": "fact_answer",
+          "routeLatencyMs": 14475,
+          "classifierCandidate": {
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "registration",
+              "price"
+            ]
+          }
+        }
+      },
+      "latencyMs": 14492,
+      "silentRetry": true
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "fact_answer"
+  ],
+  "actualAnswers": [
+    "您好，第一期北京线下班目前仍可报名，报名截止时间为2026年7月25日24:00。早鸟优惠已于2026年7月11日截止，无法享受。当前标准价格为每人6980元，暂无其他折扣。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章；素材A《2026暑期AI素养夏令营课程手册》第三章"
+  ],
+  "entities": [
+    "camp-p1-bj"
+  ],
+  "currentEntities": [
+    "camp-p1-bj"
+  ],
+  "facts": {
+    "amounts": [
+      "6980元"
+    ],
+    "dates": [
+      "7月25日",
+      "7月11日"
+    ],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第五章",
+      "factIds": [
+        "camp-p1-bj.standardPrice",
+        "camp-p1-bj.earlyBirdDeadline"
+      ]
+    },
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p1-bj.registrationDeadline"
+      ]
+    }
+  ],
+  "totalLatencyMs": 14492,
+  "silentRetry": true,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "报名截止与仍可报名准确",
+      "passed": true
+    },
+    {
+      "label": "早鸟截止与过期准确",
+      "passed": true
+    },
+    {
+      "label": "标准价6980",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "X12.json"
+}

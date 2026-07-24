@@ -255,6 +255,7 @@ function classify(message: string): Record<string, unknown> {
   if (message.includes("L1同等能力") && message.includes("Web应用")) {
     result.intent = "recommendation";
     result.teacherConstraints = {
+      level: "L1",
       startingLevel: "L1",
       goal: "web-app",
       canTakeContinuousLeave: true,
@@ -262,6 +263,7 @@ function classify(message: string): Record<string, unknown> {
       prerequisiteStatus: "met",
     };
     evidence.intent = "希望";
+    evidence["teacher.level"] = "L1同等能力";
     evidence["teacher.startingLevel"] = "L1同等能力";
     evidence["teacher.goal"] = "Web应用";
     evidence["teacher.canTakeContinuousLeave"] = "连续参加";
@@ -340,7 +342,9 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
     ? "请补充当前规则需要的信息？"
     : "已根据已确认事实完成核对。";
   if (plan.status === "institution_info") {
-    message = "学校采购需满足20人起，项目总价5万元起。";
+    message = plan.entityIds.includes("platform-membership")
+      ? "现有资料未提供会员售价；6980元属于教师L2个人培训。会员不授予订单权限，大赛只提供测试资格，测试通过后才开通订单权限。"
+      : "学校采购需满足20人起，项目总价5万元起。";
   }
   if (hasOfflineFallback) {
     message = "第一期线上直播班是当前可行备选，并提供30天回放。";
@@ -375,10 +379,78 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
     plan.status === "contextual_followup"
   ) {
     const calculations = payload.calculations as Array<{
-      value?: { total?: number };
+      value?: {
+        total?: number;
+        basePrice?: number;
+        earlyBirdDiscount?: number;
+        groupDiscount?: number;
+        appliedDiscount?: number;
+        discountKind?: string;
+        startDate?: string;
+        startWeekday?: string;
+        endDate?: string;
+        endWeekday?: string;
+        registrationCutoff?: string;
+      };
     }>;
     const total = calculations[0]?.value?.total;
-    if (typeof total === "number") message = `当前费用为${total}元。`;
+    if (typeof total === "number") {
+      const feeCalculation = calculations.find(
+        ({ value }) => typeof value?.total === "number",
+      )?.value;
+      const registrationCutoff = calculations.find(
+        ({ value }) => typeof value?.registrationCutoff === "string",
+      )?.value?.registrationCutoff;
+      const statedEarlyBirdDiscount = facts.find(({ id }) =>
+        id.endsWith(".earlyBirdDiscount")
+      )?.value ?? feeCalculation?.earlyBirdDiscount;
+      const statedGroupDiscount = facts.find(({ id }) =>
+        id.endsWith(".groupDiscount")
+      )?.value ?? feeCalculation?.groupDiscount;
+      if (
+        feeCalculation?.discountKind === "earlyBird" &&
+        typeof statedEarlyBirdDiscount === "number" &&
+        typeof statedGroupDiscount === "number"
+      ) {
+        message =
+          `早鸟优惠${statedEarlyBirdDiscount}元高于团报优惠` +
+          `${statedGroupDiscount}元，只采用早鸟优惠，当前费用为${total}元。`;
+      } else {
+        message = `当前费用为${total}元。`;
+      }
+      if (registrationCutoff) {
+        message += `报名截止为${registrationCutoff}。`;
+      }
+    }
+    const schedule = calculations.find(
+      ({ value }) =>
+        typeof value?.startDate === "string" &&
+        typeof value?.endDate === "string",
+    )?.value;
+    if (
+      schedule?.startDate &&
+      schedule.startWeekday &&
+      schedule.endDate &&
+      schedule.endWeekday &&
+      schedule.registrationCutoff
+    ) {
+      message =
+        `课程从${schedule.startDate}（${schedule.startWeekday}）至` +
+        `${schedule.endDate}（${schedule.endWeekday}），` +
+        `报名截止为${schedule.registrationCutoff}。`;
+    }
+    const address = facts.find(({ id }) =>
+      id.endsWith(".addressOrPlatform")
+    )?.value;
+    if (typeof address === "string") {
+      message = `上课地点为${address}。`;
+    }
+    const teacherSchedule = facts.find(({ id }) =>
+      id.startsWith("teacher-") && id.endsWith(".schedule")
+    )?.value;
+    if (Array.isArray(teacherSchedule)) {
+      message = `${teacherSchedule.join("；")}，采用线下集训形式。`;
+    }
     const minimumPeople = facts.find(({ id }) =>
       id.endsWith(".minimumPeople")
     )?.value;
@@ -1890,4 +1962,294 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(retried.httpStatus).toBe(200);
     expect(retried.response.error).toBeUndefined();
   });
+
+  it.each([
+    ["student", "第一期夏令营什么时候上课？", "camp-p1-bj.startDate"],
+    ["student", "北京线下班在哪里？", "camp-p1-bj.addressOrPlatform"],
+    ["student", "线上直播班多少钱？", "camp-p1-online.standardPrice"],
+    ["student", "夏令营第5天学什么？", "camp-p1-bj.dailyOutline"],
+    ["teacher", "L1暑期集训班怎么安排？", "teacher-l1-intensive.schedule"],
+    ["teacher", "L2周末研修班哪几天上课？", "teacher-l2-weekend.schedule"],
+    ["teacher", "L3教师培训多少钱？", "teacher-l3-intensive.standardPrice"],
+    ["teacher", "教师培训需要带电脑吗？", "teacher-l1-intensive.deviceRequirements"],
+    ["student", "30人班还有几个名额？", "camp-p1-bj.availabilityKnown"],
+    ["teacher", "教师培训取消报名怎么退款？", "teacher-l1-intensive.refundPolicyProvided"],
+    ["student", "2026年7月22日，第一期北京线下班还能报名吗？还能享受早鸟吗？每人多少钱？", "camp-p1-bj.registrationDeadline"],
+    ["teacher", "2026年7月22日，教师L1暑期集训班还能报名吗？早鸟还能减500元吗？", "teacher-l1-intensive.registrationDeadline"],
+    ["student", "请告诉我学生第一营的开课和结束日期。", "camp-p1-bj.startDate"],
+  ] as const)(
+    "answers an explicitly referenced %s fact question without requiring a prior recommendation: %s",
+    async (domain, message, expectedFactId) => {
+      const state = createInitialConversationState();
+      state.domain = domain;
+      const { httpStatus, response } = await postChat({
+        action: "message",
+        message,
+        state,
+        testMode: false,
+      });
+
+      expect(httpStatus).toBe(200);
+      expect(response.status).toBe("fact_answer");
+      expect(response.sources.flatMap(({ factIds }) => factIds)).toContain(
+        expectedFactId,
+      );
+      expect(response.state.pendingQuestionKeys).not.toContain("selectedCourse");
+    },
+  );
+
+  it("keeps '我是家长，在北京' grounded to Beijing instead of inventing a city named 我是", async () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    const { response } = await postChat({
+      action: "message",
+      message: "我是家长，在北京，可参加第一期，希望线下。",
+      state,
+      testMode: false,
+    });
+
+    expect(response.status).toBe("recommended");
+    expect(response.entityIds).toEqual(["camp-p1-bj"]);
+    expect(response.state.studentConstraints.region).toBe("beijing");
+    expect(response.state.studentConstraints.regionDisplayName).toBe("北京");
+  });
+
+  it("deterministically recognizes a zero-basis teacher and preserves the product over follow-ups", async () => {
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+    const recommended = (
+      await postChat({
+        action: "message",
+        message: "零基础教师，周末有空，工作日不能脱岗",
+        state,
+        testMode: false,
+      })
+    ).response;
+    expect(recommended.status).toBe("recommended");
+    expect(recommended.entityIds).toEqual(["teacher-l1-weekend"]);
+
+    const location = (
+      await postChat({
+        action: "message",
+        message: "在哪里上课？",
+        state: recommended.state,
+        testMode: false,
+      })
+    ).response;
+    expect(location.status).toBe("contextual_followup");
+    expect(location.state.selectedEntityId).toBe("teacher-l1-weekend");
+    expect(location.sources.every(({ document }) => document === "B")).toBe(true);
+  });
+
+  it("maps L1-equivalent ability and the August 3-5 window to the L2 intensive product", async () => {
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+    const { response } = await postChat({
+      action: "message",
+      message: "我是教师，已具备L1同等能力，可在8月3日至5日连续参加，希望做Web应用。",
+      state,
+      testMode: false,
+    });
+
+    expect(response.status).toBe("recommended");
+    expect(response.entityIds).toEqual(["teacher-l2-intensive"]);
+    expect(response.state.teacherConstraints).toMatchObject({
+      startingLevel: "L1",
+      goal: "web-app",
+      canTakeContinuousLeave: true,
+      availableProductIds: ["teacher-l2-intensive"],
+      prerequisiteStatus: "met",
+    });
+  });
+
+  it("routes a school organizing 50 teacher seats to school procurement, not enterprise training", async () => {
+    const state = createInitialConversationState();
+    state.domain = "platform";
+    const { response } = await postChat({
+      action: "message",
+      message: "学校组织50名教师培训，每人按2980元吗？",
+      state,
+      testMode: false,
+    });
+
+    expect(response.status).toBe("institution_info");
+    expect(response.entityIds).toEqual(["platform-school-procurement"]);
+    expect(response.message).toContain("5万元");
+    expect(response.sources.every(({ document }) => document === "C")).toBe(
+      true,
+    );
+  });
+
+  it("returns the Guangzhou student offline boundary before asking for a period", async () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    const { response } = await postChat({
+      action: "message",
+      message: "我是广州家长，想参加广州本地的学生线下班。",
+      state,
+      testMode: false,
+    });
+
+    expect(response.status).toBe("boundary_follow_up");
+    expect(response.boundaryCode).toBe(
+      "student_guangzhou_offline_not_provided",
+    );
+    expect(response.state.pendingQuestionKeys).toEqual(["canTravel"]);
+    expect(response.message).toMatch(/(?:没有|未提供).*广州学生线下班/u);
+  });
+
+  it("states both L3 early-bird and group discount amounts", async () => {
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+    const { response } = await postChat({
+      action: "message",
+      message: "L3教师培训多少钱？",
+      state,
+      testMode: false,
+    });
+
+    expect(response.status).toBe("fact_answer");
+    expect(response.message).toContain("2000");
+    expect(response.message).toContain("300");
+    expect(response.sources.every(({ document }) => document === "B")).toBe(
+      true,
+    );
+  });
+
+  it("treats an explicit refusal to continue as insufficient information with an exit", async () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    const first = (
+      await postChat({
+        action: "message",
+        message: "我是学生，第一期有空",
+        state,
+        testMode: false,
+      })
+    ).response;
+    const refused = (
+      await postChat({
+        action: "message",
+        message: "我不想再补充信息了",
+        state: first.state,
+        testMode: false,
+      })
+    ).response;
+
+    expect(refused.status).toBe("insufficient_information");
+    expect(refused.actions.some((action) =>
+      ["重新选择身份", "返回菜单"].includes(action)
+    )).toBe(true);
+    expect(refused.state.studentConstraints.refusesMoreQuestions).toBe(true);
+  });
+
+  it("blocks direct L2 enrollment as soon as the prerequisite is explicitly not met", async () => {
+    const state = createInitialConversationState();
+    state.domain = "teacher";
+    const { response } = await postChat({
+      action: "message",
+      message: "我是教师，没有完成L1，也没通过同等能力测评，但想直接报名L2，请告诉我怎么缴费。",
+      state,
+      testMode: false,
+    });
+
+    expect(response.status).toBe("prerequisite_blocked");
+    expect(response.actions.some((action) =>
+      ["recommend_L1", "ability_assessment"].includes(action)
+    )).toBe(true);
+    expect(response.sources.flatMap(({ factIds }) => factIds)).toContain(
+      "teacher-l2-intensive.prerequisite",
+    );
+  });
+
+  it("applies the larger early-bird discount instead of stacking a three-person group discount", async () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    const { response } = await postChat({
+      action: "message",
+      message: "2026年7月22日，第三期北京线下班，3人同一期同班型团报，每人多少钱？",
+      state,
+      testMode: false,
+    });
+
+    expect(response.status).toBe("fact_answer");
+    expect(response.message).toContain("5980");
+    expect(response.message).toContain("1000");
+    expect(response.message).toContain("300");
+    expect(response.message).not.toContain("5680");
+    expect(response.state.studentConstraints).toMatchObject({
+      groupSize: 3,
+      groupSamePeriodAndCamp: true,
+    });
+  });
+
+  it("keeps group terms across the actual returned state and adds optional lodging", async () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    const group = (
+      await postChat({
+        action: "message",
+        message: "2026年7月22日，3人同报第一期北京线下班，同一期同班型，每人多少钱？",
+        state,
+        testMode: false,
+      })
+    ).response;
+    expect(group.status).toBe("fact_answer");
+    expect(group.message).toContain("6680");
+
+    const lodging = (
+      await postChat({
+        action: "message",
+        message: "如果3个人都自愿加食宿，每人总价多少？",
+        state: group.state,
+        testMode: false,
+      })
+    ).response;
+    expect(lodging.status).toBe("contextual_followup");
+    expect(lodging.message).toContain("9040");
+    expect(lodging.sources.flatMap(({ factIds }) => factIds)).toContain(
+      "camp-p1-bj.lodgingPrice",
+    );
+  });
+
+  it("uses a specific no-data boundary for unsupported school and income claims", async () => {
+    const state = createInitialConversationState();
+    state.domain = "platform";
+    const { response } = await postChat({
+      action: "message",
+      message: "你们合作过哪些名校，能保证多少收入？",
+      state,
+      testMode: false,
+    });
+
+    expect(response.status).toBe("unrelated");
+    expect(response.boundaryCode).toBe("unsupported_external_claims");
+    expect(response.message).toMatch(/未提供合作学校|不能.*编造/u);
+    expect(response.entityIds).toEqual([]);
+    expect(response.sources).toEqual([]);
+  });
+
+  it.each([
+    ["专业会员是不是6980元？", /会员售价.*未提供|未提供会员售价/u],
+    ["买大师会员是不是直接能接A级订单？", /测试通过后.*订单权限/u],
+  ])(
+    "grounds membership price and order-permission comparisons: %s",
+    async (message, expectedText) => {
+      const state = createInitialConversationState();
+      state.domain = "platform";
+      const { response } = await postChat({
+        action: "message",
+        message,
+        state,
+        testMode: false,
+      });
+
+      expect(response.status).toBe("institution_info");
+      expect(response.entityIds).toEqual(["platform-membership"]);
+      expect(response.message).toMatch(expectedText);
+      expect(response.sources.flatMap(({ document }) => document)).toEqual(
+        expect.arrayContaining(["B", "C"]),
+      );
+    },
+  );
 });

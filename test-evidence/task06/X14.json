@@ -1,0 +1,403 @@
+{
+  "id": "X14",
+  "category": "补充14组",
+  "title": "第一期3人团报与食宿",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:54:21",
+  "finishedAt": "2026-07-23 18:54:49",
+  "originalInput": "2026年7月22日，3人同报第一期北京线下班，同一期同班型，每人多少钱？ → 如果3个人都自愿加食宿，每人总价多少？",
+  "expected": "早鸟已过，团报每人6680元；自愿加食宿2360元后每人9040元。",
+  "turns": [
+    {
+      "caseId": "X14",
+      "step": "团报价格",
+      "request": {
+        "action": "message",
+        "message": "2026年7月22日，3人同报第一期北京线下班，同一期同班型，每人多少钱？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:54:34",
+          "httpStatus": 200,
+          "latencyMs": 12834
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "fact_answer",
+        "message": "根据您的情况，3人同报第1期北京线下班（同一期同班型），当前标准价格为6980元/人，由于早鸟优惠已过期（截止2026年7月11日），但您满足3人团报条件，可享受团报优惠300元/人，折后每人6680元。报名截止日期为2026年7月25日24:00，请在截止前完成报名。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章；素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "groupSize": 3,
+            "groupSamePeriodAndCamp": true,
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "2026年7月22日，3人同报第一期北京线下班，同一期同班型，每人多少钱？"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的情况，3人同报第1期北京线下班（同一期同班型），当前标准价格为6980元/人，由于早鸟优惠已过期（截止2026年7月11日），但您满足3人团报条件，可享受团报优惠300元/人，折后每人6680元。报名截止日期为2026年7月25日24:00，请在截止前完成报名。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第五章",
+            "factIds": [
+              "camp-p1-bj.standardPrice",
+              "camp-p1-bj.earlyBirdDeadline",
+              "camp-p1-bj.groupMinimum",
+              "camp-p1-bj.groupDiscount",
+              "camp-p1-bj.groupScope"
+            ]
+          },
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p1-bj.registrationDeadline"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p1-bj"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "fact_question",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "groupSize": 3,
+            "groupSamePeriodAndCamp": true
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p1-bj"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "fact_answer",
+          "routeLatencyMs": 12822,
+          "classifierCandidate": {
+            "intent": "contextual_followup",
+            "studentConstraints": {
+              "region": "beijing",
+              "regionDisplayName": "北京",
+              "availablePeriods": [
+                1
+              ],
+              "modePreference": "offline"
+            },
+            "factTopics": [
+              "price"
+            ]
+          }
+        }
+      },
+      "latencyMs": 12834,
+      "silentRetry": false
+    },
+    {
+      "caseId": "X14",
+      "step": "团报加食宿",
+      "request": {
+        "action": "message",
+        "message": "如果3个人都自愿加食宿，每人总价多少？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "groupSize": 3,
+            "groupSamePeriodAndCamp": true,
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "2026年7月22日，3人同报第一期北京线下班，同一期同班型，每人多少钱？"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的情况，3人同报第1期北京线下班（同一期同班型），当前标准价格为6980元/人，由于早鸟优惠已过期（截止2026年7月11日），但您满足3人团报条件，可享受团报优惠300元/人，折后每人6680元。报名截止日期为2026年7月25日24:00，请在截止前完成报名。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:54:49",
+          "httpStatus": 200,
+          "latencyMs": 14938
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "contextual_followup",
+        "message": "如果3人同报第一期北京线下班并都选择加食宿，每人总价为：基础价格6980元 - 团报优惠300元 + 食宿套餐2360元 = 9040元。报名截止日期为2026年7月25日24:00，请在截止前完成报名。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章；素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "groupSamePeriodAndCamp": true,
+            "groupSize": 3,
+            "stalledTurns": 0,
+            "includeLodging": true
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "2026年7月22日，3人同报第一期北京线下班，同一期同班型，每人多少钱？"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的情况，3人同报第1期北京线下班（同一期同班型），当前标准价格为6980元/人，由于早鸟优惠已过期（截止2026年7月11日），但您满足3人团报条件，可享受团报优惠300元/人，折后每人6680元。报名截止日期为2026年7月25日24:00，请在截止前完成报名。"
+            },
+            {
+              "role": "user",
+              "content": "如果3个人都自愿加食宿，每人总价多少？"
+            },
+            {
+              "role": "assistant",
+              "content": "如果3人同报第一期北京线下班并都选择加食宿，每人总价为：基础价格6980元 - 团报优惠300元 + 食宿套餐2360元 = 9040元。报名截止日期为2026年7月25日24:00，请在截止前完成报名。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第五章",
+            "factIds": [
+              "camp-p1-bj.standardPrice",
+              "camp-p1-bj.earlyBirdDeadline",
+              "camp-p1-bj.groupDiscount",
+              "camp-p1-bj.groupMinimum",
+              "camp-p1-bj.groupScope",
+              "camp-p1-bj.lodgingPrice"
+            ]
+          },
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p1-bj.registrationDeadline"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p1-bj"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "contextual_followup",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "groupSamePeriodAndCamp": true,
+            "groupSize": 3,
+            "includeLodging": true
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p1-bj"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [
+            {
+              "attempt": 1,
+              "reasonCode": "ungrounded_date"
+            }
+          ],
+          "composerAttempts": 2,
+          "finalStatus": "contextual_followup",
+          "routeLatencyMs": 14928,
+          "classifierCandidate": {
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "price",
+              "fee_includes"
+            ]
+          }
+        }
+      },
+      "latencyMs": 14938,
+      "silentRetry": true
+    }
+  ],
+  "httpStatuses": [
+    200,
+    200
+  ],
+  "actualStatuses": [
+    "fact_answer",
+    "contextual_followup"
+  ],
+  "actualAnswers": [
+    "根据您的情况，3人同报第1期北京线下班（同一期同班型），当前标准价格为6980元/人，由于早鸟优惠已过期（截止2026年7月11日），但您满足3人团报条件，可享受团报优惠300元/人，折后每人6680元。报名截止日期为2026年7月25日24:00，请在截止前完成报名。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章；素材A《2026暑期AI素养夏令营课程手册》第三章",
+    "如果3人同报第一期北京线下班并都选择加食宿，每人总价为：基础价格6980元 - 团报优惠300元 + 食宿套餐2360元 = 9040元。报名截止日期为2026年7月25日24:00，请在截止前完成报名。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章；素材A《2026暑期AI素养夏令营课程手册》第三章"
+  ],
+  "entities": [
+    "camp-p1-bj"
+  ],
+  "currentEntities": [
+    "camp-p1-bj"
+  ],
+  "facts": {
+    "amounts": [
+      "6980元",
+      "300元",
+      "6680元",
+      "2360元",
+      "9040元"
+    ],
+    "dates": [
+      "7月11日",
+      "7月25日"
+    ],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第五章",
+      "factIds": [
+        "camp-p1-bj.standardPrice",
+        "camp-p1-bj.earlyBirdDeadline",
+        "camp-p1-bj.groupMinimum",
+        "camp-p1-bj.groupDiscount",
+        "camp-p1-bj.groupScope"
+      ]
+    },
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p1-bj.registrationDeadline"
+      ]
+    }
+  ],
+  "totalLatencyMs": 27772,
+  "silentRetry": true,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "两轮均HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "团报每人6680",
+      "passed": true
+    },
+    {
+      "label": "食宿另加2360",
+      "passed": true
+    },
+    {
+      "label": "加食宿每人9040",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "X14.json"
+}

@@ -1,0 +1,180 @@
+{
+  "id": "X07",
+  "category": "补充14组",
+  "title": "L2前置条件拦截",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:52:20",
+  "finishedAt": "2026-07-23 18:52:40",
+  "originalInput": "我是教师，没有完成L1，也没通过同等能力测评，但想直接报名L2，请告诉我怎么缴费。",
+  "expected": "拦截直接报名/缴费，建议L1或同等能力测评。",
+  "turns": [
+    {
+      "caseId": "X07",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "我是教师，没有完成L1，也没通过同等能力测评，但想直接报名L2，请告诉我怎么缴费。",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:52:40",
+          "httpStatus": 200,
+          "latencyMs": 20243
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "prerequisite_blocked",
+        "message": "您目前尚未完成L1或通过同等能力测评，根据课程要求，直接报名L2暂不可行。建议您先完成L1课程或进行一次能力测评，通过后方可进入L2。请问您是否需要我帮您推荐L1课程，或安排能力测评？\n\n来源：素材B《初高中教师AI素养培训体系介绍》第一、六章",
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {
+            "prerequisiteStatus": "not_met",
+            "level": "L2",
+            "stalledTurns": 0
+          },
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "我是教师，没有完成L1，也没通过同等能力测评，但想直接报名L2，请告诉我怎么缴费。"
+            },
+            {
+              "role": "assistant",
+              "content": "您目前尚未完成L1或通过同等能力测评，根据课程要求，直接报名L2暂不可行。建议您先完成L1课程或进行一次能力测评，通过后方可进入L2。请问您是否需要我帮您推荐L1课程，或安排能力测评？"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "teacher-l2-intensive"
+        },
+        "sources": [
+          {
+            "document": "B",
+            "chapter": "第一、六章",
+            "factIds": [
+              "teacher-l2-intensive.prerequisite"
+            ]
+          }
+        ],
+        "entityIds": [
+          "teacher-l2-intensive"
+        ],
+        "actions": [
+          "recommend_L1",
+          "ability_assessment",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "new_consultation",
+          "corrections": [],
+          "confirmedDomain": "teacher",
+          "confirmedConstraints": {
+            "prerequisiteStatus": "not_met",
+            "level": "L2"
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "teacher-l2-intensive"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "prerequisite_blocked",
+          "routeLatencyMs": 20220,
+          "classifierCandidate": {
+            "domainCandidate": "teacher",
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "price",
+              "registration"
+            ]
+          }
+        }
+      },
+      "latencyMs": 20243,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "prerequisite_blocked"
+  ],
+  "actualAnswers": [
+    "您目前尚未完成L1或通过同等能力测评，根据课程要求，直接报名L2暂不可行。建议您先完成L1课程或进行一次能力测评，通过后方可进入L2。请问您是否需要我帮您推荐L1课程，或安排能力测评？\n\n来源：素材B《初高中教师AI素养培训体系介绍》第一、六章"
+  ],
+  "entities": [
+    "teacher-l2-intensive"
+  ],
+  "currentEntities": [
+    "teacher-l2-intensive"
+  ],
+  "facts": {
+    "amounts": [],
+    "dates": [],
+    "keyFacts": [
+      "完成L1或通过同等能力测评"
+    ]
+  },
+  "sources": [
+    {
+      "document": "B",
+      "chapter": "第一、六章",
+      "factIds": [
+        "teacher-l2-intensive.prerequisite"
+      ]
+    }
+  ],
+  "totalLatencyMs": 20243,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200且前置阻断",
+      "passed": true
+    },
+    {
+      "label": "说明L2前置条件",
+      "passed": true
+    },
+    {
+      "label": "不引导直接缴费",
+      "passed": true
+    },
+    {
+      "label": "提供低一级或测评建议",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "X07.json"
+}

@@ -508,6 +508,9 @@ export function applyClassifierCandidate(input: {
           | "canTravel"
           | "needsReplay"
           | "preferredOfflineCampus"
+          | "groupSize"
+          | "groupSamePeriodAndCamp"
+          | "includeLodging"
         >,
         unknown,
       ]
@@ -547,6 +550,15 @@ export function applyClassifierCandidate(input: {
     const teacherCandidate = { ...input.candidate.teacherConstraints };
     const startingEvidence = input.candidate.evidence["teacher.startingLevel"];
     const goalEvidence = input.candidate.evidence["teacher.goal"];
+    const levelEvidence = input.candidate.evidence["teacher.level"];
+    if (
+      teacherCandidate.level &&
+      levelEvidence &&
+      /(?:具备|完成|通过|同等能力|当前基础)/u.test(levelEvidence) &&
+      !/(?:报名|参加|学习|目标|想上|想报)\s*l[123]/iu.test(input.message)
+    ) {
+      delete teacherCandidate.level;
+    }
     if (
       teacherCandidate.startingLevel === "beginner" &&
       teacherCandidate.goal &&

@@ -1,0 +1,45 @@
+{
+  "verifiedDateAsiaShanghai": "2026-07-24",
+  "executor": "参赛人",
+  "browser": "Chrome",
+  "sourceWord": {
+    "path": "E:\\桌面\\【比赛资料】\\task06 人工确认.docx",
+    "sha256": "5E576B9FE749B6AD98AA5D5A0E72B34AEE94C98360C925541015A2D94947077A",
+    "committedToRepository": false
+  },
+  "results": [
+    {
+      "id": "E01",
+      "verdict": "通过",
+      "actual": "空输入显示本地校验提示，Network中没有新增/api/chat；随后发送“我想学AI”返回HTTP 200，页面仍可继续使用。"
+    },
+    {
+      "id": "E02",
+      "verdict": "通过",
+      "actual": "输入501个“测”时显示501/500，发送按钮禁用且没有调用/api/chat。"
+    },
+    {
+      "id": "E03",
+      "verdict": "通过",
+      "actual": "特殊符号请求返回HTTP 400的可见校验提示而不是HTTP 500；随后正常咨询返回HTTP 200，页面恢复可用。",
+      "evidenceNote": "Word正文中的“是否HTTP 500：是”与同页“E03特殊符号：通过”及Network截图（400、200）矛盾；最终结论按实际Network截图和参赛人总体判定记录，未修改人工Word。"
+    },
+    {
+      "id": "E05",
+      "verdict": "通过",
+      "actual": "测试模式成功预置一次模型失败，只出现一条可重试错误；重试后原位恢复为正常时间回答，未重复用户消息或推荐卡，当前班型继续继承。"
+    },
+    {
+      "id": "X10",
+      "verdict": "通过",
+      "actual": "浏览器成功下载真实Markdown；导出内容包含测试编号、身份、当前班型、有效约束、完整对话、推荐结果和完整来源，并与页面一致。",
+      "exportFile": "AI课程顾问_TASK06-X10_20260724-095628.md",
+      "exportSha256": "84B6001EABC566557EEBF8AF88AC9436C58B0E2F698C6F4FE303552EBEA93D12"
+    }
+  ],
+  "totals": {
+    "passed": 5,
+    "failed": 0,
+    "blocked": 0
+  }
+}

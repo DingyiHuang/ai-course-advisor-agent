@@ -1,0 +1,285 @@
+{
+  "id": "R02",
+  "category": "官方25组/推荐",
+  "title": "上海第二期学生线下推荐",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:46:49",
+  "finishedAt": "2026-07-23 18:47:09",
+  "originalInput": "我是家长，在上海，可参加第二期，希望线下。",
+  "expected": "推荐实体camp-p2-sh，理由只对应实际采集约束，不声称未采集条件完全符合。",
+  "turns": [
+    {
+      "caseId": "R02",
+      "step": "推荐请求",
+      "request": {
+        "action": "message",
+        "message": "我是家长，在上海，可参加第二期，希望线下。",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:47:09",
+          "httpStatus": 200,
+          "latencyMs": 19033
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "recommended",
+        "message": "根据您的条件，已为您匹配到最合适的上海线下第二期夏令营（2026年8月10日-16日）。该班型在营期、地点和授课方式上均完全满足您的需求。如需了解更多详情，请选择下方操作。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              2
+            ],
+            "modePreference": "offline",
+            "region": "shanghai",
+            "regionDisplayName": "上海",
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p2-sh"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "我是家长，在上海，可参加第二期，希望线下。"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的条件，已为您匹配到最合适的上海线下第二期夏令营（2026年8月10日-16日）。该班型在营期、地点和授课方式上均完全满足您的需求。如需了解更多详情，请选择下方操作。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p2-sh"
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p2-sh.startDate",
+              "camp-p2-sh.endDate",
+              "camp-p2-sh.campus",
+              "camp-p2-sh.deliveryMode",
+              "camp-p2-sh.addressOrPlatform"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p2-sh"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "查看其他营期",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": [
+            {
+              "entityId": "camp-p2-sh",
+              "kind": "student",
+              "name": "2026暑期AI素养夏令营·第2期·上海线下班",
+              "date": "2026-08-10 至 2026-08-16",
+              "delivery": "AI教育中心上海教学基地｜上海市浦东新区张江路1000号，AI教育中心上海教学基地（模拟地址）",
+              "standardPrice": 6980,
+              "actualPrice": 6980,
+              "discountLabel": "本次按标准价计算",
+              "reasons": [
+                {
+                  "constraintKey": "availablePeriods",
+                  "reason": "该班型对应第二营期（8月10日-16日），与您选择的第二期完全吻合。",
+                  "constraintLabel": "可参加营期",
+                  "constraintValue": "2"
+                },
+                {
+                  "constraintKey": "region",
+                  "reason": "该班型位于上海，与您选择的地区一致。",
+                  "constraintLabel": "所在地区",
+                  "constraintValue": "上海"
+                },
+                {
+                  "constraintKey": "modePreference",
+                  "reason": "该班型为线下授课，符合您的线下学习偏好。",
+                  "constraintLabel": "授课形式",
+                  "constraintValue": "偏好线下"
+                }
+              ],
+              "sources": [
+                {
+                  "document": "A",
+                  "chapter": "第三章",
+                  "factIds": [
+                    "camp-p2-sh.startDate",
+                    "camp-p2-sh.endDate",
+                    "camp-p2-sh.campus",
+                    "camp-p2-sh.deliveryMode",
+                    "camp-p2-sh.addressOrPlatform"
+                  ]
+                }
+              ],
+              "availabilityNote": "资料未提供实时余位；班型规模和最低开班人数均不代表剩余名额。"
+            }
+          ]
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "new_consultation",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "availablePeriods": [
+              2
+            ],
+            "modePreference": "offline",
+            "region": "shanghai",
+            "regionDisplayName": "上海"
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p2-sh"
+          ],
+          "decisionTrace": [
+            {
+              "code": "period_available",
+              "constraintKeys": [
+                "availablePeriods"
+              ],
+              "constraintValues": {
+                "availablePeriods": [
+                  2
+                ]
+              },
+              "factIds": [
+                "camp-p2-sh.startDate",
+                "camp-p2-sh.endDate"
+              ]
+            },
+            {
+              "code": "region_match_sh",
+              "constraintKeys": [
+                "region",
+                "modePreference"
+              ],
+              "constraintValues": {
+                "region": "shanghai",
+                "modePreference": "offline"
+              },
+              "factIds": [
+                "camp-p2-sh.campus",
+                "camp-p2-sh.deliveryMode",
+                "camp-p2-sh.addressOrPlatform"
+              ]
+            }
+          ],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "recommended",
+          "routeLatencyMs": 19019,
+          "classifierCandidate": {
+            "intent": "new_consultation",
+            "studentConstraints": {
+              "region": "shanghai",
+              "regionDisplayName": "上海",
+              "availablePeriods": [
+                2
+              ],
+              "modePreference": "offline"
+            },
+            "factTopics": []
+          }
+        }
+      },
+      "latencyMs": 19033,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "recommended"
+  ],
+  "actualAnswers": [
+    "根据您的条件，已为您匹配到最合适的上海线下第二期夏令营（2026年8月10日-16日）。该班型在营期、地点和授课方式上均完全满足您的需求。如需了解更多详情，请选择下方操作。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章"
+  ],
+  "entities": [
+    "camp-p2-sh"
+  ],
+  "currentEntities": [
+    "camp-p2-sh"
+  ],
+  "facts": {
+    "amounts": [],
+    "dates": [
+      "8月10日",
+      "2026-08-10",
+      "2026-08-16",
+      "8月16日"
+    ],
+    "keyFacts": [
+      "资料未提供",
+      "实时余位"
+    ]
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p2-sh.startDate",
+        "camp-p2-sh.endDate",
+        "camp-p2-sh.campus",
+        "camp-p2-sh.deliveryMode",
+        "camp-p2-sh.addressOrPlatform"
+      ]
+    }
+  ],
+  "totalLatencyMs": 19033,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200且推荐成功",
+      "passed": true
+    },
+    {
+      "label": "推荐实体正确",
+      "passed": true
+    },
+    {
+      "label": "推荐理由逐项对应采集约束",
+      "passed": true,
+      "detail": "实际键：availablePeriods、region、modePreference"
+    },
+    {
+      "label": "不出现错误完全符合",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "R02.json"
+}

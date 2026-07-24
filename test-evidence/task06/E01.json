@@ -1,0 +1,126 @@
+{
+  "id": "E01",
+  "category": "官方25组/异常",
+  "title": "空输入",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:50:08",
+  "finishedAt": "2026-07-23 18:50:08",
+  "originalInput": "空字符串",
+  "expected": "API拒绝且不调用classifier/composer；页面需参赛人确认不发请求并可继续。",
+  "turns": [
+    {
+      "caseId": "E01",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:50:08",
+          "httpStatus": 400,
+          "latencyMs": 9,
+          "errorCode": "invalid_input"
+        }
+      ],
+      "finalHttpStatus": 400,
+      "response": {
+        "status": "error",
+        "message": "请输入问题后再发送",
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [],
+        "entityIds": [],
+        "actions": [],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "error": {
+          "code": "invalid_input",
+          "retryable": false
+        },
+        "diagnostics": {
+          "corrections": [],
+          "confirmedDomain": "unknown",
+          "confirmedConstraints": {},
+          "pendingQuestionKeys": [],
+          "entityIds": [],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 0,
+          "finalStatus": "error",
+          "routeLatencyMs": 1
+        }
+      },
+      "latencyMs": 9,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    400
+  ],
+  "actualStatuses": [
+    "error"
+  ],
+  "actualAnswers": [
+    "请输入问题后再发送"
+  ],
+  "entities": [],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [],
+    "dates": [],
+    "keyFacts": []
+  },
+  "sources": [],
+  "totalLatencyMs": 9,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 400且为invalid_input",
+      "passed": true
+    },
+    {
+      "label": "提示重新输入",
+      "passed": true
+    },
+    {
+      "label": "未调用模型composer",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "browserVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": null,
+  "browserEvidenceFile": "browser/browser-results.json",
+  "evidenceFile": "E01.json"
+}

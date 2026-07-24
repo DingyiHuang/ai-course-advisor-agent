@@ -1,0 +1,498 @@
+{
+  "id": "X08",
+  "category": "补充14组",
+  "title": "重置后不继承班型",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:52:40",
+  "finishedAt": "2026-07-23 18:53:05",
+  "originalInput": "建立第一期北京线下班 → reset → 这个班多少钱？",
+  "expected": "重置清空身份、约束和当前实体；之后不回答旧班价格并先澄清。",
+  "turns": [
+    {
+      "caseId": "X08",
+      "step": "建立旧班型",
+      "request": {
+        "action": "message",
+        "message": "家长，北京，可参加第一期，希望线下",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:52:56",
+          "httpStatus": 200,
+          "latencyMs": 16367
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "recommended",
+        "message": "根据您的需求，为您推荐第一期（2026年8月1日至7日）在北京海淀区线下举办的AI教育中心北京教学基地营地。该班型完全符合您选择的北京地区、线下偏好和第一期的时间要求。当前标准价格为6980元/人，早鸟优惠已结束。如需进一步了解或继续咨询其他班型，请选择以下操作。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章；素材A《2026暑期AI素养夏令营课程手册》第五章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "家长，北京，可参加第一期，希望线下"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，为您推荐第一期（2026年8月1日至7日）在北京海淀区线下举办的AI教育中心北京教学基地营地。该班型完全符合您选择的北京地区、线下偏好和第一期的时间要求。当前标准价格为6980元/人，早鸟优惠已结束。如需进一步了解或继续咨询其他班型，请选择以下操作。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p1-bj.startDate",
+              "camp-p1-bj.endDate",
+              "camp-p1-bj.campus",
+              "camp-p1-bj.deliveryMode",
+              "camp-p1-bj.addressOrPlatform",
+              "camp-p1-bj.locationName"
+            ]
+          },
+          {
+            "document": "A",
+            "chapter": "第五章",
+            "factIds": [
+              "camp-p1-bj.standardPrice"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p1-bj"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "查看其他营期",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": [
+            {
+              "entityId": "camp-p1-bj",
+              "kind": "student",
+              "name": "2026暑期AI素养夏令营·第1期·北京线下班",
+              "date": "2026-08-01 至 2026-08-07",
+              "delivery": "AI教育中心北京教学基地｜北京市海淀区中关村南大街5号，AI教育中心北京教学基地（模拟地址）",
+              "standardPrice": 6980,
+              "actualPrice": 6980,
+              "discountLabel": "本次按标准价计算",
+              "reasons": [
+                {
+                  "constraintKey": "availablePeriods",
+                  "reason": "您选择第一期，该班型时间为2026年8月1日至7日，完全匹配您的第一期需求。",
+                  "constraintLabel": "可参加营期",
+                  "constraintValue": "1"
+                },
+                {
+                  "constraintKey": "region",
+                  "reason": "您位于北京，该班型在北京海淀区线下举办，上课地点为AI教育中心北京教学基地，符合您的地域要求。",
+                  "constraintLabel": "所在地区",
+                  "constraintValue": "北京"
+                },
+                {
+                  "constraintKey": "modePreference",
+                  "reason": "您偏好线下模式，该班型全程线下授课，满足您的线下学习偏好。",
+                  "constraintLabel": "授课形式",
+                  "constraintValue": "偏好线下"
+                }
+              ],
+              "sources": [
+                {
+                  "document": "A",
+                  "chapter": "第三章",
+                  "factIds": [
+                    "camp-p1-bj.startDate",
+                    "camp-p1-bj.endDate",
+                    "camp-p1-bj.campus",
+                    "camp-p1-bj.deliveryMode",
+                    "camp-p1-bj.addressOrPlatform",
+                    "camp-p1-bj.locationName"
+                  ]
+                },
+                {
+                  "document": "A",
+                  "chapter": "第五章",
+                  "factIds": [
+                    "camp-p1-bj.standardPrice"
+                  ]
+                }
+              ],
+              "availabilityNote": "资料未提供实时余位；班型规模和最低开班人数均不代表剩余名额。"
+            }
+          ]
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "new_consultation",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "region": "beijing",
+            "regionDisplayName": "北京"
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p1-bj"
+          ],
+          "decisionTrace": [
+            {
+              "code": "period_available",
+              "constraintKeys": [
+                "availablePeriods"
+              ],
+              "constraintValues": {
+                "availablePeriods": [
+                  1
+                ]
+              },
+              "factIds": [
+                "camp-p1-bj.startDate",
+                "camp-p1-bj.endDate"
+              ]
+            },
+            {
+              "code": "region_match_bj",
+              "constraintKeys": [
+                "region",
+                "modePreference"
+              ],
+              "constraintValues": {
+                "region": "beijing",
+                "modePreference": "offline"
+              },
+              "factIds": [
+                "camp-p1-bj.campus",
+                "camp-p1-bj.deliveryMode",
+                "camp-p1-bj.addressOrPlatform"
+              ]
+            }
+          ],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "recommended",
+          "routeLatencyMs": 16349,
+          "classifierCandidate": {
+            "intent": "new_consultation",
+            "studentConstraints": {
+              "region": "beijing",
+              "regionDisplayName": "北京",
+              "availablePeriods": [
+                1
+              ],
+              "modePreference": "offline"
+            },
+            "factTopics": []
+          }
+        }
+      },
+      "latencyMs": 16367,
+      "silentRetry": false
+    },
+    {
+      "caseId": "X08",
+      "step": "重置",
+      "request": {
+        "action": "reset",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "家长，北京，可参加第一期，希望线下"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，为您推荐第一期（2026年8月1日至7日）在北京海淀区线下举办的AI教育中心北京教学基地营地。该班型完全符合您选择的北京地区、线下偏好和第一期的时间要求。当前标准价格为6980元/人，早鸟优惠已结束。如需进一步了解或继续咨询其他班型，请选择以下操作。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:52:56",
+          "httpStatus": 200,
+          "latencyMs": 10
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "reset",
+        "message": "已清空本次对话，请重新选择身份。",
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [],
+        "entityIds": [],
+        "actions": [],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "corrections": [],
+          "confirmedDomain": "unknown",
+          "confirmedConstraints": {},
+          "pendingQuestionKeys": [],
+          "entityIds": [],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 0,
+          "finalStatus": "reset",
+          "routeLatencyMs": 1
+        }
+      },
+      "latencyMs": 10,
+      "silentRetry": false
+    },
+    {
+      "caseId": "X08",
+      "step": "重置后模糊追问",
+      "request": {
+        "action": "message",
+        "message": "这个班多少钱？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:53:05",
+          "httpStatus": 200,
+          "latencyMs": 8449
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "needs_identity",
+        "message": "请问您是学生或家长、教师，还是机构或企业人员？",
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [
+            "identity"
+          ],
+          "pendingQuestionOptions": [
+            "学生或家长",
+            "教师",
+            "机构或企业人员"
+          ],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "这个班多少钱？"
+            },
+            {
+              "role": "assistant",
+              "content": "请问您是学生或家长、教师，还是机构或企业人员？"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [],
+        "entityIds": [],
+        "actions": [],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "unclear",
+          "corrections": [],
+          "confirmedDomain": "unknown",
+          "confirmedConstraints": {},
+          "pendingQuestionKeys": [
+            "identity"
+          ],
+          "entityIds": [],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "needs_identity",
+          "routeLatencyMs": 8436,
+          "classifierCandidate": {
+            "intent": "unclear",
+            "studentConstraints": {},
+            "factTopics": [
+              "price"
+            ]
+          }
+        }
+      },
+      "latencyMs": 8449,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200,
+    200,
+    200
+  ],
+  "actualStatuses": [
+    "recommended",
+    "reset",
+    "needs_identity"
+  ],
+  "actualAnswers": [
+    "根据您的需求，为您推荐第一期（2026年8月1日至7日）在北京海淀区线下举办的AI教育中心北京教学基地营地。该班型完全符合您选择的北京地区、线下偏好和第一期的时间要求。当前标准价格为6980元/人，早鸟优惠已结束。如需进一步了解或继续咨询其他班型，请选择以下操作。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章；素材A《2026暑期AI素养夏令营课程手册》第五章",
+    "已清空本次对话，请重新选择身份。",
+    "请问您是学生或家长、教师，还是机构或企业人员？"
+  ],
+  "entities": [
+    "camp-p1-bj"
+  ],
+  "currentEntities": [
+    "camp-p1-bj"
+  ],
+  "facts": {
+    "amounts": [
+      "6980元"
+    ],
+    "dates": [
+      "8月1日",
+      "2026-08-01",
+      "2026-08-07",
+      "8月7日"
+    ],
+    "keyFacts": [
+      "资料未提供",
+      "实时余位"
+    ]
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p1-bj.startDate",
+        "camp-p1-bj.endDate",
+        "camp-p1-bj.campus",
+        "camp-p1-bj.deliveryMode",
+        "camp-p1-bj.addressOrPlatform",
+        "camp-p1-bj.locationName"
+      ]
+    },
+    {
+      "document": "A",
+      "chapter": "第五章",
+      "factIds": [
+        "camp-p1-bj.standardPrice"
+      ]
+    }
+  ],
+  "totalLatencyMs": 24826,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "推荐与重置均成功",
+      "passed": true
+    },
+    {
+      "label": "重置state为空",
+      "passed": true
+    },
+    {
+      "label": "不继承旧实体",
+      "passed": true
+    },
+    {
+      "label": "不回答旧班6980",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "X08.json"
+}

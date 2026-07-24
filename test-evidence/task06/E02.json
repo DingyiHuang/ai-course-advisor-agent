@@ -1,0 +1,126 @@
+{
+  "id": "E02",
+  "category": "官方25组/异常",
+  "title": "超过500字",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:50:08",
+  "finishedAt": "2026-07-23 18:50:08",
+  "originalInput": "“测”重复501次",
+  "expected": "API拒绝且不调用模型；页面需参赛人确认显示字数与精简提示并可继续。",
+  "turns": [
+    {
+      "caseId": "E02",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测测",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:50:08",
+          "httpStatus": 400,
+          "latencyMs": 16,
+          "errorCode": "invalid_input"
+        }
+      ],
+      "finalHttpStatus": 400,
+      "response": {
+        "status": "error",
+        "message": "单次输入不能超过500字",
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [],
+        "entityIds": [],
+        "actions": [],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "error": {
+          "code": "invalid_input",
+          "retryable": false
+        },
+        "diagnostics": {
+          "corrections": [],
+          "confirmedDomain": "unknown",
+          "confirmedConstraints": {},
+          "pendingQuestionKeys": [],
+          "entityIds": [],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 0,
+          "finalStatus": "error",
+          "routeLatencyMs": 1
+        }
+      },
+      "latencyMs": 16,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    400
+  ],
+  "actualStatuses": [
+    "error"
+  ],
+  "actualAnswers": [
+    "单次输入不能超过500字"
+  ],
+  "entities": [],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [],
+    "dates": [],
+    "keyFacts": []
+  },
+  "sources": [],
+  "totalLatencyMs": 16,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 400且为invalid_input",
+      "passed": true
+    },
+    {
+      "label": "提示500字限制",
+      "passed": true
+    },
+    {
+      "label": "未调用模型composer",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "browserVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": null,
+  "browserEvidenceFile": "browser/browser-results.json",
+  "evidenceFile": "E02.json"
+}

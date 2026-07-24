@@ -164,8 +164,21 @@ function sanitizeStudentConstraints(value: unknown): StudentConstraints {
   if (["offline", "online", "any"].includes(String(input.modePreference))) {
     output.modePreference = input.modePreference as StudentConstraints["modePreference"];
   }
-  for (const key of ["canTravel", "needsReplay", "refusesMoreQuestions"] as const) {
+  for (const key of [
+    "canTravel",
+    "needsReplay",
+    "groupSamePeriodAndCamp",
+    "includeLodging",
+    "refusesMoreQuestions",
+  ] as const) {
     if (typeof input[key] === "boolean") output[key] = input[key];
+  }
+  if (
+    Number.isInteger(input.groupSize) &&
+    Number(input.groupSize) >= 1 &&
+    Number(input.groupSize) <= 100
+  ) {
+    output.groupSize = Number(input.groupSize);
   }
   if (Number.isInteger(input.stalledTurns) && Number(input.stalledTurns) >= 0) {
     output.stalledTurns = Math.min(Number(input.stalledTurns), 3);

@@ -202,6 +202,15 @@ describe("programmatic grounding gates", () => {
     ).not.toThrow();
   });
 
+  it("does not mistake the group condition '同一期' for first period", () => {
+    expect(() =>
+      assertComposerMentionedOnlyPlannedPeriods(
+        "第三期3人同一期同班型团报，采用早鸟优惠。",
+        ["camp-p3-bj"],
+      ),
+    ).not.toThrow();
+  });
+
   it.each([
     [
       "学校采购需满足20人起，项目总价5万元起",

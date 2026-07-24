@@ -1,0 +1,282 @@
+{
+  "id": "R03",
+  "category": "官方25组/推荐",
+  "title": "第三期不出行且需回放推荐",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:47:09",
+  "finishedAt": "2026-07-23 18:47:27",
+  "originalInput": "我是学生，第三期有空，不便出行，需要回放。",
+  "expected": "推荐实体camp-p3-online，理由只对应实际采集约束，不声称未采集条件完全符合。",
+  "turns": [
+    {
+      "caseId": "R03",
+      "step": "推荐请求",
+      "request": {
+        "action": "message",
+        "message": "我是学生，第三期有空，不便出行，需要回放。",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:47:27",
+          "httpStatus": 200,
+          "latencyMs": 18430
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "recommended",
+        "message": "根据您选择的第三期、需要回放且无法出行的条件，为您推荐线上营第三期（2026年8月20日-26日）。该课程为线上直播，提供30天回放，无需实地参与。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              3
+            ],
+            "canTravel": false,
+            "needsReplay": true,
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p3-online"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "我是学生，第三期有空，不便出行，需要回放。"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您选择的第三期、需要回放且无法出行的条件，为您推荐线上营第三期（2026年8月20日-26日）。该课程为线上直播，提供30天回放，无需实地参与。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p3-online"
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p3-online.startDate",
+              "camp-p3-online.endDate",
+              "camp-p3-online.deliveryMode",
+              "camp-p3-online.replayDays"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p3-online"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "查看其他营期",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": [
+            {
+              "entityId": "camp-p3-online",
+              "kind": "student",
+              "name": "2026暑期AI素养夏令营·第3期·线上直播班",
+              "date": "2026-08-20 至 2026-08-26",
+              "delivery": "腾讯会议直播｜腾讯会议直播（会议号缴费确认后发送）",
+              "standardPrice": 3980,
+              "actualPrice": 3280,
+              "replayDays": 30,
+              "discountLabel": "本次适用早鸟优惠",
+              "reasons": [
+                {
+                  "constraintKey": "availablePeriods",
+                  "reason": "您选择的第三期与课程时间（2026年8月20日-26日）完全匹配。",
+                  "constraintLabel": "可参加营期",
+                  "constraintValue": "3"
+                },
+                {
+                  "constraintKey": "needsReplay",
+                  "reason": "课程提供30天回放，满足您需要回放的需求。",
+                  "constraintLabel": "回放需求",
+                  "constraintValue": "是"
+                },
+                {
+                  "constraintKey": "canTravel",
+                  "reason": "课程为线上直播，无需出行，符合您无法出行的条件。",
+                  "constraintLabel": "出行条件",
+                  "constraintValue": "否"
+                }
+              ],
+              "sources": [
+                {
+                  "document": "A",
+                  "chapter": "第三章",
+                  "factIds": [
+                    "camp-p3-online.startDate",
+                    "camp-p3-online.endDate",
+                    "camp-p3-online.deliveryMode",
+                    "camp-p3-online.replayDays"
+                  ]
+                }
+              ],
+              "availabilityNote": "资料未提供实时余位；班型规模和最低开班人数均不代表剩余名额。"
+            }
+          ]
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "new_consultation",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "availablePeriods": [
+              3
+            ],
+            "canTravel": false,
+            "needsReplay": true
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p3-online"
+          ],
+          "decisionTrace": [
+            {
+              "code": "period_available",
+              "constraintKeys": [
+                "availablePeriods"
+              ],
+              "constraintValues": {
+                "availablePeriods": [
+                  3
+                ]
+              },
+              "factIds": [
+                "camp-p3-online.startDate",
+                "camp-p3-online.endDate"
+              ]
+            },
+            {
+              "code": "online_for_replay",
+              "constraintKeys": [
+                "needsReplay",
+                "canTravel"
+              ],
+              "constraintValues": {
+                "needsReplay": true,
+                "canTravel": false
+              },
+              "factIds": [
+                "camp-p3-online.deliveryMode",
+                "camp-p3-online.addressOrPlatform",
+                "camp-p3-online.replayDays"
+              ]
+            }
+          ],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "recommended",
+          "routeLatencyMs": 18419,
+          "classifierCandidate": {
+            "intent": "unknown",
+            "studentConstraints": {
+              "region": "other",
+              "availablePeriods": [
+                3
+              ],
+              "canTravel": false,
+              "needsReplay": true
+            },
+            "factTopics": []
+          }
+        }
+      },
+      "latencyMs": 18430,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "recommended"
+  ],
+  "actualAnswers": [
+    "根据您选择的第三期、需要回放且无法出行的条件，为您推荐线上营第三期（2026年8月20日-26日）。该课程为线上直播，提供30天回放，无需实地参与。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章"
+  ],
+  "entities": [
+    "camp-p3-online"
+  ],
+  "currentEntities": [
+    "camp-p3-online"
+  ],
+  "facts": {
+    "amounts": [],
+    "dates": [
+      "8月20日",
+      "2026-08-20",
+      "2026-08-26",
+      "8月26日"
+    ],
+    "keyFacts": [
+      "30天回放",
+      "资料未提供",
+      "实时余位"
+    ]
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p3-online.startDate",
+        "camp-p3-online.endDate",
+        "camp-p3-online.deliveryMode",
+        "camp-p3-online.replayDays"
+      ]
+    }
+  ],
+  "totalLatencyMs": 18430,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200且推荐成功",
+      "passed": true
+    },
+    {
+      "label": "推荐实体正确",
+      "passed": true
+    },
+    {
+      "label": "推荐理由逐项对应采集约束",
+      "passed": true,
+      "detail": "实际键：availablePeriods、needsReplay、canTravel"
+    },
+    {
+      "label": "不出现错误完全符合",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "R03.json"
+}

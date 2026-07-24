@@ -1,0 +1,195 @@
+{
+  "id": "X13",
+  "category": "补充14组",
+  "title": "教师L1集训早鸟过期",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:54:10",
+  "finishedAt": "2026-07-23 18:54:21",
+  "originalInput": "2026年7月22日，教师L1暑期集训班还能报名吗？早鸟还能减500元吗？",
+  "expected": "报名截止7月25日，早鸟7月18日已过，不再减500元，实际价2980元。",
+  "turns": [
+    {
+      "caseId": "X13",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "2026年7月22日，教师L1暑期集训班还能报名吗？早鸟还能减500元吗？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:54:21",
+          "httpStatus": 200,
+          "latencyMs": 11507
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "fact_answer",
+        "message": "您好！截至2026年7月22日，教师L1暑期集训班仍可报名，报名截止日期为2026年7月25日24:00。不过早鸟优惠（减免500元）已于2026年7月18日截止，目前无法享受。当前标准价格为2980元，无其他优惠适用。如果您有兴趣，我可以继续为您介绍课程详情或帮助整理采购需求。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第五章；素材B《初高中教师AI素养培训体系介绍》第二章",
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "teacher-l1-intensive"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "2026年7月22日，教师L1暑期集训班还能报名吗？早鸟还能减500元吗？"
+            },
+            {
+              "role": "assistant",
+              "content": "您好！截至2026年7月22日，教师L1暑期集训班仍可报名，报名截止日期为2026年7月25日24:00。不过早鸟优惠（减免500元）已于2026年7月18日截止，目前无法享受。当前标准价格为2980元，无其他优惠适用。如果您有兴趣，我可以继续为您介绍课程详情或帮助整理采购需求。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "teacher-l1-intensive"
+        },
+        "sources": [
+          {
+            "document": "B",
+            "chapter": "第五章",
+            "factIds": [
+              "teacher-l1-intensive.standardPrice",
+              "teacher-l1-intensive.earlyBirdDeadline"
+            ]
+          },
+          {
+            "document": "B",
+            "chapter": "第二章",
+            "factIds": [
+              "teacher-l1-intensive.registrationDeadline"
+            ]
+          }
+        ],
+        "entityIds": [
+          "teacher-l1-intensive"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "fact_question",
+          "corrections": [],
+          "confirmedDomain": "teacher",
+          "confirmedConstraints": {},
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "teacher-l1-intensive"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "fact_answer",
+          "routeLatencyMs": 11485,
+          "classifierCandidate": {
+            "domainCandidate": "teacher",
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "registration",
+              "price"
+            ]
+          }
+        }
+      },
+      "latencyMs": 11507,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "fact_answer"
+  ],
+  "actualAnswers": [
+    "您好！截至2026年7月22日，教师L1暑期集训班仍可报名，报名截止日期为2026年7月25日24:00。不过早鸟优惠（减免500元）已于2026年7月18日截止，目前无法享受。当前标准价格为2980元，无其他优惠适用。如果您有兴趣，我可以继续为您介绍课程详情或帮助整理采购需求。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第五章；素材B《初高中教师AI素养培训体系介绍》第二章"
+  ],
+  "entities": [
+    "teacher-l1-intensive"
+  ],
+  "currentEntities": [
+    "teacher-l1-intensive"
+  ],
+  "facts": {
+    "amounts": [
+      "500元",
+      "2980元"
+    ],
+    "dates": [
+      "7月22日",
+      "7月25日",
+      "7月18日"
+    ],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "B",
+      "chapter": "第五章",
+      "factIds": [
+        "teacher-l1-intensive.standardPrice",
+        "teacher-l1-intensive.earlyBirdDeadline"
+      ]
+    },
+    {
+      "document": "B",
+      "chapter": "第二章",
+      "factIds": [
+        "teacher-l1-intensive.registrationDeadline"
+      ]
+    }
+  ],
+  "totalLatencyMs": 11507,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "报名截止准确",
+      "passed": true
+    },
+    {
+      "label": "早鸟7月18日已过",
+      "passed": true
+    },
+    {
+      "label": "实际标准价2980",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "X13.json"
+}

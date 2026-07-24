@@ -1,0 +1,199 @@
+{
+  "id": "F05",
+  "category": "官方25组/资料事实",
+  "title": "教师L1暑期集训安排",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:44:53",
+  "finishedAt": "2026-07-23 18:45:17",
+  "originalInput": "L1暑期集训班怎么安排？",
+  "expected": "8月1日09:00—12:00、14:00—17:00，共8课时，北京线下，素材B第二章。",
+  "turns": [
+    {
+      "caseId": "F05",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "L1暑期集训班怎么安排？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:45:07",
+          "httpStatus": 503,
+          "latencyMs": 14335,
+          "errorCode": "grounding_rejected"
+        },
+        {
+          "attempt": 2,
+          "testTimeAsiaShanghai": "2026-07-23 18:45:17",
+          "httpStatus": 200,
+          "latencyMs": 7814
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "fact_answer",
+        "message": "L1暑期集训班安排如下：\n- 开始日期：2026年8月1日\n- 课程安排：8月1日09:00—12:00、14:00—17:00，共8课时\n- 报名截止日期：2026年7月25日\n- 班型形式：连续集训\n- 城市：北京\n- 地点：北京教学基地线下（北京市海淀区中关村南大街5号，AI教育中心北京教学基地）\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二章；素材B《初高中教师AI素养培训体系介绍》第二、四章",
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "teacher-l1-intensive"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "L1暑期集训班怎么安排？"
+            },
+            {
+              "role": "assistant",
+              "content": "L1暑期集训班安排如下：\n- 开始日期：2026年8月1日\n- 课程安排：8月1日09:00—12:00、14:00—17:00，共8课时\n- 报名截止日期：2026年7月25日\n- 班型形式：连续集训\n- 城市：北京\n- 地点：北京教学基地线下（北京市海淀区中关村南大街5号，AI教育中心北京教学基地）"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "teacher-l1-intensive"
+        },
+        "sources": [
+          {
+            "document": "B",
+            "chapter": "第二章",
+            "factIds": [
+              "teacher-l1-intensive.startDate",
+              "teacher-l1-intensive.schedule",
+              "teacher-l1-intensive.registrationDeadline",
+              "teacher-l1-intensive.format"
+            ]
+          },
+          {
+            "document": "B",
+            "chapter": "第二、四章",
+            "factIds": [
+              "teacher-l1-intensive.cities",
+              "teacher-l1-intensive.locationsOrPlatforms"
+            ]
+          }
+        ],
+        "entityIds": [
+          "teacher-l1-intensive"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "fact_question",
+          "corrections": [],
+          "confirmedDomain": "teacher",
+          "confirmedConstraints": {},
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "teacher-l1-intensive"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "fact_answer",
+          "routeLatencyMs": 7788,
+          "classifierCandidate": {
+            "domainCandidate": "teacher",
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "schedule"
+            ]
+          }
+        }
+      },
+      "latencyMs": 22149,
+      "silentRetry": true
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "fact_answer"
+  ],
+  "actualAnswers": [
+    "L1暑期集训班安排如下：\n- 开始日期：2026年8月1日\n- 课程安排：8月1日09:00—12:00、14:00—17:00，共8课时\n- 报名截止日期：2026年7月25日\n- 班型形式：连续集训\n- 城市：北京\n- 地点：北京教学基地线下（北京市海淀区中关村南大街5号，AI教育中心北京教学基地）\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二章；素材B《初高中教师AI素养培训体系介绍》第二、四章"
+  ],
+  "entities": [
+    "teacher-l1-intensive"
+  ],
+  "currentEntities": [
+    "teacher-l1-intensive"
+  ],
+  "facts": {
+    "amounts": [],
+    "dates": [
+      "8月1日",
+      "7月25日"
+    ],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "B",
+      "chapter": "第二章",
+      "factIds": [
+        "teacher-l1-intensive.startDate",
+        "teacher-l1-intensive.schedule",
+        "teacher-l1-intensive.registrationDeadline",
+        "teacher-l1-intensive.format"
+      ]
+    },
+    {
+      "document": "B",
+      "chapter": "第二、四章",
+      "factIds": [
+        "teacher-l1-intensive.cities",
+        "teacher-l1-intensive.locationsOrPlatforms"
+      ]
+    }
+  ],
+  "totalLatencyMs": 22149,
+  "silentRetry": true,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "日期课时形式准确",
+      "passed": true
+    },
+    {
+      "label": "引用素材B第二章",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "F05.json"
+}

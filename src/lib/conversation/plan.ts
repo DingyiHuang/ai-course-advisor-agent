@@ -310,6 +310,7 @@ function factQuestionPlan(input: {
   state: ConversationState;
   factTopics: FactTopic[];
   currentDate: BusinessDate;
+  allowMultipleEntities: boolean;
   crossDomainFrom?: "student" | "teacher" | "platform";
 }): ComposerPlan | undefined {
   const candidateIds = input.state.selectedEntityId
@@ -342,7 +343,10 @@ function factQuestionPlan(input: {
       values.add(JSON.stringify(fact.value));
       valuesByLabel.set(fact.label, values);
     }
-    if ([...valuesByLabel.values()].some((values) => values.size > 1)) {
+    if (
+      !input.allowMultipleEntities &&
+      [...valuesByLabel.values()].some((values) => values.size > 1)
+    ) {
       return basePlan({
         state: input.state,
         status: "needs_more_information",
@@ -353,50 +357,130 @@ function factQuestionPlan(input: {
       });
     }
   }
-  const selectedId = candidateIds[0];
-  let facts = candidateFacts[0] ?? [];
+  let facts = input.allowMultipleEntities
+    ? candidateFacts.flat()
+    : candidateFacts[0] ?? [];
   const calculations: GroundedCalculation[] = [];
-  const entity = getKnowledgeEntityById(selectedId);
-  if (entity?.id.startsWith("camp-") && input.factTopics.some((topic) => topic === "price" || topic === "schedule" || topic === "registration")) {
-    const camp = entity as Camp;
-    const fee = calculateCampFee({ camp, currentDate: input.currentDate });
-    facts = groundedFactsFromIds([
-      ...facts.map(({ id }) => id),
-      ...fee.factIds,
-    ]);
-    calculations.push({
-      label: `${camp.id}当前报名与费用状态`,
-      value: {
-        currentDate: input.currentDate,
-        registrationStatus: fee.registrationStatus,
-        earlyBirdStatus: fee.earlyBirdStatus,
-        total: fee.total,
-        discountKind: fee.discountKind,
-      },
-      relatedFactIds: fee.factIds,
-    });
-  } else if (entity?.id.startsWith("teacher-") && input.factTopics.some((topic) => topic === "price" || topic === "schedule" || topic === "registration")) {
-    const product = entity as TeacherProduct;
-    const fee = calculateTeacherFee({ product, currentDate: input.currentDate });
-    facts = groundedFactsFromIds([
-      ...facts.map(({ id }) => id),
-      ...fee.factIds,
-    ]);
-    calculations.push({
-      label: `${product.id}当前报名与费用状态`,
-      value: {
-        currentDate: input.currentDate,
-        registrationStatus: fee.registrationStatus,
-        earlyBirdStatus: fee.earlyBirdStatus,
-        total: fee.total,
-        discountKind: fee.discountKind,
-      },
-      relatedFactIds: fee.factIds,
-    });
+  if (input.factTopics.includes("schedule")) {
+    for (const entityId of candidateIds) {
+      const entity = getKnowledgeEntityById(entityId);
+      if (entity?.id.startsWith("camp-")) {
+        const camp = entity as Camp;
+        const weekday = (date: string) =>
+          ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"][
+            new Date(`${date}T00:00:00Z`).getUTCDay()
+          ];
+        calculations.push({
+          label: `${camp.id}课程日期、星期与报名截止时间`,
+          value: {
+            startDate: camp.startDate,
+            startWeekday: weekday(camp.startDate),
+            endDate: camp.endDate,
+            endWeekday: weekday(camp.endDate),
+            registrationCutoff: `${camp.registrationDeadline} 24:00`,
+          },
+          relatedFactIds: [
+            `${camp.id}.startDate`,
+            `${camp.id}.endDate`,
+            `${camp.id}.registrationDeadline`,
+          ],
+        });
+      } else if (entity?.id.startsWith("teacher-")) {
+        const product = entity as TeacherProduct;
+        calculations.push({
+          label: `${product.id}课程日期、课时与授课形式`,
+          value: {
+            schedule: product.schedule,
+            format:
+              product.format === "intensive"
+                ? "连续集训"
+                : "周末研修",
+            locationsOrPlatforms: product.locationsOrPlatforms,
+          },
+          relatedFactIds: [
+            `${product.id}.schedule`,
+            `${product.id}.format`,
+            `${product.id}.locationsOrPlatforms`,
+          ],
+        });
+      }
+    }
+  }
+  if (
+    input.factTopics.some(
+      (topic) => topic === "price" || topic === "registration",
+    )
+  ) {
+    for (const entityId of candidateIds) {
+      const entity = getKnowledgeEntityById(entityId);
+      if (entity?.id.startsWith("camp-")) {
+        const camp = entity as Camp;
+        const groupSize = input.state.studentConstraints.groupSize;
+        const fee = calculateCampFee({
+          camp,
+          currentDate: input.currentDate,
+          group: groupSize
+            ? {
+                size: groupSize,
+                samePeriodAndCamp:
+                  input.state.studentConstraints.groupSamePeriodAndCamp === true,
+              }
+            : undefined,
+          includeLodging:
+            input.state.studentConstraints.includeLodging === true,
+        });
+        facts = groundedFactsFromIds([
+          ...facts.map(({ id }) => id),
+          ...fee.factIds,
+        ]);
+        calculations.push({
+          label: `${camp.id}当前报名与费用状态`,
+          value: {
+            currentDate: input.currentDate,
+            registrationStatus: fee.registrationStatus,
+            registrationCutoff: `${camp.registrationDeadline} 24:00`,
+            earlyBirdStatus: fee.earlyBirdStatus,
+            basePrice: fee.basePrice,
+            earlyBirdDiscount: fee.earlyBirdDiscount,
+            groupDiscount: fee.groupDiscount,
+            appliedDiscount: fee.appliedDiscount,
+            total: fee.total,
+            discountKind: fee.discountKind,
+          },
+          relatedFactIds: fee.factIds,
+        });
+      } else if (entity?.id.startsWith("teacher-")) {
+        const product = entity as TeacherProduct;
+        const fee = calculateTeacherFee({
+          product,
+          currentDate: input.currentDate,
+        });
+        facts = groundedFactsFromIds([
+          ...facts.map(({ id }) => id),
+          ...fee.factIds,
+        ]);
+        calculations.push({
+          label: `${product.id}当前报名与费用状态`,
+          value: {
+            currentDate: input.currentDate,
+            registrationStatus: fee.registrationStatus,
+            registrationCutoff: `${product.registrationDeadline} 24:00`,
+            earlyBirdStatus: fee.earlyBirdStatus,
+            basePrice: fee.basePrice,
+            earlyBirdDiscount: fee.earlyBirdDiscount,
+            groupDiscount: fee.groupDiscount,
+            appliedDiscount: fee.appliedDiscount,
+            total: fee.total,
+            discountKind: fee.discountKind,
+          },
+          relatedFactIds: fee.factIds,
+        });
+      }
+    }
   }
   return basePlan({
     state: input.state,
-    status: "contextual_followup",
+    status: input.allowMultipleEntities ? "fact_answer" : "contextual_followup",
     facts,
     calculations,
     actions: ["继续询问当前班型", "返回菜单"],
@@ -444,7 +528,10 @@ export function buildComposerPlan(input: {
     input.intent === "fact_question" ||
     input.intent === "contextual_followup"
   ) {
-    const plan = factQuestionPlan(input);
+    const plan = factQuestionPlan({
+      ...input,
+      allowMultipleEntities: input.intent === "fact_question",
+    });
     if (plan) return plan;
   }
   if (

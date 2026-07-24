@@ -1,0 +1,201 @@
+{
+  "id": "F01",
+  "category": "官方25组/资料事实",
+  "title": "学生第一期营期",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:44:14",
+  "finishedAt": "2026-07-23 18:44:20",
+  "originalInput": "第一期夏令营什么时候上课？",
+  "expected": "8月1日至7日、报名截止7月25日，来源素材A第三章。",
+  "turns": [
+    {
+      "caseId": "F01",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "第一期夏令营什么时候上课？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:44:20",
+          "httpStatus": 200,
+          "latencyMs": 5709
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "fact_answer",
+        "message": "第一期夏令营课程时间为2026年8月1日（星期六）至8月7日（星期五），报名截止至2026年7月25日24:00。北京、上海和线上班型均为此时间。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj",
+            "camp-p1-sh",
+            "camp-p1-online"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "第一期夏令营什么时候上课？"
+            },
+            {
+              "role": "assistant",
+              "content": "第一期夏令营课程时间为2026年8月1日（星期六）至8月7日（星期五），报名截止至2026年7月25日24:00。北京、上海和线上班型均为此时间。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p1-bj.startDate",
+              "camp-p1-bj.endDate",
+              "camp-p1-bj.registrationDeadline",
+              "camp-p1-sh.startDate",
+              "camp-p1-sh.endDate",
+              "camp-p1-sh.registrationDeadline",
+              "camp-p1-online.startDate",
+              "camp-p1-online.endDate",
+              "camp-p1-online.registrationDeadline"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p1-bj",
+          "camp-p1-sh",
+          "camp-p1-online"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "fact_question",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "availablePeriods": [
+              1
+            ]
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p1-bj",
+            "camp-p1-sh",
+            "camp-p1-online"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "fact_answer",
+          "routeLatencyMs": 5650,
+          "classifierCandidate": {
+            "domainCandidate": "student",
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "schedule"
+            ]
+          }
+        }
+      },
+      "latencyMs": 5709,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "fact_answer"
+  ],
+  "actualAnswers": [
+    "第一期夏令营课程时间为2026年8月1日（星期六）至8月7日（星期五），报名截止至2026年7月25日24:00。北京、上海和线上班型均为此时间。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章"
+  ],
+  "entities": [
+    "camp-p1-bj",
+    "camp-p1-sh",
+    "camp-p1-online"
+  ],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [],
+    "dates": [
+      "8月1日",
+      "8月7日",
+      "7月25日"
+    ],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p1-bj.startDate",
+        "camp-p1-bj.endDate",
+        "camp-p1-bj.registrationDeadline",
+        "camp-p1-sh.startDate",
+        "camp-p1-sh.endDate",
+        "camp-p1-sh.registrationDeadline",
+        "camp-p1-online.startDate",
+        "camp-p1-online.endDate",
+        "camp-p1-online.registrationDeadline"
+      ]
+    }
+  ],
+  "totalLatencyMs": 5709,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200且为事实回答",
+      "passed": true
+    },
+    {
+      "label": "日期、星期与截止时间准确",
+      "passed": true
+    },
+    {
+      "label": "引用素材A第三章",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "F01.json"
+}

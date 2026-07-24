@@ -1,0 +1,200 @@
+{
+  "id": "X05",
+  "category": "补充14组",
+  "title": "教师退款资料缺失",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:51:55",
+  "finishedAt": "2026-07-23 18:52:04",
+  "originalInput": "教师培训取消报名怎么退款？",
+  "expected": "素材B未提供教师退款规则，不套用素材A学生退款。",
+  "turns": [
+    {
+      "caseId": "X05",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "教师培训取消报名怎么退款？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:52:04",
+          "httpStatus": 200,
+          "latencyMs": 8830
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "fact_answer",
+        "message": "根据您查询的教师培训课程，目前系统中未提供各班的退款规则。如果您需要取消报名，建议直接联系培训机构了解具体的退款政策。\n\n来源：素材B《初高中教师AI素养培训体系介绍》全文（未提供退款规则）",
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "teacher-l1-intensive",
+            "teacher-l1-weekend",
+            "teacher-l2-intensive",
+            "teacher-l2-weekend",
+            "teacher-l3-intensive",
+            "teacher-l3-weekend"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "教师培训取消报名怎么退款？"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您查询的教师培训课程，目前系统中未提供各班的退款规则。如果您需要取消报名，建议直接联系培训机构了解具体的退款政策。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [
+          {
+            "document": "B",
+            "chapter": "全文",
+            "section": "未提供退款规则",
+            "factIds": [
+              "teacher-l1-intensive.refundPolicyProvided",
+              "teacher-l1-weekend.refundPolicyProvided",
+              "teacher-l2-intensive.refundPolicyProvided",
+              "teacher-l2-weekend.refundPolicyProvided",
+              "teacher-l3-intensive.refundPolicyProvided",
+              "teacher-l3-weekend.refundPolicyProvided"
+            ]
+          }
+        ],
+        "entityIds": [
+          "teacher-l1-intensive",
+          "teacher-l1-weekend",
+          "teacher-l2-intensive",
+          "teacher-l2-weekend",
+          "teacher-l3-intensive",
+          "teacher-l3-weekend"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "fact_question",
+          "corrections": [],
+          "confirmedDomain": "teacher",
+          "confirmedConstraints": {},
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "teacher-l1-intensive",
+            "teacher-l1-weekend",
+            "teacher-l2-intensive",
+            "teacher-l2-weekend",
+            "teacher-l3-intensive",
+            "teacher-l3-weekend"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "fact_answer",
+          "routeLatencyMs": 8808,
+          "classifierCandidate": {
+            "domainCandidate": "teacher",
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "refund"
+            ]
+          }
+        }
+      },
+      "latencyMs": 8830,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "fact_answer"
+  ],
+  "actualAnswers": [
+    "根据您查询的教师培训课程，目前系统中未提供各班的退款规则。如果您需要取消报名，建议直接联系培训机构了解具体的退款政策。\n\n来源：素材B《初高中教师AI素养培训体系介绍》全文（未提供退款规则）"
+  ],
+  "entities": [
+    "teacher-l1-intensive",
+    "teacher-l1-weekend",
+    "teacher-l2-intensive",
+    "teacher-l2-weekend",
+    "teacher-l3-intensive",
+    "teacher-l3-weekend"
+  ],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [],
+    "dates": [],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "B",
+      "chapter": "全文",
+      "section": "未提供退款规则",
+      "factIds": [
+        "teacher-l1-intensive.refundPolicyProvided",
+        "teacher-l1-weekend.refundPolicyProvided",
+        "teacher-l2-intensive.refundPolicyProvided",
+        "teacher-l2-weekend.refundPolicyProvided",
+        "teacher-l3-intensive.refundPolicyProvided",
+        "teacher-l3-weekend.refundPolicyProvided"
+      ]
+    }
+  ],
+  "totalLatencyMs": 8830,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "明确退款规则未提供",
+      "passed": true
+    },
+    {
+      "label": "不引用学生资料",
+      "passed": true
+    },
+    {
+      "label": "不套用90%/50%规则",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "X05.json"
+}

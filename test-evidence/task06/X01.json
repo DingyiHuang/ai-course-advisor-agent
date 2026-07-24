@@ -1,0 +1,142 @@
+{
+  "id": "X01",
+  "category": "补充14组",
+  "title": "模糊学AI先澄清身份",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:51:00",
+  "finishedAt": "2026-07-23 18:51:03",
+  "originalInput": "我想学AI",
+  "expected": "先澄清学生/家长、教师或机构身份，不直接推荐。",
+  "turns": [
+    {
+      "caseId": "X01",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "我想学AI",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:51:03",
+          "httpStatus": 200,
+          "latencyMs": 3304
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "needs_identity",
+        "message": "请问您是以什么身份咨询AI课程？是学生或家长、教师，还是机构或企业人员？",
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [
+            "identity"
+          ],
+          "pendingQuestionOptions": [
+            "学生或家长",
+            "教师",
+            "机构或企业人员"
+          ],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "我想学AI"
+            },
+            {
+              "role": "assistant",
+              "content": "请问您是以什么身份咨询AI课程？是学生或家长、教师，还是机构或企业人员？"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [],
+        "entityIds": [],
+        "actions": [],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "unknown",
+          "corrections": [],
+          "confirmedDomain": "unknown",
+          "confirmedConstraints": {},
+          "pendingQuestionKeys": [
+            "identity"
+          ],
+          "entityIds": [],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "needs_identity",
+          "routeLatencyMs": 3295,
+          "classifierCandidate": {
+            "intent": "new_consultation",
+            "studentConstraints": {},
+            "factTopics": []
+          }
+        }
+      },
+      "latencyMs": 3304,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "needs_identity"
+  ],
+  "actualAnswers": [
+    "请问您是以什么身份咨询AI课程？是学生或家长、教师，还是机构或企业人员？"
+  ],
+  "entities": [],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [],
+    "dates": [],
+    "keyFacts": []
+  },
+  "sources": [],
+  "totalLatencyMs": 3304,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200且needs_identity",
+      "passed": true
+    },
+    {
+      "label": "不返回课程实体或卡片",
+      "passed": true
+    },
+    {
+      "label": "保留身份澄清状态",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "X01.json"
+}

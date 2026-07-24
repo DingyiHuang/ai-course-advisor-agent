@@ -1,0 +1,230 @@
+{
+  "id": "M02",
+  "category": "官方25组/多轮",
+  "title": "学生当前班型准备事项追问",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:48:56",
+  "finishedAt": "2026-07-23 18:49:06",
+  "originalInput": "（继承M01实际state）需要带什么？",
+  "expected": "继续继承camp-p1-bj，使用素材A第六章，不重新询问身份。",
+  "turns": [
+    {
+      "caseId": "M02",
+      "step": "接续M01追问准备事项",
+      "request": {
+        "action": "message",
+        "message": "需要带什么？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "家长，北京，可参加第一期，希望线下"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，为您推荐北京第一期线下AI编程营。该营期时间与您选择的第一营期一致，地点位于北京市海淀区，方便您线下参加。"
+            },
+            {
+              "role": "user",
+              "content": "这个班什么时候？"
+            },
+            {
+              "role": "assistant",
+              "content": "北京第一期线下AI编程营的课程时间为2026年8月1日（星期六）至8月7日（星期五），报名截止时间为2026年7月25日24:00。请问您还需要了解其他信息吗？"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:49:06",
+          "httpStatus": 200,
+          "latencyMs": 9729
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "contextual_followup",
+        "message": "北京第一期线下AI编程营需要携带以下物品：笔记本电脑（必须）、充电器、按开营通知注册的模拟/免费工具账号，以及线下学员还需携带身份证明复印件、洗漱用品、换洗衣物、水杯和雨具。设备要求：Windows 10及以上或macOS 12及以上，8GB内存，可正常运行Chrome/Edge和腾讯会议。建议网络带宽不低于20Mbps。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第六章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline",
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "家长，北京，可参加第一期，希望线下"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的需求，为您推荐北京第一期线下AI编程营。该营期时间与您选择的第一营期一致，地点位于北京市海淀区，方便您线下参加。"
+            },
+            {
+              "role": "user",
+              "content": "这个班什么时候？"
+            },
+            {
+              "role": "assistant",
+              "content": "北京第一期线下AI编程营的课程时间为2026年8月1日（星期六）至8月7日（星期五），报名截止时间为2026年7月25日24:00。请问您还需要了解其他信息吗？"
+            },
+            {
+              "role": "user",
+              "content": "需要带什么？"
+            },
+            {
+              "role": "assistant",
+              "content": "北京第一期线下AI编程营需要携带以下物品：笔记本电脑（必须）、充电器、按开营通知注册的模拟/免费工具账号，以及线下学员还需携带身份证明复印件、洗漱用品、换洗衣物、水杯和雨具。设备要求：Windows 10及以上或macOS 12及以上，8GB内存，可正常运行Chrome/Edge和腾讯会议。建议网络带宽不低于20Mbps。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p1-bj"
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第六章",
+            "factIds": [
+              "camp-p1-bj.requiredItems",
+              "camp-p1-bj.equipmentRequirements"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p1-bj"
+        ],
+        "actions": [
+          "继续询问当前班型"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "contextual_followup",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "availablePeriods": [
+              1
+            ],
+            "modePreference": "offline"
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p1-bj"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "contextual_followup",
+          "routeLatencyMs": 9715,
+          "classifierCandidate": {
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "required_items"
+            ]
+          }
+        }
+      },
+      "latencyMs": 9729,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "contextual_followup"
+  ],
+  "actualAnswers": [
+    "北京第一期线下AI编程营需要携带以下物品：笔记本电脑（必须）、充电器、按开营通知注册的模拟/免费工具账号，以及线下学员还需携带身份证明复印件、洗漱用品、换洗衣物、水杯和雨具。设备要求：Windows 10及以上或macOS 12及以上，8GB内存，可正常运行Chrome/Edge和腾讯会议。建议网络带宽不低于20Mbps。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第六章"
+  ],
+  "entities": [
+    "camp-p1-bj"
+  ],
+  "currentEntities": [
+    "camp-p1-bj"
+  ],
+  "facts": {
+    "amounts": [],
+    "dates": [],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第六章",
+      "factIds": [
+        "camp-p1-bj.requiredItems",
+        "camp-p1-bj.equipmentRequirements"
+      ]
+    }
+  ],
+  "totalLatencyMs": 9729,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "继承当前学生班型",
+      "passed": true
+    },
+    {
+      "label": "回答准备事项",
+      "passed": true
+    },
+    {
+      "label": "引用素材A第六章",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "M02.json"
+}

@@ -1,0 +1,38 @@
+{
+  "id": "X10",
+  "category": "补充14组",
+  "title": "浏览器真实Markdown导出",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:53:41",
+  "finishedAt": "2026-07-23 18:53:41",
+  "originalInput": "完成真实对话后在页面填写编号并点击“导出 Markdown”",
+  "expected": "下载文件包含真实完整对话、身份、约束、推荐、来源、测试模式与实际错误状态。",
+  "turns": [],
+  "httpStatuses": [],
+  "actualStatuses": [],
+  "actualAnswers": [],
+  "entities": [],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [],
+    "dates": [],
+    "keyFacts": []
+  },
+  "sources": [],
+  "totalLatencyMs": 0,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "浏览器真实导出文件完整一致",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "browserVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": null,
+  "browserEvidenceFile": "browser/browser-results.json",
+  "browserExportFile": "browser/AI课程顾问_TASK06-X10_20260724-095628.md",
+  "evidenceFile": "X10.json"
+}

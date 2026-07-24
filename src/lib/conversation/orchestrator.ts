@@ -77,6 +77,23 @@ export type ConversationRequest = {
   testMode?: boolean;
 };
 
+function scenarioBusinessDate(
+  message: string,
+  fallback: BusinessDate,
+): BusinessDate {
+  const match = message.match(
+    /(?:^|[，,。；;\s])(20\d{2})年(\d{1,2})月(\d{1,2})日/u,
+  );
+  if (!match) return fallback;
+  const candidate =
+    `${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}` as BusinessDate;
+  const parsed = new Date(`${candidate}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === candidate
+    ? candidate
+    : fallback;
+}
+
 const EMPTY_PRESENTATION: ChatResponse["presentation"] = {
   recommendations: [],
 };
@@ -138,6 +155,23 @@ function scopeClarificationResponse(state: ConversationState): ChatResponse {
       : ["咨询学生课程", "咨询教师培训", "咨询机构服务", "返回菜单"],
     presentation: EMPTY_PRESENTATION,
     notices: [],
+  };
+}
+
+function unsupportedExternalClaimsResponse(
+  state: ConversationState,
+): ChatResponse {
+  return {
+    status: "unrelated",
+    message:
+      "现有资料未提供合作学校名单、名校案例、收入数据或收入保证；我不能据此编造案例、背书或收益承诺。您可以继续咨询资料内的学生课程、教师培训、机构采购或平台服务。",
+    state,
+    sources: [],
+    entityIds: [],
+    actions: ["继续咨询机构服务", "返回菜单"],
+    presentation: EMPTY_PRESENTATION,
+    notices: [],
+    boundaryCode: "unsupported_external_claims",
   };
 }
 
@@ -654,6 +688,200 @@ function assertSchoolProcurementMinimums(
   }
 }
 
+function answerContainsBusinessDate(message: string, value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  if (message.includes(value)) return true;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/u);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  return (
+    message.includes(`${year}年${Number(month)}月${Number(day)}日`) ||
+    message.includes(`${Number(month)}月${Number(day)}日`)
+  );
+}
+
+function weekdayForBusinessDate(value: unknown): string | undefined {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) {
+    return undefined;
+  }
+  return [
+    "星期日",
+    "星期一",
+    "星期二",
+    "星期三",
+    "星期四",
+    "星期五",
+    "星期六",
+  ][new Date(`${value}T00:00:00Z`).getUTCDay()];
+}
+
+function assertDirectFactAnswerCompleteness(input: {
+  plan: ComposerPlan;
+  output: LlmComposerOutput;
+  userMessage: string;
+  usedFactIds: string[];
+}): void {
+  if (input.plan.status !== "fact_answer") return;
+  const used = new Set(input.usedFactIds);
+  const factsBySuffix = (suffix: string) =>
+    input.plan.facts.filter(({ id }) => id.endsWith(suffix));
+  const usesSuffix = (suffix: string) =>
+    [...used].some((id) => id.endsWith(suffix));
+
+  if (
+    input.plan.entityIds.some((id) => id.startsWith("camp-")) &&
+    /什么时候上课/u.test(input.userMessage)
+  ) {
+    const startDate = factsBySuffix(".startDate")[0]?.value;
+    const endDate = factsBySuffix(".endDate")[0]?.value;
+    const registrationDeadline =
+      factsBySuffix(".registrationDeadline")[0]?.value;
+    const startWeekday = weekdayForBusinessDate(startDate);
+    const endWeekday = weekdayForBusinessDate(endDate);
+    if (
+      !answerContainsBusinessDate(input.output.message, startDate) ||
+      !answerContainsBusinessDate(input.output.message, endDate) ||
+      !answerContainsBusinessDate(input.output.message, registrationDeadline) ||
+      !startWeekday ||
+      !endWeekday ||
+      !input.output.message.includes(startWeekday) ||
+      !input.output.message.includes(endWeekday) ||
+      !/24[:：]00/u.test(input.output.message) ||
+      !usesSuffix(".startDate") ||
+      !usesSuffix(".endDate") ||
+      !usesSuffix(".registrationDeadline")
+    ) {
+      throw new GroundingError(
+        "missing_required_fact",
+        "Camp schedule answer omitted a date, weekday, or registration cutoff",
+        "camp_schedule_incomplete",
+      );
+    }
+  }
+
+  if (
+    input.plan.entityIds.some((id) => id.startsWith("camp-")) &&
+    /(?:还能|可以|是否|是不是).{0,6}报名/u.test(input.userMessage)
+  ) {
+    const registrationDeadline =
+      factsBySuffix(".registrationDeadline")[0]?.value;
+    if (
+      !answerContainsBusinessDate(input.output.message, registrationDeadline) ||
+      !/24[:：]00/u.test(input.output.message) ||
+      !usesSuffix(".registrationDeadline")
+    ) {
+      throw new GroundingError(
+        "missing_required_fact",
+        "Registration answer omitted the 24:00 cutoff",
+        "registration_cutoff_incomplete",
+      );
+    }
+  }
+
+  if (
+    /(?:在哪里|在哪儿|哪里)/u.test(input.userMessage) &&
+    factsBySuffix(".addressOrPlatform").some(
+      ({ value }) => typeof value === "string" && value.includes("模拟地址"),
+    ) &&
+    (!input.output.message.includes("模拟地址") ||
+      !usesSuffix(".addressOrPlatform"))
+  ) {
+    throw new GroundingError(
+      "missing_required_fact",
+      "Location answer omitted the simulated-address boundary",
+      "simulated_address_missing",
+    );
+  }
+
+  if (
+    input.plan.entityIds.some((id) => id.startsWith("teacher-")) &&
+    /怎么安排/u.test(input.userMessage)
+  ) {
+    const scheduleText = factsBySuffix(".schedule")
+      .map(({ value }) => String(value))
+      .join("；");
+    const requiredDates = [...new Set(scheduleText.match(/\d+月\d+日/gu) ?? [])];
+    const requiredHours = scheduleText.match(/共\d+课时/u)?.[0];
+    if (
+      requiredDates.some((date) => !input.output.message.includes(date)) ||
+      (requiredHours && !input.output.message.includes(requiredHours)) ||
+      !input.output.message.includes("线下") ||
+      !usesSuffix(".schedule") ||
+      !usesSuffix(".format") ||
+      !usesSuffix(".locationsOrPlatforms")
+    ) {
+      throw new GroundingError(
+        "missing_required_fact",
+        "Teacher schedule answer omitted its date, hours, or delivery format",
+        "teacher_schedule_incomplete",
+      );
+    }
+  }
+
+  if (
+    input.plan.entityIds.some((id) => id.startsWith("teacher-")) &&
+    /多少钱|费用|价格/u.test(input.userMessage)
+  ) {
+    const messageWithoutSeparators = input.output.message.replace(/,/gu, "");
+    const earlyBirdDiscounts = [
+      ...new Set(
+        factsBySuffix(".earlyBirdDiscount")
+          .map(({ value }) => value)
+          .filter((value): value is number => typeof value === "number"),
+      ),
+    ];
+    const groupDiscounts = [
+      ...new Set(
+        factsBySuffix(".groupDiscount")
+          .map(({ value }) => value)
+          .filter((value): value is number => typeof value === "number"),
+      ),
+    ];
+    if (
+      earlyBirdDiscounts.some(
+        (amount) => !messageWithoutSeparators.includes(String(amount)),
+      ) ||
+      groupDiscounts.some(
+        (amount) => !messageWithoutSeparators.includes(String(amount)),
+      ) ||
+      (earlyBirdDiscounts.length > 0 && !usesSuffix(".earlyBirdDiscount")) ||
+      (groupDiscounts.length > 0 && !usesSuffix(".groupDiscount"))
+    ) {
+      throw new GroundingError(
+        "missing_required_fact",
+        "Teacher price answer omitted a stated discount condition",
+        "teacher_price_incomplete",
+      );
+    }
+  }
+
+  if (
+    input.plan.entityIds.some((id) => id.startsWith("teacher-")) &&
+    /早鸟.{0,8}(?:减|优惠)|减\s*\d+\s*元/u.test(input.userMessage)
+  ) {
+    const messageWithoutSeparators = input.output.message.replace(/,/gu, "");
+    const standardPrices = [
+      ...new Set(
+        factsBySuffix(".standardPrice")
+          .map(({ value }) => value)
+          .filter((value): value is number => typeof value === "number"),
+      ),
+    ];
+    if (
+      standardPrices.some(
+        (amount) => !messageWithoutSeparators.includes(String(amount)),
+      ) ||
+      (standardPrices.length > 0 && !usesSuffix(".standardPrice"))
+    ) {
+      throw new GroundingError(
+        "missing_required_fact",
+        "Teacher early-bird answer omitted the resulting standard price",
+        "teacher_early_bird_price_incomplete",
+      );
+    }
+  }
+}
+
 function validateComposerOutput(input: {
   output: LlmComposerOutput;
   plan: ComposerPlan;
@@ -688,6 +916,12 @@ function validateComposerOutput(input: {
     );
   }
   assertTraceFactsUsed(input.plan, usedFactIds);
+  assertDirectFactAnswerCompleteness({
+    plan: input.plan,
+    output: input.output,
+    userMessage: input.userMessage,
+    usedFactIds,
+  });
   assertHighRiskValuesGrounded({
     message: [
       input.output.message,
@@ -742,6 +976,18 @@ function retryFeedbackFor(error: unknown): string | undefined {
       "回答或理由必须明确写出所推荐线上班提供30天回放。",
     replay_fact_id_missing:
       "usedFactIds必须包含所推荐线上班的replayDays事实ID。",
+    camp_schedule_incomplete:
+      "学生营期回答必须同时写明开课和结束日期、对应星期、报名截止日24:00，并在usedFactIds中使用startDate、endDate、registrationDeadline。",
+    simulated_address_missing:
+      "地点回答必须完整保留地址事实中的“模拟地址”标记，并在usedFactIds中使用addressOrPlatform。",
+    teacher_schedule_incomplete:
+      "教师集训安排必须写明日期、总课时和线下授课形式，并在usedFactIds中使用schedule、format、locationsOrPlatforms。",
+    registration_cutoff_incomplete:
+      "报名状态回答必须写明报名截止日24:00，并在usedFactIds中使用registrationDeadline。",
+    teacher_price_incomplete:
+      "教师价格回答必须明确写出早鸟优惠金额和团报优惠金额，并在usedFactIds中使用earlyBirdDiscount、groupDiscount。",
+    teacher_early_bird_price_incomplete:
+      "教师早鸟状态回答必须明确写出当前标准价格，并在usedFactIds中使用standardPrice。",
   };
   if (error.detailCode && detailFeedback[error.detailCode]) {
     return detailFeedback[error.detailCode];
@@ -1066,6 +1312,12 @@ export async function runConversationTurn(
       message,
       state: originalState,
     });
+    if (deterministic.boundaryCode === "unsupported_external_claims") {
+      if (dependencies.diagnostics) {
+        dependencies.diagnostics.effectiveIntent = "unrelated";
+      }
+      return unsupportedExternalClaimsResponse(originalState);
+    }
     if (deterministic.intent === "unrelated") {
       const plan = buildVerifiedComposerPlan({
         state: originalState,
@@ -1119,6 +1371,15 @@ export async function runConversationTurn(
       applied.state.teacherConstraints,
       deterministic.teacherConstraints,
     );
+    if (deterministic.referencedEntityIds?.length) {
+      applied.state.lastRecommendationIds = [
+        ...new Set(deterministic.referencedEntityIds),
+      ];
+      applied.state.selectedEntityId =
+        applied.state.lastRecommendationIds.length === 1
+          ? applied.state.lastRecommendationIds[0]
+          : undefined;
+    }
     if (dependencies.diagnostics) {
       dependencies.diagnostics.corrections.push(
         ...structuredClone(applied.corrections),
@@ -1193,7 +1454,7 @@ export async function runConversationTurn(
       state: workingState,
       intent,
       factTopics,
-      currentDate: dependencies.currentDate,
+      currentDate: scenarioBusinessDate(message, dependencies.currentDate),
       crossDomainFrom,
     });
     recordPlanDiagnostics(dependencies, workingState, plan);

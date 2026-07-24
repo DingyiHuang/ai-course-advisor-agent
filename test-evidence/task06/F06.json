@@ -1,0 +1,174 @@
+{
+  "id": "F06",
+  "category": "官方25组/资料事实",
+  "title": "教师L2周末研修日期",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:45:17",
+  "finishedAt": "2026-07-23 18:45:30",
+  "originalInput": "L2周末研修班哪几天上课？",
+  "expected": "8月8日线上8课时、8月9日线下8课时、8月15日上午线上4课时，共20课时。",
+  "turns": [
+    {
+      "caseId": "F06",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "L2周末研修班哪几天上课？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:45:30",
+          "httpStatus": 200,
+          "latencyMs": 13013
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "fact_answer",
+        "message": "L2周末研修班的上课时间为：8月8日线上8课时、8月9日线下8课时、8月15日上午线上4课时，共20课时。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二章",
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "teacher-l2-weekend"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "L2周末研修班哪几天上课？"
+            },
+            {
+              "role": "assistant",
+              "content": "L2周末研修班的上课时间为：8月8日线上8课时、8月9日线下8课时、8月15日上午线上4课时，共20课时。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "teacher-l2-weekend"
+        },
+        "sources": [
+          {
+            "document": "B",
+            "chapter": "第二章",
+            "factIds": [
+              "teacher-l2-weekend.schedule"
+            ]
+          }
+        ],
+        "entityIds": [
+          "teacher-l2-weekend"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "fact_question",
+          "corrections": [],
+          "confirmedDomain": "teacher",
+          "confirmedConstraints": {},
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "teacher-l2-weekend"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "fact_answer",
+          "routeLatencyMs": 13001,
+          "classifierCandidate": {
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "schedule"
+            ]
+          }
+        }
+      },
+      "latencyMs": 13013,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "fact_answer"
+  ],
+  "actualAnswers": [
+    "L2周末研修班的上课时间为：8月8日线上8课时、8月9日线下8课时、8月15日上午线上4课时，共20课时。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二章"
+  ],
+  "entities": [
+    "teacher-l2-weekend"
+  ],
+  "currentEntities": [
+    "teacher-l2-weekend"
+  ],
+  "facts": {
+    "amounts": [],
+    "dates": [
+      "8月8日",
+      "8月9日",
+      "8月15日"
+    ],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "B",
+      "chapter": "第二章",
+      "factIds": [
+        "teacher-l2-weekend.schedule"
+      ]
+    }
+  ],
+  "totalLatencyMs": 13013,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "三段日期准确",
+      "passed": true
+    },
+    {
+      "label": "线上线下与20课时准确",
+      "passed": true
+    },
+    {
+      "label": "来源属于素材B",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "F06.json"
+}

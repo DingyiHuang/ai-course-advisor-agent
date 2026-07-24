@@ -1,0 +1,350 @@
+{
+  "id": "R05",
+  "category": "官方25组/推荐",
+  "title": "L1同等能力教师L2集训推荐",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:47:56",
+  "finishedAt": "2026-07-23 18:48:38",
+  "originalInput": "我是教师，已具备L1同等能力，可在8月3日至5日连续参加，希望做Web应用。",
+  "expected": "推荐实体teacher-l2-intensive，理由只对应实际采集约束，不声称未采集条件完全符合。",
+  "turns": [
+    {
+      "caseId": "R05",
+      "step": "推荐请求",
+      "request": {
+        "action": "message",
+        "message": "我是教师，已具备L1同等能力，可在8月3日至5日连续参加，希望做Web应用。",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:48:38",
+          "httpStatus": 200,
+          "latencyMs": 41304
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "recommended",
+        "message": "根据您的情况，推荐L2集训班型，理由如下：\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二章；素材B《初高中教师AI素养培训体系介绍》第一章；素材B《初高中教师AI素养培训体系介绍》第三章；素材B《初高中教师AI素养培训体系介绍》第一、六章",
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {
+            "goal": "web-app",
+            "canTakeContinuousLeave": true,
+            "startingLevel": "L1",
+            "prerequisiteStatus": "met",
+            "availableProductIds": [
+              "teacher-l2-intensive"
+            ],
+            "stalledTurns": 0
+          },
+          "lastRecommendationIds": [
+            "teacher-l2-intensive"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "我是教师，已具备L1同等能力，可在8月3日至5日连续参加，希望做Web应用。"
+            },
+            {
+              "role": "assistant",
+              "content": "根据您的情况，推荐L2集训班型，理由如下："
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "teacher-l2-intensive"
+        },
+        "sources": [
+          {
+            "document": "B",
+            "chapter": "第二章",
+            "factIds": [
+              "teacher-l2-intensive.format",
+              "teacher-l2-intensive.schedule"
+            ]
+          },
+          {
+            "document": "B",
+            "chapter": "第一章",
+            "factIds": [
+              "teacher-l2-intensive.level"
+            ]
+          },
+          {
+            "document": "B",
+            "chapter": "第三章",
+            "factIds": [
+              "teacher-l2-intensive.curriculumModules",
+              "teacher-l2-intensive.outcome"
+            ]
+          },
+          {
+            "document": "B",
+            "chapter": "第一、六章",
+            "factIds": [
+              "teacher-l2-intensive.prerequisite"
+            ]
+          }
+        ],
+        "entityIds": [
+          "teacher-l2-intensive"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "查看其他班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": [
+            {
+              "entityId": "teacher-l2-intensive",
+              "kind": "teacher",
+              "name": "初高中教师AI素养培训·L2·暑期集训班",
+              "date": "8月3日8课时、8月4日8课时、8月5日上午4课时，共20课时",
+              "delivery": "北京市海淀区中关村南大街5号，AI教育中心北京教学基地（模拟地址）",
+              "standardPrice": 6980,
+              "actualPrice": 6980,
+              "discountLabel": "本次按标准价计算",
+              "reasons": [
+                {
+                  "constraintKey": "canTakeContinuousLeave",
+                  "reason": "您可以连续请假，而本班型是集中式集训，安排在8月3日至5日连续上课，与您的假期安排完全吻合。",
+                  "constraintLabel": "时间安排",
+                  "constraintValue": "是"
+                },
+                {
+                  "constraintKey": "goal",
+                  "reason": "您的目标是构建Web应用，本班型为L2能力等级，课程模块覆盖需求拆解、响应式页面、数据库、LLM API等，产出可运行的AI教学Web应用MVP，精准契合您的目标。",
+                  "constraintLabel": "培训目标",
+                  "constraintValue": "AI Web应用"
+                },
+                {
+                  "constraintKey": "prerequisiteStatus",
+                  "reason": "您已完成L1，本班型前置条件为完成L1或同等能力测评，您完全满足入学要求。",
+                  "constraintLabel": "前置条件",
+                  "constraintValue": "已满足"
+                },
+                {
+                  "constraintKey": "availableProductIds",
+                  "reason": "该班型在您可选的产品列表中，且排课时间在您可参加的档期内。",
+                  "constraintLabel": "可参加班型",
+                  "constraintValue": "teacher-l2-intensive"
+                }
+              ],
+              "sources": [
+                {
+                  "document": "B",
+                  "chapter": "第二章",
+                  "factIds": [
+                    "teacher-l2-intensive.format",
+                    "teacher-l2-intensive.schedule"
+                  ]
+                },
+                {
+                  "document": "B",
+                  "chapter": "第一章",
+                  "factIds": [
+                    "teacher-l2-intensive.level"
+                  ]
+                },
+                {
+                  "document": "B",
+                  "chapter": "第三章",
+                  "factIds": [
+                    "teacher-l2-intensive.curriculumModules",
+                    "teacher-l2-intensive.outcome"
+                  ]
+                },
+                {
+                  "document": "B",
+                  "chapter": "第一、六章",
+                  "factIds": [
+                    "teacher-l2-intensive.prerequisite"
+                  ]
+                }
+              ],
+              "availabilityNote": "资料未提供实时余位；班型规模和最低开班人数均不代表剩余名额。"
+            }
+          ]
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "new_consultation",
+          "corrections": [],
+          "confirmedDomain": "teacher",
+          "confirmedConstraints": {
+            "goal": "web-app",
+            "canTakeContinuousLeave": true,
+            "startingLevel": "L1",
+            "prerequisiteStatus": "met",
+            "availableProductIds": [
+              "teacher-l2-intensive"
+            ]
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "teacher-l2-intensive"
+          ],
+          "decisionTrace": [
+            {
+              "code": "continuous_time",
+              "constraintKeys": [
+                "canTakeContinuousLeave"
+              ],
+              "factIds": [
+                "teacher-l2-intensive.format",
+                "teacher-l2-intensive.schedule"
+              ]
+            },
+            {
+              "code": "level_l2",
+              "constraintKeys": [
+                "goal"
+              ],
+              "factIds": [
+                "teacher-l2-intensive.level",
+                "teacher-l2-intensive.curriculumModules",
+                "teacher-l2-intensive.outcome"
+              ]
+            },
+            {
+              "code": "prerequisite_met",
+              "constraintKeys": [
+                "prerequisiteStatus"
+              ],
+              "factIds": [
+                "teacher-l2-intensive.prerequisite"
+              ]
+            },
+            {
+              "code": "schedule_available",
+              "constraintKeys": [
+                "availableProductIds"
+              ],
+              "factIds": [
+                "teacher-l2-intensive.schedule"
+              ]
+            }
+          ],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "recommended",
+          "routeLatencyMs": 41285,
+          "classifierCandidate": {
+            "intent": "identity_selection",
+            "studentConstraints": {},
+            "factTopics": []
+          }
+        }
+      },
+      "latencyMs": 41304,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "recommended"
+  ],
+  "actualAnswers": [
+    "根据您的情况，推荐L2集训班型，理由如下：\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二章；素材B《初高中教师AI素养培训体系介绍》第一章；素材B《初高中教师AI素养培训体系介绍》第三章；素材B《初高中教师AI素养培训体系介绍》第一、六章"
+  ],
+  "entities": [
+    "teacher-l2-intensive"
+  ],
+  "currentEntities": [
+    "teacher-l2-intensive"
+  ],
+  "facts": {
+    "amounts": [],
+    "dates": [
+      "8月3日",
+      "8月4日",
+      "8月5日"
+    ],
+    "keyFacts": [
+      "资料未提供",
+      "实时余位"
+    ]
+  },
+  "sources": [
+    {
+      "document": "B",
+      "chapter": "第二章",
+      "factIds": [
+        "teacher-l2-intensive.format",
+        "teacher-l2-intensive.schedule"
+      ]
+    },
+    {
+      "document": "B",
+      "chapter": "第一章",
+      "factIds": [
+        "teacher-l2-intensive.level"
+      ]
+    },
+    {
+      "document": "B",
+      "chapter": "第三章",
+      "factIds": [
+        "teacher-l2-intensive.curriculumModules",
+        "teacher-l2-intensive.outcome"
+      ]
+    },
+    {
+      "document": "B",
+      "chapter": "第一、六章",
+      "factIds": [
+        "teacher-l2-intensive.prerequisite"
+      ]
+    }
+  ],
+  "totalLatencyMs": 41304,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200且推荐成功",
+      "passed": true
+    },
+    {
+      "label": "推荐实体正确",
+      "passed": true
+    },
+    {
+      "label": "推荐理由逐项对应采集约束",
+      "passed": true,
+      "detail": "实际键：canTakeContinuousLeave、goal、prerequisiteStatus、availableProductIds"
+    },
+    {
+      "label": "不出现错误完全符合",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "R05.json"
+}

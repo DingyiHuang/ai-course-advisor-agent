@@ -1,0 +1,208 @@
+{
+  "id": "X04",
+  "category": "补充14组",
+  "title": "班型规模不是余位",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:51:44",
+  "finishedAt": "2026-07-23 18:51:55",
+  "originalInput": "30人班还有几个名额？",
+  "expected": "资料未提供实时余位，30人规模和最低开班人数不代表剩余名额。",
+  "turns": [
+    {
+      "caseId": "X04",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "30人班还有几个名额？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:51:55",
+          "httpStatus": 200,
+          "latencyMs": 10782
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "fact_answer",
+        "message": "目前暂时无法查询实时余位，但可以告知您每个班型的设计规模均为30人，最低开班人数为15人。具体剩余名额需要进一步确认。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj",
+            "camp-p1-sh",
+            "camp-p2-bj",
+            "camp-p2-sh",
+            "camp-p3-bj",
+            "camp-p3-sh"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "30人班还有几个名额？"
+            },
+            {
+              "role": "assistant",
+              "content": "目前暂时无法查询实时余位，但可以告知您每个班型的设计规模均为30人，最低开班人数为15人。具体剩余名额需要进一步确认。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p1-bj.capacity",
+              "camp-p1-bj.minimumToOpen",
+              "camp-p1-sh.capacity",
+              "camp-p1-sh.minimumToOpen",
+              "camp-p2-bj.capacity",
+              "camp-p2-bj.minimumToOpen",
+              "camp-p2-sh.capacity",
+              "camp-p2-sh.minimumToOpen",
+              "camp-p3-bj.capacity",
+              "camp-p3-bj.minimumToOpen",
+              "camp-p3-sh.capacity",
+              "camp-p3-sh.minimumToOpen"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p1-bj",
+          "camp-p1-sh",
+          "camp-p2-bj",
+          "camp-p2-sh",
+          "camp-p3-bj",
+          "camp-p3-sh"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "fact_question",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {},
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p1-bj",
+            "camp-p1-sh",
+            "camp-p2-bj",
+            "camp-p2-sh",
+            "camp-p3-bj",
+            "camp-p3-sh"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "fact_answer",
+          "routeLatencyMs": 10761,
+          "classifierCandidate": {
+            "domainCandidate": "student",
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "availability"
+            ]
+          }
+        }
+      },
+      "latencyMs": 10782,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "fact_answer"
+  ],
+  "actualAnswers": [
+    "目前暂时无法查询实时余位，但可以告知您每个班型的设计规模均为30人，最低开班人数为15人。具体剩余名额需要进一步确认。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章"
+  ],
+  "entities": [
+    "camp-p1-bj",
+    "camp-p1-sh",
+    "camp-p2-bj",
+    "camp-p2-sh",
+    "camp-p3-bj",
+    "camp-p3-sh"
+  ],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [],
+    "dates": [],
+    "keyFacts": [
+      "实时余位"
+    ]
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p1-bj.capacity",
+        "camp-p1-bj.minimumToOpen",
+        "camp-p1-sh.capacity",
+        "camp-p1-sh.minimumToOpen",
+        "camp-p2-bj.capacity",
+        "camp-p2-bj.minimumToOpen",
+        "camp-p2-sh.capacity",
+        "camp-p2-sh.minimumToOpen",
+        "camp-p3-bj.capacity",
+        "camp-p3-bj.minimumToOpen",
+        "camp-p3-sh.capacity",
+        "camp-p3-sh.minimumToOpen"
+      ]
+    }
+  ],
+  "totalLatencyMs": 10782,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "明确余位未知",
+      "passed": true
+    },
+    {
+      "label": "不声称剩余30个名额",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "X04.json"
+}

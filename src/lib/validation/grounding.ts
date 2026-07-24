@@ -249,7 +249,7 @@ export function assertComposerMentionedOnlyPlannedPeriods(
     "2": 2,
     "3": 3,
   };
-  const mentionedPeriods = [...message.matchAll(/第?\s*([一二三123])\s*期/gu)]
+  const mentionedPeriods = [...message.matchAll(/第\s*([一二三123])\s*期/gu)]
     .map((match) => numberMap[match[1]]);
   if (mentionedPeriods.some((period) => !allowedPeriods.has(period))) {
     throw new GroundingError(

@@ -1,0 +1,250 @@
+{
+  "id": "B01",
+  "category": "官方25组/资料边界",
+  "title": "会员售价边界",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:45:50",
+  "finishedAt": "2026-07-23 18:46:00",
+  "originalInput": "专业会员是不是6980元？",
+  "expected": "素材C未提供会员售价；6980元属于教师L2个人培训，不把两者混价。",
+  "turns": [
+    {
+      "caseId": "B01",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "专业会员是不是6980元？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "platform",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:46:00",
+          "httpStatus": 200,
+          "latencyMs": 9411
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "institution_info",
+        "message": "您提到的6980元是教师L2集训的标准价格，并非专业会员的售价。目前平台会员的具体售价未提供，且会员服务不包含订单权限。如需了解更多，请继续咨询。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第五章；素材C《OPC超级个体赋能平台产品白皮书》第五章（会员权益表未提供价格）；素材C《OPC超级个体赋能平台产品白皮书》第五、六、七章",
+        "state": {
+          "version": 1,
+          "domain": "platform",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "专业会员是不是6980元？"
+            },
+            {
+              "role": "assistant",
+              "content": "您提到的6980元是教师L2集训的标准价格，并非专业会员的售价。目前平台会员的具体售价未提供，且会员服务不包含订单权限。如需了解更多，请继续咨询。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "institutionNeed": "membership",
+          "selectedEntityId": "platform-membership"
+        },
+        "sources": [
+          {
+            "document": "B",
+            "chapter": "第五章",
+            "factIds": [
+              "teacher-l2-intensive.standardPrice"
+            ]
+          },
+          {
+            "document": "C",
+            "chapter": "第五章",
+            "section": "会员权益表未提供价格",
+            "factIds": [
+              "platform-membership.priceProvided"
+            ]
+          },
+          {
+            "document": "C",
+            "chapter": "第五、六、七章",
+            "factIds": [
+              "platform-membership.boundary"
+            ]
+          }
+        ],
+        "entityIds": [
+          "platform-membership"
+        ],
+        "actions": [
+          "查看模拟咨询流程",
+          "整理采购需求清单",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": [],
+          "institutionService": {
+            "entityId": "platform-membership",
+            "name": "平台会员",
+            "audience": "使用课程、工具和社区服务的平台用户",
+            "pricingRule": "资料未提供具体价格",
+            "boundary": "会员不授予订单权限，素材C未提供具体会员售价",
+            "sources": [
+              {
+                "document": "C",
+                "chapter": "第五章",
+                "section": "会员权益表未提供价格",
+                "factIds": [
+                  "platform-membership.priceProvided"
+                ]
+              },
+              {
+                "document": "C",
+                "chapter": "第五、六、七章",
+                "factIds": [
+                  "platform-membership.boundary"
+                ]
+              }
+            ]
+          }
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "institution_service",
+          "corrections": [],
+          "confirmedDomain": "platform",
+          "confirmedConstraints": {
+            "institutionNeed": "membership"
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "platform-membership"
+          ],
+          "decisionTrace": [
+            {
+              "code": "institution_membership",
+              "constraintKeys": [
+                "institutionNeed"
+              ],
+              "constraintValues": {
+                "institutionNeed": "membership"
+              },
+              "factIds": [
+                "platform-membership.category",
+                "platform-membership.audience",
+                "platform-membership.boundary",
+                "platform-membership.priceProvided",
+                "platform-membership.grantsOrderPermission",
+                "platform-contest.grantsDirectOrderPermission",
+                "platform-contest.boundary",
+                "teacher-l2-intensive.standardPrice"
+              ]
+            }
+          ],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "institution_info",
+          "routeLatencyMs": 9397,
+          "classifierCandidate": {
+            "intent": "new_consultation",
+            "studentConstraints": {},
+            "factTopics": [
+              "price"
+            ]
+          }
+        }
+      },
+      "latencyMs": 9411,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "institution_info"
+  ],
+  "actualAnswers": [
+    "您提到的6980元是教师L2集训的标准价格，并非专业会员的售价。目前平台会员的具体售价未提供，且会员服务不包含订单权限。如需了解更多，请继续咨询。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第五章；素材C《OPC超级个体赋能平台产品白皮书》第五章（会员权益表未提供价格）；素材C《OPC超级个体赋能平台产品白皮书》第五、六、七章"
+  ],
+  "entities": [
+    "platform-membership"
+  ],
+  "currentEntities": [
+    "platform-membership"
+  ],
+  "facts": {
+    "amounts": [
+      "6980元"
+    ],
+    "dates": [],
+    "keyFacts": [
+      "资料未提供"
+    ]
+  },
+  "sources": [
+    {
+      "document": "B",
+      "chapter": "第五章",
+      "factIds": [
+        "teacher-l2-intensive.standardPrice"
+      ]
+    },
+    {
+      "document": "C",
+      "chapter": "第五章",
+      "section": "会员权益表未提供价格",
+      "factIds": [
+        "platform-membership.priceProvided"
+      ]
+    },
+    {
+      "document": "C",
+      "chapter": "第五、六、七章",
+      "factIds": [
+        "platform-membership.boundary"
+      ]
+    }
+  ],
+  "totalLatencyMs": 9411,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "明确会员售价未提供",
+      "passed": true
+    },
+    {
+      "label": "6980仅作为教师L2边界说明",
+      "passed": true
+    },
+    {
+      "label": "没有把会员定价为6980",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "B01.json"
+}

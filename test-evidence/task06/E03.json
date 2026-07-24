@@ -1,0 +1,290 @@
+{
+  "id": "E03",
+  "category": "官方25组/异常",
+  "title": "大量特殊符号与恢复",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:50:08",
+  "finishedAt": "2026-07-23 18:50:19",
+  "originalInput": "测试特殊符号：!@#$%^&*()_+{}[]<>?/\\|~ → 第一期夏令营什么时候上课？",
+  "expected": "不出现500或崩溃，给出可理解提示；随后正常问题可继续。",
+  "turns": [
+    {
+      "caseId": "E03",
+      "step": "特殊符号",
+      "request": {
+        "action": "message",
+        "message": "测试特殊符号：!@#$%^&*()_+{}[]<>?/\\|~",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:50:11",
+          "httpStatus": 200,
+          "latencyMs": 3506
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "unrelated",
+        "message": "这条信息似乎与课程或机构服务咨询无关。我可以继续协助查询学生课程、教师培训、费用、报名条件或机构采购。",
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [],
+        "entityIds": [],
+        "actions": [
+          "咨询学生课程",
+          "咨询教师培训",
+          "咨询机构服务",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "unrelated",
+          "corrections": [],
+          "confirmedDomain": "unknown",
+          "confirmedConstraints": {},
+          "pendingQuestionKeys": [],
+          "entityIds": [],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 0,
+          "finalStatus": "unrelated",
+          "routeLatencyMs": 3493,
+          "classifierCandidate": {
+            "intent": "unrelated",
+            "studentConstraints": {},
+            "factTopics": []
+          }
+        }
+      },
+      "latencyMs": 3506,
+      "silentRetry": false
+    },
+    {
+      "caseId": "E03",
+      "step": "恢复后正常咨询",
+      "request": {
+        "action": "message",
+        "message": "第一期夏令营什么时候上课？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:50:19",
+          "httpStatus": 200,
+          "latencyMs": 8104
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "fact_answer",
+        "message": "第一期夏令营课程时间为2026年8月1日（星期六）至8月7日（星期五），报名截止时间为2026年7月25日24:00。目前可选班型包括北京、上海和线上，均执行相同时间安排。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              1
+            ],
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p1-bj",
+            "camp-p1-sh",
+            "camp-p1-online"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "第一期夏令营什么时候上课？"
+            },
+            {
+              "role": "assistant",
+              "content": "第一期夏令营课程时间为2026年8月1日（星期六）至8月7日（星期五），报名截止时间为2026年7月25日24:00。目前可选班型包括北京、上海和线上，均执行相同时间安排。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p1-bj.startDate",
+              "camp-p1-bj.endDate",
+              "camp-p1-bj.registrationDeadline",
+              "camp-p1-sh.startDate",
+              "camp-p1-sh.endDate",
+              "camp-p1-sh.registrationDeadline",
+              "camp-p1-online.startDate",
+              "camp-p1-online.endDate",
+              "camp-p1-online.registrationDeadline"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p1-bj",
+          "camp-p1-sh",
+          "camp-p1-online"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "fact_question",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "availablePeriods": [
+              1
+            ]
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p1-bj",
+            "camp-p1-sh",
+            "camp-p1-online"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "fact_answer",
+          "routeLatencyMs": 8094,
+          "classifierCandidate": {
+            "domainCandidate": "student",
+            "intent": "contextual_followup",
+            "studentConstraints": {
+              "availablePeriods": [
+                1
+              ]
+            },
+            "factTopics": [
+              "schedule"
+            ]
+          }
+        }
+      },
+      "latencyMs": 8104,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200,
+    200
+  ],
+  "actualStatuses": [
+    "unrelated",
+    "fact_answer"
+  ],
+  "actualAnswers": [
+    "这条信息似乎与课程或机构服务咨询无关。我可以继续协助查询学生课程、教师培训、费用、报名条件或机构采购。",
+    "第一期夏令营课程时间为2026年8月1日（星期六）至8月7日（星期五），报名截止时间为2026年7月25日24:00。目前可选班型包括北京、上海和线上，均执行相同时间安排。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章"
+  ],
+  "entities": [
+    "camp-p1-bj",
+    "camp-p1-sh",
+    "camp-p1-online"
+  ],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [],
+    "dates": [
+      "8月1日",
+      "8月7日",
+      "7月25日"
+    ],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p1-bj.startDate",
+        "camp-p1-bj.endDate",
+        "camp-p1-bj.registrationDeadline",
+        "camp-p1-sh.startDate",
+        "camp-p1-sh.endDate",
+        "camp-p1-sh.registrationDeadline",
+        "camp-p1-online.startDate",
+        "camp-p1-online.endDate",
+        "camp-p1-online.registrationDeadline"
+      ]
+    }
+  ],
+  "totalLatencyMs": 11610,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "特殊符号未触发500",
+      "passed": true
+    },
+    {
+      "label": "后续咨询恢复HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "恢复后可继续业务流程",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "browserVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": null,
+  "browserEvidenceFile": "browser/browser-results.json",
+  "evidenceFile": "E03.json"
+}

@@ -1,0 +1,129 @@
+{
+  "id": "E04",
+  "category": "官方25组/异常",
+  "title": "无关天气问题",
+  "priorityIfFailed": "P1",
+  "startedAt": "2026-07-23 18:50:19",
+  "finishedAt": "2026-07-23 18:50:19",
+  "originalInput": "北京今天天气怎么样？",
+  "expected": "返回服务范围提示和返回菜单，不调用业务composer，不重复当前课程或服务。",
+  "turns": [
+    {
+      "caseId": "E04",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "北京今天天气怎么样？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:50:19",
+          "httpStatus": 200,
+          "latencyMs": 10
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "unrelated",
+        "message": "这条信息似乎与课程或机构服务咨询无关。我可以继续协助查询学生课程、教师培训、费用、报名条件或机构采购。",
+        "state": {
+          "version": 1,
+          "domain": "unknown",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [],
+        "entityIds": [],
+        "actions": [
+          "咨询学生课程",
+          "咨询教师培训",
+          "咨询机构服务",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "unrelated",
+          "corrections": [],
+          "confirmedDomain": "unknown",
+          "confirmedConstraints": {},
+          "pendingQuestionKeys": [],
+          "entityIds": [],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 0,
+          "finalStatus": "unrelated",
+          "routeLatencyMs": 1
+        }
+      },
+      "latencyMs": 10,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "unrelated"
+  ],
+  "actualAnswers": [
+    "这条信息似乎与课程或机构服务咨询无关。我可以继续协助查询学生课程、教师培训、费用、报名条件或机构采购。"
+  ],
+  "entities": [],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [],
+    "dates": [],
+    "keyFacts": []
+  },
+  "sources": [],
+  "totalLatencyMs": 10,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200且unrelated",
+      "passed": true
+    },
+    {
+      "label": "返回范围提示和菜单入口",
+      "passed": true
+    },
+    {
+      "label": "本轮无实体、来源或卡片",
+      "passed": true
+    },
+    {
+      "label": "不调用业务composer",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "E04.json"
+}

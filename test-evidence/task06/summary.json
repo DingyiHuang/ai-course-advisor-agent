@@ -1,0 +1,380 @@
+{
+  "generatedAtAsiaShanghai": "2026-07-23 18:54:49",
+  "apiUrl": "http://127.0.0.1:3000/api/chat",
+  "totalCases": 39,
+  "official25": {
+    "passed": 25,
+    "failed": 0,
+    "blocked": 0
+  },
+  "supplemental14": {
+    "passed": 14,
+    "failed": 0,
+    "blocked": 0
+  },
+  "apiLayer": {
+    "passed": 39,
+    "failed": 0
+  },
+  "browserLayer": {
+    "passed": 5,
+    "failed": 0,
+    "blocked": 0,
+    "evidenceFile": "browser/browser-results.json"
+  },
+  "failures": [],
+  "supplierEvents": [],
+  "records": [
+    {
+      "id": "F01",
+      "category": "官方25组/资料事实",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 5709,
+      "silentRetry": false,
+      "evidenceFile": "F01.json"
+    },
+    {
+      "id": "F02",
+      "category": "官方25组/资料事实",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 11398,
+      "silentRetry": false,
+      "evidenceFile": "F02.json"
+    },
+    {
+      "id": "F03",
+      "category": "官方25组/资料事实",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 13368,
+      "silentRetry": false,
+      "evidenceFile": "F03.json"
+    },
+    {
+      "id": "F04",
+      "category": "官方25组/资料事实",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 7584,
+      "silentRetry": false,
+      "evidenceFile": "F04.json"
+    },
+    {
+      "id": "F05",
+      "category": "官方25组/资料事实",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 22149,
+      "silentRetry": true,
+      "evidenceFile": "F05.json"
+    },
+    {
+      "id": "F06",
+      "category": "官方25组/资料事实",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 13013,
+      "silentRetry": false,
+      "evidenceFile": "F06.json"
+    },
+    {
+      "id": "F07",
+      "category": "官方25组/资料事实",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 14324,
+      "silentRetry": true,
+      "evidenceFile": "F07.json"
+    },
+    {
+      "id": "F08",
+      "category": "官方25组/资料事实",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 6223,
+      "silentRetry": false,
+      "evidenceFile": "F08.json"
+    },
+    {
+      "id": "B01",
+      "category": "官方25组/资料边界",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 9411,
+      "silentRetry": false,
+      "evidenceFile": "B01.json"
+    },
+    {
+      "id": "B02",
+      "category": "官方25组/资料边界",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 20961,
+      "silentRetry": false,
+      "evidenceFile": "B02.json"
+    },
+    {
+      "id": "B03",
+      "category": "官方25组/资料边界",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 12687,
+      "silentRetry": false,
+      "evidenceFile": "B03.json"
+    },
+    {
+      "id": "B04",
+      "category": "官方25组/资料边界",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 18,
+      "silentRetry": false,
+      "evidenceFile": "B04.json"
+    },
+    {
+      "id": "R01",
+      "category": "官方25组/推荐",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 16157,
+      "silentRetry": false,
+      "evidenceFile": "R01.json"
+    },
+    {
+      "id": "R02",
+      "category": "官方25组/推荐",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 19033,
+      "silentRetry": false,
+      "evidenceFile": "R02.json"
+    },
+    {
+      "id": "R03",
+      "category": "官方25组/推荐",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 18430,
+      "silentRetry": false,
+      "evidenceFile": "R03.json"
+    },
+    {
+      "id": "R04",
+      "category": "官方25组/推荐",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 29259,
+      "silentRetry": true,
+      "evidenceFile": "R04.json"
+    },
+    {
+      "id": "R05",
+      "category": "官方25组/推荐",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 41304,
+      "silentRetry": false,
+      "evidenceFile": "R05.json"
+    },
+    {
+      "id": "M01",
+      "category": "官方25组/多轮",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 18704,
+      "silentRetry": false,
+      "evidenceFile": "M01.json"
+    },
+    {
+      "id": "M02",
+      "category": "官方25组/多轮",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 9729,
+      "silentRetry": false,
+      "evidenceFile": "M02.json"
+    },
+    {
+      "id": "M03",
+      "category": "官方25组/多轮",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 61763,
+      "silentRetry": true,
+      "evidenceFile": "M03.json"
+    },
+    {
+      "id": "E01",
+      "category": "官方25组/异常",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 9,
+      "silentRetry": false,
+      "evidenceFile": "E01.json"
+    },
+    {
+      "id": "E02",
+      "category": "官方25组/异常",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 16,
+      "silentRetry": false,
+      "evidenceFile": "E02.json"
+    },
+    {
+      "id": "E03",
+      "category": "官方25组/异常",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 11610,
+      "silentRetry": false,
+      "evidenceFile": "E03.json"
+    },
+    {
+      "id": "E04",
+      "category": "官方25组/异常",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 10,
+      "silentRetry": false,
+      "evidenceFile": "E04.json"
+    },
+    {
+      "id": "E05",
+      "category": "官方25组/异常",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 40115,
+      "silentRetry": false,
+      "evidenceFile": "E05.json"
+    },
+    {
+      "id": "X01",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 3304,
+      "silentRetry": false,
+      "evidenceFile": "X01.json"
+    },
+    {
+      "id": "X02",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 16270,
+      "silentRetry": false,
+      "evidenceFile": "X02.json"
+    },
+    {
+      "id": "X03",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 25134,
+      "silentRetry": false,
+      "evidenceFile": "X03.json"
+    },
+    {
+      "id": "X04",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 10782,
+      "silentRetry": false,
+      "evidenceFile": "X04.json"
+    },
+    {
+      "id": "X05",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 8830,
+      "silentRetry": false,
+      "evidenceFile": "X05.json"
+    },
+    {
+      "id": "X06",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 15910,
+      "silentRetry": false,
+      "evidenceFile": "X06.json"
+    },
+    {
+      "id": "X07",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 20243,
+      "silentRetry": false,
+      "evidenceFile": "X07.json"
+    },
+    {
+      "id": "X08",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 24826,
+      "silentRetry": false,
+      "evidenceFile": "X08.json"
+    },
+    {
+      "id": "X09",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 35948,
+      "silentRetry": true,
+      "evidenceFile": "X09.json"
+    },
+    {
+      "id": "X10",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 0,
+      "silentRetry": false,
+      "evidenceFile": "X10.json"
+    },
+    {
+      "id": "X11",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 14183,
+      "silentRetry": true,
+      "evidenceFile": "X11.json"
+    },
+    {
+      "id": "X12",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 14492,
+      "silentRetry": true,
+      "evidenceFile": "X12.json"
+    },
+    {
+      "id": "X13",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 11507,
+      "silentRetry": false,
+      "evidenceFile": "X13.json"
+    },
+    {
+      "id": "X14",
+      "category": "补充14组",
+      "apiVerdict": "通过",
+      "overallVerdict": "通过",
+      "totalLatencyMs": 27772,
+      "silentRetry": true,
+      "evidenceFile": "X14.json"
+    }
+  ]
+}

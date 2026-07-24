@@ -9,6 +9,7 @@ import type {
   StudentConstraints,
   TeacherConstraints,
 } from "@/lib/domain/rules";
+import { CAMPS, TEACHER_PRODUCTS } from "@/lib/knowledge";
 import {
   extractExplicitStudentRegion,
   normalizeStudentRegionName,
@@ -24,6 +25,8 @@ export type DeterministicTurnRouting = {
   teacherConstraints: Partial<TeacherConstraints>;
   intent?: ConversationIntent;
   factTopics: FactTopic[];
+  referencedEntityIds?: string[];
+  boundaryCode?: "unsupported_external_claims";
 };
 
 function normalized(message: string): string {
@@ -38,7 +41,7 @@ function institutionRouting(
   const text = normalized(message);
   const schoolProcurement =
     /(?:学校|教育局).{0,12}(?:计划)?(?:统一)?采购/u.test(text) ||
-    /(?:学校|教育局).{0,12}\d+人.{0,8}(?:采购|培训)/u.test(text);
+    /(?:学校|教育局).{0,12}\d+(?:人|名(?:教师)?).{0,8}(?:采购|培训)/u.test(text);
   if (schoolProcurement) {
     return {
       domain: "platform",
@@ -56,7 +59,7 @@ function institutionRouting(
       intent: "institution_service",
     };
   }
-  if (/(?:会员权益|平台会员)/u.test(text)) {
+  if (/(?:会员权益|平台会员|专业会员|大师会员)/u.test(text)) {
     return {
       domain: "platform",
       institutionNeed: "membership",
@@ -105,6 +108,9 @@ function personalDomain(message: string): KnownDomain | undefined {
     return "student";
   }
   if (/我(?:是|是一名|作为).{0,12}(?:教师|老师)/u.test(text)) {
+    return "teacher";
+  }
+  if (/(?:零基础|中小学|初高中).{0,6}(?:教师|老师)/u.test(text)) {
     return "teacher";
   }
   return undefined;
@@ -183,6 +189,20 @@ function explicitUnrelatedIntent(message: string): boolean {
   );
 }
 
+function unsupportedExternalClaims(message: string): boolean {
+  const text = normalized(message);
+  return (
+    /(?:合作|服务过).{0,8}(?:名校|学校|客户|案例)/u.test(text) ||
+    /(?:保证|承诺).{0,8}(?:收入|收益|回报|接单)/u.test(text)
+  );
+}
+
+function refusesFurtherQuestions(message: string): boolean {
+  return /(?:不想|不要|拒绝).{0,8}(?:再|继续)?(?:回答|补充)|不再补充/u.test(
+    normalized(message),
+  );
+}
+
 function residenceRegion(
   message: string,
   state: ConversationState,
@@ -193,6 +213,7 @@ function residenceRegion(
 
   const regionIsOpen =
     state.domain === "unknown" ||
+    !state.studentConstraints.region ||
     state.pendingQuestionKeys.includes("region");
   if (!regionIsOpen || /(?:前往|去往|去|到)(?:北京|上海)/u.test(text)) {
     return undefined;
@@ -250,9 +271,9 @@ function explicitStudentConstraints(
   if (region) Object.assign(patch, region);
 
   const periods = [
-    /第?\s*[一1]\s*期|营期\s*[一1]/u.test(message) ? 1 : undefined,
-    /第?\s*[二2]\s*期|营期\s*[二2]/u.test(message) ? 2 : undefined,
-    /第?\s*[三3]\s*期|营期\s*[三3]/u.test(message) ? 3 : undefined,
+    /第\s*[一1]\s*期|营期\s*[一1]/u.test(message) ? 1 : undefined,
+    /第\s*[二2]\s*期|营期\s*[二2]/u.test(message) ? 2 : undefined,
+    /第\s*[三3]\s*期|营期\s*[三3]/u.test(message) ? 3 : undefined,
   ].filter((value): value is 1 | 2 | 3 => value !== undefined);
   if (periods.length) {
     patch.availablePeriods = periods;
@@ -278,6 +299,9 @@ function explicitStudentConstraints(
       patch.modePreference = "online";
     }
   }
+  if (/(?:学生|夏令营).{0,4}线下班|本地.{0,8}学生线下班/u.test(text)) {
+    patch.modePreference = "offline";
+  }
 
   if (/(?:不需要|不要|无需).{0,3}(?:录播|回放)/u.test(text)) {
     patch.needsReplay = false;
@@ -288,10 +312,26 @@ function explicitStudentConstraints(
   ) {
     patch.needsReplay = true;
   }
+  const groupMatch = text.match(/(?:^|[，,。；;])?(?:共|一共)?([三3])人.{0,8}(?:团报|同报|一起报|一起报名)/u) ??
+    text.match(/(?:团报|同报|一起报|一起报名).{0,8}([三3])人/u);
+  if (groupMatch) {
+    patch.groupSize = 3;
+    if (
+      /同一期.{0,4}同一班型|同一营期.{0,4}同一班型/u.test(text) ||
+      /第\s*[一二三123]\s*期.{0,8}(?:北京|上海|线上).{0,4}(?:线下班|直播班|班)/u.test(
+        text,
+      )
+    ) {
+      patch.groupSamePeriodAndCamp = true;
+    }
+  }
+  if (/(?:自愿)?(?:加|选择|包含|含).{0,3}食宿|食宿套餐/u.test(text)) {
+    patch.includeLodging = true;
+  }
   return patch;
 }
 
-function pendingTeacherConstraints(
+function explicitTeacherConstraints(
   message: string,
   state: ConversationState,
 ): Partial<TeacherConstraints> {
@@ -299,8 +339,40 @@ function pendingTeacherConstraints(
   const keys = new Set(state.pendingQuestionKeys);
   const text = normalized(message);
   const patch: Partial<TeacherConstraints> = {};
+  if (/零基础/u.test(text)) {
+    patch.startingLevel = "beginner";
+  }
+  if (/(?:已|已经)?具备l1同等能力|通过l1同等能力测评/iu.test(text)) {
+    patch.startingLevel = "L1";
+    patch.prerequisiteStatus = "met";
+  }
   if (
-    keys.has("canTakeContinuousLeave") &&
+    /(?:没有|未|没).{0,4}(?:完成|学过)l1/iu.test(text) &&
+    /(?:没|未|没有).{0,4}(?:通过|具备).{0,4}同等能力/u.test(text)
+  ) {
+    patch.prerequisiteStatus = "not_met";
+  }
+  if (/(?:报名|参加|学习|目标|想上|想报)l2/iu.test(text)) {
+    patch.level = "L2";
+  } else if (/(?:报名|参加|学习|目标|想上|想报)l3/iu.test(text)) {
+    patch.level = "L3";
+  }
+  if (/web应用|aiweb/iu.test(text)) {
+    patch.goal = "web-app";
+  } else if (/知识库|rag/iu.test(text)) {
+    patch.goal = "rag-project";
+  }
+  if (
+    /8月3日?(?:至|到|—|-)?5日|8月3日至5日/u.test(text)
+  ) {
+    patch.availableProductIds = ["teacher-l2-intensive"];
+  }
+  if (
+    /(?:可以|能|可).{0,12}(?:连续|脱岗|请假|参加)|连续参加/u.test(text)
+  ) {
+    patch.canTakeContinuousLeave = true;
+  }
+  if (
     /(?:不能|不便|无法).{0,8}(?:连续|脱岗|请假)/u.test(text)
   ) {
     patch.canTakeContinuousLeave = false;
@@ -313,35 +385,22 @@ function pendingTeacherConstraints(
   return patch;
 }
 
-function currentEntityFactTopics(
-  message: string,
-  state: ConversationState,
-): FactTopic[] {
-  if (!state.selectedEntityId && state.lastRecommendationIds.length === 0) {
-    return [];
-  }
+function factTopicsFromText(message: string): FactTopic[] {
   const text = normalized(message);
-  const hasCurrentReference =
-    /(?:这个|该|当前|刚才|之前推荐的).{0,4}(?:班|班型|课程|培训|方案|服务|项目)|学校采购|当前产品|^(?:它|其)(?:的)?(?:价格|费用|时间|地点|报名|回放|退款|名额|课程内容|前置条件)/u.test(
-      text,
-    );
-  const isEllipticalCurrentQuestion =
-    /^(?:多少钱|费用(?:多少|是多少|呢)?|价格(?:多少|是多少|呢)?|什么时候(?:报名|上课)?|哪天(?:报名|上课)?|在哪里(?:上课)?|在哪儿(?:上课)?|哪里上课|需要带(?:什么|电脑|笔记本电脑|设备)(?:吗)?|准备什么|怎么报名|如何报名|有回放吗|可以回放吗|能回放吗|可以退款吗|能退款吗|还有名额吗|有名额吗|课程内容是什么|学什么|需要什么基础|有什么前置条件)[?？]?$/u.test(
-      text,
-    );
-  if (!hasCurrentReference && !isEllipticalCurrentQuestion) {
-    return [];
-  }
   const topics: FactTopic[] = [];
-  if (/(?:什么时候|时间安排|哪天|日期)/u.test(text)) topics.push("schedule");
-  if (/(?:需要带什么|带什么|准备什么|携带)/u.test(text)) {
+  if (/(?:什么时候|时间安排|哪几天|哪天|日期|怎么安排)/u.test(text)) {
+    topics.push("schedule");
+  }
+  if (/(?:需要带什么|带什么|准备什么|携带|电脑|设备)/u.test(text)) {
     topics.push("required_items");
   }
   if (/(?:在哪里|在哪儿|哪里上课|上课地点|地点)/u.test(text)) {
     topics.push("location");
   }
-  if (/(?:多少钱|费用|价格)/u.test(text)) topics.push("price");
-  if (/(?:怎么报名|如何报名|报名方式|报名)/u.test(text)) {
+  if (/(?:多少钱|费用|价格|总价|早鸟|团报)/u.test(text)) {
+    topics.push("price");
+  }
+  if (/(?:怎么报名|如何报名|报名方式|报名|报名截止)/u.test(text)) {
     topics.push("registration");
   }
   if (
@@ -360,15 +419,17 @@ function currentEntityFactTopics(
     topics.push("curriculum");
   }
   if (/(?:回放|录播)/u.test(text)) topics.push("replay");
-  if (/(?:退款|退费)/u.test(text)) topics.push("refund");
-  if (/(?:余位|名额|开班人数)/u.test(text)) topics.push("availability");
-  if (/(?:课程内容|课程大纲|学什么|培训内容)/u.test(text)) {
+  if (/(?:退款|退费|取消报名)/u.test(text)) topics.push("refund");
+  if (/(?:余位|名额|开班人数|30人班)/u.test(text)) {
+    topics.push("availability");
+  }
+  if (/(?:课程内容|课程大纲|第\s*[一二三四五六七1234567]\s*天|学什么|培训内容)/u.test(text)) {
     topics.push("curriculum");
   }
   if (/(?:前置条件|需要什么基础|先修)/u.test(text)) {
     topics.push("prerequisite");
   }
-  if (/(?:费用包含|费用包括|含食宿)/u.test(text)) {
+  if (/(?:费用包含|费用包括|含食宿|加食宿|食宿套餐)/u.test(text)) {
     topics.push("fee_includes");
   }
   if (/(?:直接下单|能下单|可以下单|锁定名额)/u.test(text)) {
@@ -377,14 +438,148 @@ function currentEntityFactTopics(
   return [...new Set(topics)];
 }
 
+function currentEntityFactTopics(
+  message: string,
+  state: ConversationState,
+): FactTopic[] {
+  if (!state.selectedEntityId && state.lastRecommendationIds.length === 0) {
+    return [];
+  }
+  const text = normalized(message);
+  const hasCurrentReference =
+    /(?:这个|该|当前|刚才|之前推荐的).{0,4}(?:班|班型|课程|培训|方案|服务|项目)|学校采购|当前产品|^(?:它|其)(?:的)?(?:价格|费用|时间|地点|报名|回放|退款|名额|课程内容|前置条件)/u.test(
+      text,
+    );
+  const isEllipticalCurrentQuestion =
+    /^(?:多少钱|费用(?:多少|是多少|呢)?|价格(?:多少|是多少|呢)?|总价(?:多少|是多少|呢)?|什么时候(?:报名|上课)?|哪天(?:报名|上课)?|在哪里(?:上课)?|在哪儿(?:上课)?|哪里上课|需要带(?:什么|电脑|笔记本电脑|设备)(?:吗)?|准备什么|怎么报名|如何报名|有回放吗|可以回放吗|能回放吗|可以退款吗|能退款吗|还有名额吗|有名额吗|课程内容是什么|学什么|需要什么基础|有什么前置条件|如果.{0,16}(?:加|含|选择)食宿.{0,12}(?:总价(?:多少|是多少)?|多少钱))[?？]?$/u.test(
+      text,
+    );
+  if (!hasCurrentReference && !isEllipticalCurrentQuestion) {
+    return [];
+  }
+  return factTopicsFromText(message);
+}
+
+function explicitFactReference(message: string): {
+  domain: "student" | "teacher";
+  entityIds: string[];
+  factTopics: FactTopic[];
+} | undefined {
+  const text = normalized(message);
+  const factTopics = factTopicsFromText(message);
+  const hasQuestionShape =
+    /[?？]|(?:怎么|如何|什么时候|哪几天|哪天|哪里|在哪|多少|是否|是不是|能否|可以吗|需要带|学什么|还有|取消报名|请告诉我|想了解|查询)/u.test(
+      text,
+    );
+  if (
+    !factTopics.length ||
+    !hasQuestionShape ||
+    /(?:直接报名|想报|怎么缴费|如何缴费)/u.test(text)
+  ) {
+    return undefined;
+  }
+
+  const studentSignal =
+    /(?:夏令营|学生班|学生第一营|线上直播班|北京线下班|上海线下班|30人班|第\s*[一二三123]\s*期)/u.test(
+      text,
+    );
+  if (studentSignal) {
+    const period =
+      /第\s*[一1]\s*期|第一营/u.test(text)
+        ? 1
+        : /第\s*[二2]\s*期|第二营/u.test(text)
+          ? 2
+          : /第\s*[三3]\s*期|第三营/u.test(text)
+            ? 3
+            : undefined;
+    const campus =
+      /北京.{0,4}线下|北京线下班/u.test(text)
+        ? "bj"
+        : /上海.{0,4}线下|上海线下班/u.test(text)
+          ? "sh"
+          : /线上直播|线上班/u.test(text)
+            ? "online"
+            : undefined;
+    const entityIds = CAMPS.filter(
+      (camp) =>
+        (period === undefined || camp.period === period) &&
+        (campus === undefined || camp.campus === campus) &&
+        (!/30人班/u.test(text) || camp.campus !== "online"),
+    ).map(({ id }) => id);
+    if (entityIds.length) {
+      return { domain: "student", entityIds, factTopics };
+    }
+  }
+
+  const teacherSignal =
+    /(?:教师培训|教师l[123]|l[123](?:暑期集训|集训|周末研修|周末班|教师培训)|暑期集训班|周末研修班)/iu.test(
+      text,
+    );
+  if (teacherSignal) {
+    const level = /l1/iu.test(text)
+      ? "L1"
+      : /l2/iu.test(text)
+        ? "L2"
+        : /l3/iu.test(text)
+          ? "L3"
+          : undefined;
+    const format = /(?:暑期集训|集训班)/u.test(text)
+      ? "intensive"
+      : /(?:周末研修|周末班)/u.test(text)
+        ? "weekend"
+        : undefined;
+    const entityIds = TEACHER_PRODUCTS.filter(
+      (product) =>
+        (level === undefined || product.level === level) &&
+        (format === undefined || product.format === format),
+    ).map(({ id }) => id);
+    if (entityIds.length) {
+      return { domain: "teacher", entityIds, factTopics };
+    }
+  }
+  return undefined;
+}
+
 export function resolveDeterministicTurnRouting(input: {
   message: string;
   state: ConversationState;
 }): DeterministicTurnRouting {
-  if (
-    promptInjectionOrSensitiveRequest(input.message) ||
-    explicitUnrelatedIntent(input.message)
-  ) {
+  if (promptInjectionOrSensitiveRequest(input.message)) {
+    return {
+      studentConstraints: {},
+      teacherConstraints: {},
+      intent: "unrelated",
+      factTopics: [],
+    };
+  }
+  if (unsupportedExternalClaims(input.message)) {
+    return {
+      studentConstraints: {},
+      teacherConstraints: {},
+      intent: "unrelated",
+      factTopics: [],
+      boundaryCode: "unsupported_external_claims",
+    };
+  }
+  if (refusesFurtherQuestions(input.message)) {
+    if (input.state.domain === "student") {
+      return {
+        studentConstraints: { refusesMoreQuestions: true },
+        teacherConstraints: {},
+        intent: "new_consultation",
+        factTopics: [],
+      };
+    }
+    if (input.state.domain === "teacher") {
+      return {
+        studentConstraints: {},
+        teacherConstraints: { refusesMoreQuestions: true },
+        intent: "new_consultation",
+        factTopics: [],
+      };
+    }
+  }
+  if (explicitUnrelatedIntent(input.message)) {
     return {
       studentConstraints: {},
       teacherConstraints: {},
@@ -402,11 +597,14 @@ export function resolveDeterministicTurnRouting(input: {
     };
   }
 
+  const factReference = explicitFactReference(input.message);
   const explicitPersonal = personalDomain(input.message);
   const identity = pendingIdentity(input.message, input.state);
   const institutionNeed = pendingInstitutionNeed(input.message, input.state);
   const domain =
-    institutionNeed ? "platform" : explicitPersonal ?? identity;
+    institutionNeed
+      ? "platform"
+      : factReference?.domain ?? explicitPersonal ?? identity;
   const effectiveDomain =
     domain ??
     (input.state.domain === "unknown" ? undefined : input.state.domain);
@@ -415,11 +613,15 @@ export function resolveDeterministicTurnRouting(input: {
     input.state,
     effectiveDomain,
   );
-  const teacherConstraints = pendingTeacherConstraints(
+  const teacherConstraints = explicitTeacherConstraints(
     input.message,
-    input.state,
+    input.state.domain === "teacher" || factReference?.domain === "teacher"
+      ? { ...input.state, domain: "teacher" }
+      : input.state,
   );
-  const factTopics = currentEntityFactTopics(input.message, input.state);
+  const factTopics =
+    factReference?.factTopics ??
+    currentEntityFactTopics(input.message, input.state);
   const currentInstitutionOperation =
     input.state.domain === "platform" &&
     Boolean(input.state.institutionNeed) &&
@@ -435,10 +637,13 @@ export function resolveDeterministicTurnRouting(input: {
     studentConstraints,
     teacherConstraints,
     factTopics,
+    referencedEntityIds: factReference?.entityIds,
     intent: institutionNeed
       ? "institution_service"
       : currentInstitutionOperation
         ? "institution_service"
+      : factReference
+        ? "fact_question"
       : identity
         ? "identity_selection"
         : domain

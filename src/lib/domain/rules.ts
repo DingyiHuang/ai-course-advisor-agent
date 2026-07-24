@@ -45,6 +45,9 @@ export type StudentConstraints = {
   modePreference?: "offline" | "online" | "any";
   canTravel?: boolean;
   needsReplay?: boolean;
+  groupSize?: number;
+  groupSamePeriodAndCamp?: boolean;
+  includeLodging?: boolean;
   refusesMoreQuestions?: boolean;
   stalledTurns?: number;
 };

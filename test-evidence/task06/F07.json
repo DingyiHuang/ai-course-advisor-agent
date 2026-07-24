@@ -1,0 +1,227 @@
+{
+  "id": "F07",
+  "category": "官方25组/资料事实",
+  "title": "教师L3个人费用",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:45:30",
+  "finishedAt": "2026-07-23 18:45:44",
+  "originalInput": "L3教师培训多少钱？",
+  "expected": "标准价12800元，早鸟减2000元、团报减300元且择优，不引用素材C。",
+  "turns": [
+    {
+      "caseId": "F07",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "L3教师培训多少钱？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:45:44",
+          "httpStatus": 200,
+          "latencyMs": 14324
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "fact_answer",
+        "message": "L3教师培训两个班型的标准价格均为12800元。当前可享受早鸟优惠2000元，优惠后价格为10800元（早鸟截止日期：密集型2026-07-27，周末班2026-08-02）。此外，还有团报优惠：若3人及以上同时报名，每人可再减300元。报名截止日期：密集型2026-08-03，周末班2026-08-09。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第五章；素材B《初高中教师AI素养培训体系介绍》第二章",
+        "state": {
+          "version": 1,
+          "domain": "teacher",
+          "studentConstraints": {},
+          "teacherConstraints": {
+            "level": "L3",
+            "stalledTurns": 0
+          },
+          "lastRecommendationIds": [
+            "teacher-l3-intensive",
+            "teacher-l3-weekend"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "L3教师培训多少钱？"
+            },
+            {
+              "role": "assistant",
+              "content": "L3教师培训两个班型的标准价格均为12800元。当前可享受早鸟优惠2000元，优惠后价格为10800元（早鸟截止日期：密集型2026-07-27，周末班2026-08-02）。此外，还有团报优惠：若3人及以上同时报名，每人可再减300元。报名截止日期：密集型2026-08-03，周末班2026-08-09。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          }
+        },
+        "sources": [
+          {
+            "document": "B",
+            "chapter": "第五章",
+            "factIds": [
+              "teacher-l3-intensive.standardPrice",
+              "teacher-l3-intensive.earlyBirdDiscount",
+              "teacher-l3-intensive.groupDiscount",
+              "teacher-l3-intensive.earlyBirdDeadline",
+              "teacher-l3-weekend.standardPrice",
+              "teacher-l3-weekend.earlyBirdDiscount",
+              "teacher-l3-weekend.groupDiscount",
+              "teacher-l3-weekend.earlyBirdDeadline"
+            ]
+          },
+          {
+            "document": "B",
+            "chapter": "第二章",
+            "factIds": [
+              "teacher-l3-intensive.registrationDeadline",
+              "teacher-l3-weekend.registrationDeadline"
+            ]
+          }
+        ],
+        "entityIds": [
+          "teacher-l3-intensive",
+          "teacher-l3-weekend"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "fact_question",
+          "corrections": [],
+          "confirmedDomain": "teacher",
+          "confirmedConstraints": {
+            "level": "L3"
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "teacher-l3-intensive",
+            "teacher-l3-weekend"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [
+            {
+              "attempt": 1,
+              "reasonCode": "missing_required_fact",
+              "detailCode": "teacher_price_incomplete"
+            }
+          ],
+          "composerAttempts": 2,
+          "finalStatus": "fact_answer",
+          "routeLatencyMs": 14314,
+          "classifierCandidate": {
+            "domainCandidate": "teacher",
+            "intent": "contextual_followup",
+            "studentConstraints": {},
+            "factTopics": [
+              "price"
+            ]
+          }
+        }
+      },
+      "latencyMs": 14324,
+      "silentRetry": true
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "fact_answer"
+  ],
+  "actualAnswers": [
+    "L3教师培训两个班型的标准价格均为12800元。当前可享受早鸟优惠2000元，优惠后价格为10800元（早鸟截止日期：密集型2026-07-27，周末班2026-08-02）。此外，还有团报优惠：若3人及以上同时报名，每人可再减300元。报名截止日期：密集型2026-08-03，周末班2026-08-09。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第五章；素材B《初高中教师AI素养培训体系介绍》第二章"
+  ],
+  "entities": [
+    "teacher-l3-intensive",
+    "teacher-l3-weekend"
+  ],
+  "currentEntities": [],
+  "facts": {
+    "amounts": [
+      "12800元",
+      "2000元",
+      "10800元",
+      "300元"
+    ],
+    "dates": [
+      "2026-07-27",
+      "2026-08-02",
+      "2026-08-03",
+      "2026-08-09",
+      "7月27日",
+      "8月2日",
+      "8月3日",
+      "8月9日"
+    ],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "B",
+      "chapter": "第五章",
+      "factIds": [
+        "teacher-l3-intensive.standardPrice",
+        "teacher-l3-intensive.earlyBirdDiscount",
+        "teacher-l3-intensive.groupDiscount",
+        "teacher-l3-intensive.earlyBirdDeadline",
+        "teacher-l3-weekend.standardPrice",
+        "teacher-l3-weekend.earlyBirdDiscount",
+        "teacher-l3-weekend.groupDiscount",
+        "teacher-l3-weekend.earlyBirdDeadline"
+      ]
+    },
+    {
+      "document": "B",
+      "chapter": "第二章",
+      "factIds": [
+        "teacher-l3-intensive.registrationDeadline",
+        "teacher-l3-weekend.registrationDeadline"
+      ]
+    }
+  ],
+  "totalLatencyMs": 14324,
+  "silentRetry": true,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "L3标准价准确",
+      "passed": true
+    },
+    {
+      "label": "优惠条件准确",
+      "passed": true
+    },
+    {
+      "label": "不引用素材C",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "F07.json"
+}

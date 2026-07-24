@@ -1,0 +1,222 @@
+{
+  "id": "X03",
+  "category": "补充14组",
+  "title": "学生早鸟与团报择优",
+  "priorityIfFailed": "P0",
+  "startedAt": "2026-07-23 18:51:19",
+  "finishedAt": "2026-07-23 18:51:44",
+  "originalInput": "2026年7月22日，第三期北京线下班，3人同一期同班型团报，每人多少钱？",
+  "expected": "早鸟优惠1000元高于团报300元，只采用早鸟，实际每人5980元。",
+  "turns": [
+    {
+      "caseId": "X03",
+      "step": "单轮",
+      "request": {
+        "action": "message",
+        "message": "2026年7月22日，第三期北京线下班，3人同一期同班型团报，每人多少钱？",
+        "testMode": false,
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {},
+          "teacherConstraints": {},
+          "lastRecommendationIds": [],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [],
+          "test": {
+            "failNextModelCall": false
+          }
+        }
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "testTimeAsiaShanghai": "2026-07-23 18:51:44",
+          "httpStatus": 200,
+          "latencyMs": 25134
+        }
+      ],
+      "finalHttpStatus": 200,
+      "response": {
+        "status": "fact_answer",
+        "message": "根据当前信息，第三期北京线下班（camp-p3-bj）的标准价格为6980元，但您早鸟报名可享1000元优惠，目前早鸟价每人5980元。关于3人团报，团报优惠金额为每人300元，但需注意团报优惠可能与早鸟优惠不叠加，具体请以最新活动说明为准。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章；素材A《2026暑期AI素养夏令营课程手册》第三章",
+        "state": {
+          "version": 1,
+          "domain": "student",
+          "studentConstraints": {
+            "availablePeriods": [
+              3
+            ],
+            "modePreference": "offline",
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "groupSize": 3,
+            "groupSamePeriodAndCamp": true,
+            "stalledTurns": 0
+          },
+          "teacherConstraints": {},
+          "lastRecommendationIds": [
+            "camp-p3-bj"
+          ],
+          "pendingQuestionKeys": [],
+          "pendingQuestionOptions": [],
+          "shortHistory": [
+            {
+              "role": "user",
+              "content": "2026年7月22日，第三期北京线下班，3人同一期同班型团报，每人多少钱？"
+            },
+            {
+              "role": "assistant",
+              "content": "根据当前信息，第三期北京线下班（camp-p3-bj）的标准价格为6980元，但您早鸟报名可享1000元优惠，目前早鸟价每人5980元。关于3人团报，团报优惠金额为每人300元，但需注意团报优惠可能与早鸟优惠不叠加，具体请以最新活动说明为准。"
+            }
+          ],
+          "test": {
+            "failNextModelCall": false
+          },
+          "selectedEntityId": "camp-p3-bj"
+        },
+        "sources": [
+          {
+            "document": "A",
+            "chapter": "第五章",
+            "factIds": [
+              "camp-p3-bj.standardPrice",
+              "camp-p3-bj.earlyBirdPrice",
+              "camp-p3-bj.earlyBirdDeadline",
+              "camp-p3-bj.groupDiscount",
+              "camp-p3-bj.groupMinimum",
+              "camp-p3-bj.groupScope"
+            ]
+          },
+          {
+            "document": "A",
+            "chapter": "第三章",
+            "factIds": [
+              "camp-p3-bj.registrationDeadline"
+            ]
+          }
+        ],
+        "entityIds": [
+          "camp-p3-bj"
+        ],
+        "actions": [
+          "继续询问当前班型",
+          "返回菜单"
+        ],
+        "presentation": {
+          "recommendations": []
+        },
+        "notices": [],
+        "diagnostics": {
+          "effectiveIntent": "fact_question",
+          "corrections": [],
+          "confirmedDomain": "student",
+          "confirmedConstraints": {
+            "availablePeriods": [
+              3
+            ],
+            "modePreference": "offline",
+            "region": "beijing",
+            "regionDisplayName": "北京",
+            "groupSize": 3,
+            "groupSamePeriodAndCamp": true
+          },
+          "pendingQuestionKeys": [],
+          "entityIds": [
+            "camp-p3-bj"
+          ],
+          "decisionTrace": [],
+          "groundingFailures": [],
+          "composerAttempts": 1,
+          "finalStatus": "fact_answer",
+          "routeLatencyMs": 25102,
+          "classifierCandidate": {
+            "domainCandidate": "student",
+            "intent": "contextual_followup",
+            "studentConstraints": {
+              "region": "beijing",
+              "regionDisplayName": "北京",
+              "availablePeriods": [
+                3
+              ],
+              "modePreference": "offline"
+            },
+            "factTopics": [
+              "price"
+            ]
+          }
+        }
+      },
+      "latencyMs": 25134,
+      "silentRetry": false
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "actualStatuses": [
+    "fact_answer"
+  ],
+  "actualAnswers": [
+    "根据当前信息，第三期北京线下班（camp-p3-bj）的标准价格为6980元，但您早鸟报名可享1000元优惠，目前早鸟价每人5980元。关于3人团报，团报优惠金额为每人300元，但需注意团报优惠可能与早鸟优惠不叠加，具体请以最新活动说明为准。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章；素材A《2026暑期AI素养夏令营课程手册》第三章"
+  ],
+  "entities": [
+    "camp-p3-bj"
+  ],
+  "currentEntities": [
+    "camp-p3-bj"
+  ],
+  "facts": {
+    "amounts": [
+      "6980元",
+      "1000元",
+      "5980元",
+      "300元"
+    ],
+    "dates": [],
+    "keyFacts": []
+  },
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第五章",
+      "factIds": [
+        "camp-p3-bj.standardPrice",
+        "camp-p3-bj.earlyBirdPrice",
+        "camp-p3-bj.earlyBirdDeadline",
+        "camp-p3-bj.groupDiscount",
+        "camp-p3-bj.groupMinimum",
+        "camp-p3-bj.groupScope"
+      ]
+    },
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p3-bj.registrationDeadline"
+      ]
+    }
+  ],
+  "totalLatencyMs": 25134,
+  "silentRetry": false,
+  "supplierEvents": [],
+  "checks": [
+    {
+      "label": "HTTP 200",
+      "passed": true
+    },
+    {
+      "label": "实际价为5980",
+      "passed": true
+    },
+    {
+      "label": "选择早鸟而非叠加",
+      "passed": true
+    }
+  ],
+  "apiVerdict": "通过",
+  "overallVerdict": "通过",
+  "failureReason": "",
+  "evidenceFile": "X03.json"
+}
