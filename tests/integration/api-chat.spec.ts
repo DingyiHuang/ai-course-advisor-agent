@@ -10,6 +10,8 @@ import type {
 } from "@/lib/llm/types";
 import { createInitialConversationState } from "@/lib/conversation/session";
 
+vi.mock("server-only", () => ({}));
+
 const providerControl = vi.hoisted(() => ({
   classifierMode: "normal" as
     | "normal"

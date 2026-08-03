@@ -12,6 +12,7 @@ export type ChatAction =
 export type ChatRequest = {
   message?: string;
   state: ConversationState;
+  sessionId?: string;
   action?: ChatAction;
   domain?: "student" | "teacher" | "platform";
   entityId?: string;

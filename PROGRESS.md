@@ -100,3 +100,10 @@
 - 本阶段边界：只完成统一存储接口、工厂、Local JSON、Supabase 服务端实现与模拟测试、Blob 可编译入口及数据库迁移文件；不执行远程迁移，不部署 Preview，不修改 Production，不进入 TASK-B02。
 - 第一阶段有效工时停止：2026-08-03 15:00:04（Asia/Shanghai）；H5 累计使用 0 小时 30 分钟，现进入不计时的迁移等待。
 - 本地检查：新增存储测试 37 项、全量 292 项全部通过；TypeScript、ESLint、Production Build 和 `git diff --check` 通过。
+- 第二阶段首次恢复计时：2026-08-03 15:09:20 至 15:17:43，共 8 分 23 秒。本地开发服务重启后，第 1 项创建会话返回 HTTP 503、公开错误码 `persistence_error`；脱敏鉴权探针为 HTTP 401、原因分类 `INVALID_API_KEY`，失败发生在表访问和 RLS 判断之前。第 2 至 5 项未执行，未切换存储方案。
+- 第二阶段本地配置修正后复验：2026-08-03 15:28:37 至 15:30:15，共 1 分 38 秒。确认使用新进程加载本地配置；第 1 项创建会话仍返回 HTTP 503、公开错误码 `persistence_error`，脱敏鉴权探针仍为 HTTP 401、原因分类 `INVALID_API_KEY`。配置未被系统级同名变量覆盖，项目 URL 结构检查通过；第 2、3 项未执行，暂不部署 Preview，不修改 Production，不切换存储方案。
+- 第二阶段新建 Secret Key 后复验：2026-08-03 15:38:18 至 15:39:42，共 1 分 24 秒。全新本地进程启动成功；第 1 项创建会话返回 HTTP 503、公开错误码 `persistence_error`。脱敏探针显示 Supabase 已接受新 key，但表访问为 HTTP 403，原因分类 `TABLE_PERMISSION_DENIED`；失败已从鉴权入口推进到数据库表权限层。第 2、3 项未执行，未创建公开 RLS 策略，未切换存储方案。
+- 第二阶段 service_role 最小授权后复验：2026-08-03 15:44:18 至 15:47:37，共 3 分 19 秒。本地第 1 项创建会话通过（HTTP 201，1121ms，会话 `251e3400-0c4c-43cd-ae04-f5e0afe7522c`）；第 2 项保存用户与 AI 消息通过（HTTP 200，17074ms，响应状态 `needs_identity`，内容摘要分别为 `a79bcdffa539`、`4cdf03705d09`）；第 3 项查询顺序、内容和隔离通过（主会话 HTTP 200，1433ms，角色顺序 `user > assistant`，2 条内容均与写入响应一致；隔离会话创建 141ms、查询 295ms、消息数 0）。本地开发服务随后停止，未进入 Preview。
+- 独立授权迁移：新增 `supabase/migrations/20260803000100_grant_chat_history_service_role.sql`，原迁移未修改；只向 `service_role` 授予 `chat_sessions` 的 SELECT/INSERT/UPDATE/DELETE 和 `chat_messages` 的 SELECT/INSERT/DELETE。静态测试确认没有 `anon`、`authenticated`、`grant all`、公开 RLS 策略或关闭 RLS；定向 18/18、全量 301/301、TypeScript、ESLint、Production Build 和 `git diff --check` 通过。
+- H5 累计有效工时：0 小时 44 分 58 秒。本地三项已全部通过并按要求停止；五项中的 Preview 连接和刷新恢复尚未执行，因此暂不形成最终 H5 存储决策，不部署 Preview，不修改 Production，不进入 TASK-B02。
+- 第三阶段恢复计时：2026-08-03 16:04:03（Asia/Shanghai）。仅继续 TASK-B01 的部署前复验、Preview 部署与真实联调，不修改 Production，不合并 `main`，不进入 TASK-B02。

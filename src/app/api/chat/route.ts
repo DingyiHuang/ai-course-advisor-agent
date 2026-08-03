@@ -4,6 +4,12 @@ import { createComposer } from "@/lib/llm/composer";
 import { createRuntimeLlmClient } from "@/lib/llm/runtime";
 import { shanghaiToday } from "@/lib/time/shanghai";
 import type { ConversationState, TurnDiagnostics } from "@/lib/domain/conversation";
+import { createConversationStore } from "@/lib/history/createConversationStore";
+import {
+  persistChatResponse,
+  preparePersistedTurn,
+} from "@/lib/history/chatPersistence";
+import { conversationStoreErrorResponse } from "@/lib/history/http";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -51,6 +57,17 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
   const bodyRecord = body as Record<string, unknown>;
+  let persistedTurn: Awaited<ReturnType<typeof preparePersistedTurn>>;
+  if (bodyRecord.sessionId !== undefined) {
+    try {
+      persistedTurn = await preparePersistedTurn({
+        store: createConversationStore(),
+        body: bodyRecord,
+      });
+    } catch (error) {
+      return conversationStoreErrorResponse(error);
+    }
+  }
   const diagnosticsAllowed =
     process.env.NODE_ENV !== "production" ||
     process.env.VERCEL_ENV === "preview";
@@ -105,6 +122,11 @@ export async function POST(request: Request): Promise<Response> {
     },
     diagnostics,
   });
+  try {
+    await persistChatResponse(persistedTurn, response);
+  } catch (error) {
+    return conversationStoreErrorResponse(error);
+  }
   if (diagnostics) {
     const planWasRecorded =
       diagnostics.composerAttempts > 0 ||

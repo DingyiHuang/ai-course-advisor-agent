@@ -341,4 +341,26 @@ describe("Supabase chat history migration", () => {
     );
     expect(migration).not.toMatch(/\bcreate\s+policy\b/i);
   });
+
+  it("records only the minimum service-role table grants in a follow-up migration", () => {
+    const migration = readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/migrations/20260803000100_grant_chat_history_service_role.sql",
+      ),
+      "utf8",
+    );
+    const normalized = migration.replace(/\s+/g, " ");
+
+    expect(normalized).toMatch(
+      /grant select, insert, update, delete on table public\.chat_sessions to service_role;/i,
+    );
+    expect(normalized).toMatch(
+      /grant select, insert, delete on table public\.chat_messages to service_role;/i,
+    );
+    expect(normalized).not.toMatch(/\bgrant all\b/i);
+    expect(normalized).not.toMatch(/\bto (anon|authenticated)\b/i);
+    expect(normalized).not.toMatch(/\bcreate policy\b/i);
+    expect(normalized).not.toMatch(/disable row level security/i);
+  });
 });

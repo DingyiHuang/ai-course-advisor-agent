@@ -35,6 +35,9 @@ import {
   type ClientUiMessage,
   type IdentifiedClientUiMessage,
 } from "@/lib/conversation/clientChatState";
+import { restoreConversation } from "@/lib/conversation/historyRestore";
+import { isConversationId } from "@/lib/history/conversationStore";
+import type { ChatMessage, ChatSession } from "@/lib/history/types";
 import styles from "./CourseAdvisor.module.css";
 
 type UiMessage = ClientUiMessage;
@@ -44,9 +47,93 @@ type RequestOptions = {
   appendUser?: boolean;
   replaceOnSuccess?: boolean;
   retrySnapshot?: RetryRequestSnapshot;
+  historySessionId?: string;
 };
 
 const EMPTY_PRESENTATION: ChatPresentation = { recommendations: [] };
+const HISTORY_SESSION_KEY = "ai-course-advisor.sessionId";
+
+type BrowserHistory = {
+  sessionId: string;
+  messages: IdentifiedClientUiMessage[];
+  state: ConversationState;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasSessionPayload(value: unknown): value is { session: ChatSession } {
+  if (!isRecord(value) || !isRecord(value.session)) return false;
+  return isConversationId(value.session.id);
+}
+
+function hasMessagesPayload(
+  value: unknown,
+): value is { messages: ChatMessage[] } {
+  if (!isRecord(value) || !Array.isArray(value.messages)) return false;
+  return value.messages.every(
+    (message) =>
+      isRecord(message) &&
+      isConversationId(message.id) &&
+      isConversationId(message.sessionId) &&
+      (message.role === "user" ||
+        message.role === "assistant" ||
+        message.role === "system") &&
+      typeof message.content === "string" &&
+      typeof message.createdAt === "string" &&
+      Array.isArray(message.sources) &&
+      isRecord(message.metadata),
+  );
+}
+
+async function createHistorySession(): Promise<ChatSession> {
+  const response = await fetch("/api/history/sessions", { method: "POST" });
+  const payload: unknown = await response.json().catch(() => undefined);
+  if (!response.ok || !hasSessionPayload(payload)) {
+    throw new Error("history_session_create_failed");
+  }
+  return payload.session;
+}
+
+async function loadHistory(sessionId: string): Promise<ChatMessage[]> {
+  const response = await fetch(
+    `/api/history/sessions/${encodeURIComponent(sessionId)}/messages`,
+  );
+  const payload: unknown = await response.json().catch(() => undefined);
+  if (!response.ok || !hasMessagesPayload(payload)) {
+    throw new Error(
+      response.status === 404
+        ? "history_session_not_found"
+        : "history_session_load_failed",
+    );
+  }
+  return payload.messages;
+}
+
+async function initializeBrowserHistory(): Promise<BrowserHistory> {
+  const savedSessionId = localStorage.getItem(HISTORY_SESSION_KEY);
+  if (isConversationId(savedSessionId)) {
+    try {
+      const storedMessages = await loadHistory(savedSessionId);
+      return {
+        sessionId: savedSessionId,
+        ...restoreConversation(storedMessages),
+      };
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        error.message !== "history_session_not_found"
+      ) {
+        throw error;
+      }
+    }
+  }
+
+  const session = await createHistorySession();
+  localStorage.setItem(HISTORY_SESSION_KEY, session.id);
+  return { sessionId: session.id, ...restoreConversation([]) };
+}
 
 const ROLE_OPTIONS = [
   {
@@ -220,12 +307,49 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   const [draft, setDraft] = useState("");
   const [inputError, setInputError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [historyReady, setHistoryReady] = useState(false);
+  const [historySessionId, setHistorySessionId] = useState("");
   const [sessionId, setSessionId] = useState("TASK05-001");
   const [exportNotice, setExportNotice] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const requestInFlightRef = useRef<string | undefined>(undefined);
   const consumedRetryErrorIdsRef = useRef<ReadonlySet<string>>(new Set());
+  const historyInitializationRef = useRef<Promise<BrowserHistory> | undefined>(
+    undefined,
+  );
+
+  useEffect(() => {
+    let active = true;
+    const initialization =
+      historyInitializationRef.current ?? initializeBrowserHistory();
+    historyInitializationRef.current = initialization;
+
+    void initialization
+      .then((restored) => {
+        if (!active) return;
+        setHistorySessionId(restored.sessionId);
+        setState(restored.state);
+        dispatchChatUi({
+          type: "replace_all",
+          messages: restored.messages.length
+            ? restored.messages
+            : initialMessages().map((message) => ({
+                ...message,
+                clientRequestId: message.id,
+              })),
+        });
+        setHistoryReady(true);
+      })
+      .catch(() => {
+        if (!active) return;
+        setInputError("历史会话初始化失败，当前无法发送，请稍后刷新重试。");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -295,6 +419,12 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
     request: ChatRequest,
     options: RequestOptions = {},
   ): Promise<ChatResponse | undefined> {
+    const activeHistorySessionId =
+      options.historySessionId ?? historySessionId;
+    if (!isConversationId(activeHistorySessionId)) {
+      setInputError("历史会话尚未就绪，请稍后重试。");
+      return undefined;
+    }
     let identifiedRequest = identifyChatRequest({
       ...request,
       testMode: request.testMode ?? testMode,
@@ -352,7 +482,10 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
       const httpResponse = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(identifiedRequest),
+        body: JSON.stringify({
+          ...identifiedRequest,
+          sessionId: activeHistorySessionId,
+        }),
       });
       const payload: unknown = await httpResponse.json().catch(() => undefined);
       if (!hasChatResponseShape(payload)) {
@@ -445,6 +578,10 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   }
 
   async function sendMessage(message: string, action: "message" | "catalog" = "message") {
+    if (!historyReady) {
+      setInputError("历史会话尚未就绪，请稍后重试。");
+      return;
+    }
     const normalized = message.trim();
     if (!normalized) {
       setInputError("请输入问题后再发送，不会发起空请求。");
@@ -471,7 +608,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      if (!loading) void sendMessage(draft);
+      if (!loading && historyReady) void sendMessage(draft);
     }
   }
 
@@ -500,11 +637,24 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   }
 
   async function restart() {
+    let nextSession: ChatSession;
+    try {
+      nextSession = await createHistorySession();
+    } catch {
+      setInputError("无法创建新的历史会话，请稍后重试。");
+      return;
+    }
     const result = await requestChat(
       { action: "reset", state },
-      { appendUser: false, replaceOnSuccess: true },
+      {
+        appendUser: false,
+        replaceOnSuccess: true,
+        historySessionId: nextSession.id,
+      },
     );
     if (result) {
+      localStorage.setItem(HISTORY_SESSION_KEY, nextSession.id);
+      setHistorySessionId(nextSession.id);
       setDraft("");
       setSessionId(uid("TASK05"));
     }
@@ -622,6 +772,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
               "我们想做一个企业知识库RAG项目",
             ]
           : [];
+  const interactionDisabled = loading || !historyReady;
 
   return (
     <main className={styles.pageShell}>
@@ -647,7 +798,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
           <button type="button" className={styles.ghostButton} onClick={exportMarkdown}>
             导出 Markdown
           </button>
-          <button type="button" className={styles.ghostButton} onClick={() => void restart()} disabled={loading}>
+          <button type="button" className={styles.ghostButton} onClick={() => void restart()} disabled={interactionDisabled}>
             重新开始
           </button>
         </div>
@@ -670,7 +821,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
                   key={role.domain}
                   className={state.domain === role.domain ? styles.miniRoleActive : styles.miniRole}
                   onClick={() => void selectDomain(role.domain)}
-                  disabled={loading || state.domain === role.domain}
+                  disabled={interactionDisabled || state.domain === role.domain}
                 >
                   {role.title}
                 </button>
@@ -710,10 +861,10 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
           </section>
 
           <div className={styles.sideActions}>
-            <button type="button" onClick={() => void sendMessage("查看全部课程", "catalog")} disabled={loading}>
+            <button type="button" onClick={() => void sendMessage("查看全部课程", "catalog")} disabled={interactionDisabled}>
               查看全部课程
             </button>
-            <button type="button" onClick={() => void returnMenu()} disabled={loading}>
+            <button type="button" onClick={() => void returnMenu()} disabled={interactionDisabled}>
               返回菜单
             </button>
             {testMode && (
@@ -721,7 +872,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
                 type="button"
                 className={state.test.failNextModelCall ? styles.testArmedButton : styles.testButton}
                 onClick={() => void armTestFailure()}
-                disabled={loading || state.test.failNextModelCall}
+                disabled={interactionDisabled || state.test.failNextModelCall}
               >
                 {state.test.failNextModelCall ? "下一次失败已就绪" : "模拟模型失败"}
               </button>
@@ -751,7 +902,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
                       type="button"
                       key={role.domain}
                       onClick={() => void selectDomain(role.domain)}
-                      disabled={loading}
+                      disabled={interactionDisabled}
                     >
                       <span className={styles.roleMark}>{role.mark}</span>
                       <span><strong>{role.title}</strong><small>{role.note}</small></span>
@@ -764,9 +915,9 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
 
             {messages.map((message) => {
               const messageControlsDisabled =
-                loading || message.id !== latestResponseMessageId;
+                interactionDisabled || message.id !== latestResponseMessageId;
               const errorControlsDisabled = areErrorControlsDisabled(
-                loading,
+                interactionDisabled,
                 message.retrying,
               );
               return (
@@ -883,7 +1034,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
             {starterPrompts.length > 0 && (
               <div className={styles.starterPrompts}>
                 {starterPrompts.map((prompt) => (
-                  <button type="button" key={prompt} onClick={() => void sendMessage(prompt)} disabled={loading}>{prompt}</button>
+                  <button type="button" key={prompt} onClick={() => void sendMessage(prompt)} disabled={interactionDisabled}>{prompt}</button>
                 ))}
               </div>
             )}
@@ -899,13 +1050,13 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
                   if (inputError) setInputError("");
                 }}
                 onKeyDown={handleKeyDown}
-                disabled={loading}
+                disabled={interactionDisabled}
                 aria-invalid={Boolean(inputError)}
               />
               <div className={styles.composerFooter}>
                 <span className={draft.length > 500 ? styles.countError : undefined}>{draft.length}/500</span>
                 <span>Enter 发送 · Shift + Enter 换行</span>
-                <button type="submit" disabled={loading || draft.length > 500}>
+                <button type="submit" disabled={interactionDisabled || draft.length > 500}>
                   {loading ? "发送中" : "发送"}
                 </button>
               </div>
