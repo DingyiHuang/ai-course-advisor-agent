@@ -107,3 +107,7 @@
 - 独立授权迁移：新增 `supabase/migrations/20260803000100_grant_chat_history_service_role.sql`，原迁移未修改；只向 `service_role` 授予 `chat_sessions` 的 SELECT/INSERT/UPDATE/DELETE 和 `chat_messages` 的 SELECT/INSERT/DELETE。静态测试确认没有 `anon`、`authenticated`、`grant all`、公开 RLS 策略或关闭 RLS；定向 18/18、全量 301/301、TypeScript、ESLint、Production Build 和 `git diff --check` 通过。
 - H5 累计有效工时：0 小时 44 分 58 秒。本地三项已全部通过并按要求停止；五项中的 Preview 连接和刷新恢复尚未执行，因此暂不形成最终 H5 存储决策，不部署 Preview，不修改 Production，不进入 TASK-B02。
 - 第三阶段恢复计时：2026-08-03 16:04:03（Asia/Shanghai）。仅继续 TASK-B01 的部署前复验、Preview 部署与真实联调，不修改 Production，不合并 `main`，不进入 TASK-B02。
+- Preview Deployment：`dpl_EfvwSToiRhPGtVQiwetFGASWRnQb`，地址 `https://ai-course-advisor-agent-4ew498mjn-projectmanagement1.vercel.app`，创建时间 2026-08-03 16:06:52（Asia/Shanghai），Target 为 Preview，状态 `READY`，Git SHA `34b873d929e076ddc1545c2a36effc27e71680f9`，分支 `feature/b-level-v2`。Production Deployment 未修改。
+- Preview 真实联调：创建会话、保存用户与 AI 消息、按 `user > assistant` 顺序查询、刷新恢复同一会话和完整消息、第二会话隔离、浏览器仅保存 `ai-course-advisor.sessionId`、标准 JSON 错误脱敏均通过。变量核对仅检查名称及 Preview 适用环境，未读取、显示或记录变量值。
+H5检查：Supabase五项全部达成，决定继续使用Supabase。当前CONVERSATION_STORE=supabase。
+- 第三阶段有效工时停止：2026-08-03 16:19:41（Asia/Shanghai），本阶段 0 小时 15 分 38 秒；H5 累计有效工时 1 小时 0 分 36 秒。完成后停止在 TASK-B01，不进入 TASK-B02。
