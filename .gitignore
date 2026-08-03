@@ -21,6 +21,7 @@ recordings/
 
 # Tooling and local files
 .vercel/
+/.data/chat-history/
 .DS_Store
 *.pem
 *.log

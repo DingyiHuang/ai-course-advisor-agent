@@ -537,6 +537,17 @@ vi.mock("@/lib/llm/runtime", () => ({
   }),
 }));
 
+// Keep the frozen TASK-05 Route baseline independent of the machine clock.
+vi.mock("@/lib/time/shanghai", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/time/shanghai")
+  >();
+  return {
+    ...actual,
+    shanghaiToday: () => "2026-07-22",
+  };
+});
+
 import { maxDuration, POST } from "@/app/api/chat/route";
 
 async function postChat(body: Record<string, unknown>): Promise<{
