@@ -1,4 +1,5 @@
 import { collectSources } from "./collectSources";
+import { collectChunkSources } from "./collectSources";
 
 const DOCUMENT_TITLES = {
   A: "2026暑期AI素养夏令营课程手册",
@@ -8,6 +9,16 @@ const DOCUMENT_TITLES = {
 
 export function formatSourceFootnotes(factIds: string[]): string {
   const sources = collectSources(factIds);
+  if (!sources.length) return "";
+  const labels = sources.map((source) => {
+    const section = source.section ? `（${source.section}）` : "";
+    return `素材${source.document}《${DOCUMENT_TITLES[source.document]}》${source.chapter}${section}`;
+  });
+  return `\n\n来源：${labels.join("；")}`;
+}
+
+export function formatChunkSourceFootnotes(chunkIds: string[]): string {
+  const sources = collectChunkSources(chunkIds);
   if (!sources.length) return "";
   const labels = sources.map((source) => {
     const section = source.section ? `（${source.section}）` : "";

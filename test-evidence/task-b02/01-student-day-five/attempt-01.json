@@ -1,0 +1,120 @@
+{
+  "scenarioId": "01-student-day-five",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T02:02:56.363Z",
+  "finishedAt": "2026-08-04T02:03:17.058Z",
+  "elapsedMs": 20695,
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "第五天是“智能体搭建”主题。当天会学习Agent、知识库、工作流、测试与边界，并完成个人学习助手Bot作为作品。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第二章",
+  "retrievedChunkIds": [
+    "student-camp-daily-outline",
+    "student-camp-p1-bj-logistics",
+    "student-camp-overview",
+    "student-camp-p1-bj-pricing",
+    "student-camp-required-items",
+    "student-camp-equipment"
+  ],
+  "usedChunkIds": [
+    "student-camp-daily-outline"
+  ],
+  "sources": [
+    "素材A《2026暑期AI素养夏令营课程手册》第二章"
+  ],
+  "modelCallCount": 2,
+  "regenerationCount": 0,
+  "expected": "回答第五天的智能体课程，并使用学生课程知识块和素材A来源。",
+  "actual": {
+    "status": "contextual_followup",
+    "entityIds": [
+      "camp-p1-bj"
+    ],
+    "flowResults": [
+      {
+        "label": "student-current-entity",
+        "answer": "第五天是“智能体搭建”主题。当天会学习Agent、知识库、工作流、测试与边界，并完成个人学习助手Bot作为作品。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第二章",
+        "retrievedChunkIds": [
+          "student-camp-daily-outline",
+          "student-camp-p1-bj-logistics",
+          "student-camp-overview",
+          "student-camp-p1-bj-pricing",
+          "student-camp-required-items",
+          "student-camp-equipment"
+        ],
+        "usedChunkIds": [
+          "student-camp-daily-outline"
+        ],
+        "sources": [
+          "素材A《2026暑期AI素养夏令营课程手册》第二章"
+        ],
+        "sourceDocuments": [
+          "A"
+        ],
+        "entityIds": [
+          "camp-p1-bj"
+        ],
+        "modelCallCount": 2,
+        "regenerationCount": 0
+      }
+    ],
+    "checks": [
+      {
+        "label": "usedChunkIds全部来自本轮retrievedChunkIds",
+        "pass": true
+      },
+      {
+        "label": "来源由程序追加且与usedChunkIds对应",
+        "pass": true
+      },
+      {
+        "label": "正文说明第五天学习智能体相关内容",
+        "pass": true
+      },
+      {
+        "label": "使用七天课程安排知识块",
+        "pass": true
+      },
+      {
+        "label": "来源只属于素材A",
+        "pass": true
+      },
+      {
+        "label": "真实composer被调用",
+        "pass": true
+      }
+    ]
+  },
+  "conclusion": "通过",
+  "requestStages": [
+    {
+      "stage": "student-current-entity:create_session",
+      "elapsedMs": 2529,
+      "httpStatus": 201,
+      "publicErrorCode": null,
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "routeLatencyMs": null
+    },
+    {
+      "stage": "student-current-entity:establish_student_context",
+      "elapsedMs": 11720,
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "routeLatencyMs": 11566
+    },
+    {
+      "stage": "student-current-entity:target_question",
+      "elapsedMs": 6331,
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "routeLatencyMs": 6312
+    }
+  ],
+  "transientFailure": false,
+  "passed": true,
+  "programFallbackCount": 0
+}

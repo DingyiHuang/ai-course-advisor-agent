@@ -1,0 +1,58 @@
+{
+  "scenarioId": "04-teacher-device",
+  "attemptNumber": 2,
+  "startedAt": "2026-08-04T02:10:53.509Z",
+  "finishedAt": "2026-08-04T02:11:39.678Z",
+  "elapsedMs": 46169,
+  "httpStatus": 503,
+  "publicErrorCode": "model_unavailable",
+  "finalPublicAnswer": "模型服务暂时不可用，请稍后重试。原有对话已保留。",
+  "retrievedChunkIds": [],
+  "usedChunkIds": [],
+  "sources": [],
+  "modelCallCount": 2,
+  "regenerationCount": 0,
+  "expected": "明确必须携带笔记本电脑并说明基本设备要求。",
+  "actual": {
+    "status": "error",
+    "entityIds": [],
+    "flowResults": [
+      {
+        "label": "isolated",
+        "answer": "模型服务暂时不可用，请稍后重试。原有对话已保留。",
+        "retrievedChunkIds": [],
+        "usedChunkIds": [],
+        "sources": [],
+        "sourceDocuments": [],
+        "entityIds": [],
+        "modelCallCount": 2,
+        "regenerationCount": 0
+      }
+    ],
+    "checks": []
+  },
+  "conclusion": "供应商瞬时故障",
+  "requestStages": [
+    {
+      "stage": "isolated:create_session",
+      "elapsedMs": 3241,
+      "httpStatus": 201,
+      "publicErrorCode": null,
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "routeLatencyMs": null
+    },
+    {
+      "stage": "isolated:target_question",
+      "elapsedMs": 42924,
+      "httpStatus": 503,
+      "publicErrorCode": "model_unavailable",
+      "modelCallCount": 2,
+      "regenerationCount": 0,
+      "routeLatencyMs": 42913
+    }
+  ],
+  "transientFailure": true,
+  "passed": false,
+  "programFallbackCount": 1
+}

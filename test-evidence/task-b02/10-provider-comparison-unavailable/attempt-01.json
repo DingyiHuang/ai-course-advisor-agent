@@ -1,0 +1,79 @@
+{
+  "scenarioId": "10-provider-comparison-unavailable",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T02:17:25.941Z",
+  "finishedAt": "2026-08-04T02:17:30.913Z",
+  "elapsedMs": 4972,
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "感谢您的关注。关于与其他培训机构的对比，现有资料未提供相关排名、案例或比较结论，因此我无法判断哪家更好，也不便给出臆测性评价。如果您想继续了解我们的学生课程、教师培训、费用、报名条件或机构服务，我可以继续为您整理和说明。",
+  "retrievedChunkIds": [],
+  "usedChunkIds": [],
+  "sources": [],
+  "modelCallCount": 1,
+  "regenerationCount": 0,
+  "expected": "明确资料未提供机构比较信息，不编造排名或结论。",
+  "actual": {
+    "status": "fact_answer",
+    "entityIds": [],
+    "flowResults": [
+      {
+        "label": "isolated",
+        "answer": "感谢您的关注。关于与其他培训机构的对比，现有资料未提供相关排名、案例或比较结论，因此我无法判断哪家更好，也不便给出臆测性评价。如果您想继续了解我们的学生课程、教师培训、费用、报名条件或机构服务，我可以继续为您整理和说明。",
+        "retrievedChunkIds": [],
+        "usedChunkIds": [],
+        "sources": [],
+        "sourceDocuments": [],
+        "entityIds": [],
+        "modelCallCount": 1,
+        "regenerationCount": 0
+      }
+    ],
+    "checks": [
+      {
+        "label": "usedChunkIds全部来自本轮retrievedChunkIds",
+        "pass": true
+      },
+      {
+        "label": "来源由程序追加且与usedChunkIds对应",
+        "pass": true
+      },
+      {
+        "label": "明确比较资料未提供",
+        "pass": true
+      },
+      {
+        "label": "不声称任何机构最好",
+        "pass": true
+      },
+      {
+        "label": "不注入无关知识块或来源",
+        "pass": true
+      }
+    ]
+  },
+  "conclusion": "通过",
+  "requestStages": [
+    {
+      "stage": "isolated:create_session",
+      "elapsedMs": 245,
+      "httpStatus": 201,
+      "publicErrorCode": null,
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "routeLatencyMs": null
+    },
+    {
+      "stage": "isolated:target_question",
+      "elapsedMs": 4722,
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "routeLatencyMs": 4705
+    }
+  ],
+  "transientFailure": false,
+  "passed": true,
+  "programFallbackCount": 0
+}

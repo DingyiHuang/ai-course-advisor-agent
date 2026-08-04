@@ -607,6 +607,25 @@ export function buildComposerPlan(input: {
   });
 }
 
+export function buildMaterialBoundaryPlan(input: {
+  state: ConversationState;
+  boundaryCode:
+    | "material_contact_not_provided"
+    | "material_extra_discount_not_provided"
+    | "material_comparison_not_provided";
+}): ComposerPlan {
+  const entityIds = input.state.selectedEntityId
+    ? [input.state.selectedEntityId]
+    : input.state.lastRecommendationIds;
+  return basePlan({
+    state: input.state,
+    status: "fact_answer",
+    actions: ["继续当前咨询", "返回菜单"],
+    entityIds,
+    boundaryCode: input.boundaryCode,
+  });
+}
+
 export function buildCatalogPlan(input: {
   state: ConversationState;
 }): ComposerPlan {

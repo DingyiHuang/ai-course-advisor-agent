@@ -1,0 +1,209 @@
+{
+  "scenarioId": "11-dynamic-teacher-paraphrases",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T02:18:10.309Z",
+  "finishedAt": "2026-08-04T02:18:44.242Z",
+  "elapsedMs": 33933,
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "根据您“刚开始接触AI，平日走不开，但周末可以上课”的情况，推荐L1周末研修班。该班型面向零基础教师，没有先修要求，课程安排在8月2日上午4课时线上、下午4课时线下工作坊，能避开您的工作日时间。课程覆盖提示词、AI备课、课件与图像、作业反馈、教学伦理，完成后可产出含教案、课件和练习的AI辅助教学资源包。线下工作坊设在北京、上海、广州，线上部分通过腾讯会议进行，并提供30天回放。需要提醒：该班报名已于2026-07-26截止，目前无法再提交报名；标准价格为2980元，早鸟优惠也已过期，费用包含课程、资料和考核。您可以继续询问这一班型的细节，或查看其他班型。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二、四章；素材B《初高中教师AI素养培训体系介绍》第一、六章；素材B《初高中教师AI素养培训体系介绍》第五章；素材B《初高中教师AI素养培训体系介绍》第三章；素材B《初高中教师AI素养培训体系介绍》第四章",
+  "retrievedChunkIds": [
+    "teacher-l1-weekend-schedule",
+    "teacher-product-overview",
+    "teacher-l1-prerequisite",
+    "teacher-l1-pricing",
+    "teacher-l1-curriculum",
+    "teacher-device-and-replay"
+  ],
+  "usedChunkIds": [
+    "teacher-l1-weekend-schedule",
+    "teacher-l1-prerequisite",
+    "teacher-l1-pricing",
+    "teacher-l1-curriculum",
+    "teacher-device-and-replay"
+  ],
+  "sources": [
+    "素材B《初高中教师AI素养培训体系介绍》第二、四章",
+    "素材B《初高中教师AI素养培训体系介绍》第一、六章",
+    "素材B《初高中教师AI素养培训体系介绍》第五章",
+    "素材B《初高中教师AI素养培训体系介绍》第三章",
+    "素材B《初高中教师AI素养培训体系介绍》第四章"
+  ],
+  "modelCallCount": 2,
+  "regenerationCount": 0,
+  "expected": "推荐一致、关键chunk重合、正文表达明显不同，且两次均真实调用composer。",
+  "actual": {
+    "status": "recommended",
+    "entityIds": [
+      "teacher-l1-weekend"
+    ],
+    "flowResults": [
+      {
+        "label": "teacher-paraphrase-a",
+        "answer": "根据你的情况，推荐L1周末研修班。你提到自己是零基础教师，而L1正是面向零基础教师，资料中未设置先修要求，适合你系统入门AI教学应用。课程覆盖提示词、AI备课、课件与图像、作业反馈、教学伦理，完成后可产出含教案、课件和练习的AI辅助教学资源包。由于你不能在工作日脱岗，这个班型安排在周末（8月2日上午4课时线上、下午4课时线下工作坊），不需要请连续假期，更符合你的时间约束。班型在北京、上海、广州均有开设，线上部分通过腾讯会议进行，线下部分在北京、上海、广州的工作坊开展。按当前日期（2026-08-04），该班型的报名截止日期2026-07-26已过，早鸟优惠也已结束，单人标准价为2980元，费用包含课程、资料、考核。另据资料，参加培训需自带笔记本电脑，系统需为Windows 10及以上或macOS 12及以上，内存至少8GB。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二、四章；素材B《初高中教师AI素养培训体系介绍》第一、六章；素材B《初高中教师AI素养培训体系介绍》第五章；素材B《初高中教师AI素养培训体系介绍》第三章；素材B《初高中教师AI素养培训体系介绍》第四章",
+        "retrievedChunkIds": [
+          "teacher-l1-weekend-schedule",
+          "teacher-product-overview",
+          "teacher-l1-prerequisite",
+          "teacher-l1-pricing",
+          "teacher-l1-curriculum",
+          "teacher-device-and-replay"
+        ],
+        "usedChunkIds": [
+          "teacher-l1-weekend-schedule",
+          "teacher-l1-prerequisite",
+          "teacher-l1-pricing",
+          "teacher-l1-curriculum",
+          "teacher-device-and-replay"
+        ],
+        "sources": [
+          "素材B《初高中教师AI素养培训体系介绍》第二、四章",
+          "素材B《初高中教师AI素养培训体系介绍》第一、六章",
+          "素材B《初高中教师AI素养培训体系介绍》第五章",
+          "素材B《初高中教师AI素养培训体系介绍》第三章",
+          "素材B《初高中教师AI素养培训体系介绍》第四章"
+        ],
+        "sourceDocuments": [
+          "B",
+          "B",
+          "B",
+          "B",
+          "B"
+        ],
+        "entityIds": [
+          "teacher-l1-weekend"
+        ],
+        "modelCallCount": 1,
+        "regenerationCount": 0
+      },
+      {
+        "label": "teacher-paraphrase-b",
+        "answer": "根据您“刚开始接触AI，平日走不开，但周末可以上课”的情况，推荐L1周末研修班。该班型面向零基础教师，没有先修要求，课程安排在8月2日上午4课时线上、下午4课时线下工作坊，能避开您的工作日时间。课程覆盖提示词、AI备课、课件与图像、作业反馈、教学伦理，完成后可产出含教案、课件和练习的AI辅助教学资源包。线下工作坊设在北京、上海、广州，线上部分通过腾讯会议进行，并提供30天回放。需要提醒：该班报名已于2026-07-26截止，目前无法再提交报名；标准价格为2980元，早鸟优惠也已过期，费用包含课程、资料和考核。您可以继续询问这一班型的细节，或查看其他班型。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二、四章；素材B《初高中教师AI素养培训体系介绍》第一、六章；素材B《初高中教师AI素养培训体系介绍》第五章；素材B《初高中教师AI素养培训体系介绍》第三章；素材B《初高中教师AI素养培训体系介绍》第四章",
+        "retrievedChunkIds": [
+          "teacher-l1-weekend-schedule",
+          "teacher-product-overview",
+          "teacher-l1-prerequisite",
+          "teacher-l1-pricing",
+          "teacher-l1-curriculum",
+          "teacher-device-and-replay"
+        ],
+        "usedChunkIds": [
+          "teacher-l1-weekend-schedule",
+          "teacher-l1-prerequisite",
+          "teacher-l1-pricing",
+          "teacher-l1-curriculum",
+          "teacher-device-and-replay"
+        ],
+        "sources": [
+          "素材B《初高中教师AI素养培训体系介绍》第二、四章",
+          "素材B《初高中教师AI素养培训体系介绍》第一、六章",
+          "素材B《初高中教师AI素养培训体系介绍》第五章",
+          "素材B《初高中教师AI素养培训体系介绍》第三章",
+          "素材B《初高中教师AI素养培训体系介绍》第四章"
+        ],
+        "sourceDocuments": [
+          "B",
+          "B",
+          "B",
+          "B",
+          "B"
+        ],
+        "entityIds": [
+          "teacher-l1-weekend"
+        ],
+        "modelCallCount": 1,
+        "regenerationCount": 0
+      }
+    ],
+    "checks": [
+      {
+        "label": "usedChunkIds全部来自本轮retrievedChunkIds",
+        "pass": true
+      },
+      {
+        "label": "来源由程序追加且与usedChunkIds对应",
+        "pass": true
+      },
+      {
+        "label": "两次推荐结果均为L1周末研修班",
+        "pass": true
+      },
+      {
+        "label": "关键知识块一致或合理重合",
+        "pass": true
+      },
+      {
+        "label": "两次正文组织和措辞有明显差异",
+        "pass": true
+      },
+      {
+        "label": "两次均有真实composer调用",
+        "pass": true
+      }
+    ]
+  },
+  "conclusion": "通过",
+  "requestStages": [
+    {
+      "stage": "teacher-paraphrase-a:create_session",
+      "elapsedMs": 224,
+      "httpStatus": 201,
+      "publicErrorCode": null,
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "routeLatencyMs": null
+    },
+    {
+      "stage": "teacher-paraphrase-a:select_teacher_domain",
+      "elapsedMs": 699,
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "routeLatencyMs": 681
+    },
+    {
+      "stage": "teacher-paraphrase-a:target_question",
+      "elapsedMs": 20611,
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "routeLatencyMs": 20588
+    },
+    {
+      "stage": "teacher-paraphrase-b:create_session",
+      "elapsedMs": 119,
+      "httpStatus": 201,
+      "publicErrorCode": null,
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "routeLatencyMs": null
+    },
+    {
+      "stage": "teacher-paraphrase-b:select_teacher_domain",
+      "elapsedMs": 760,
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "routeLatencyMs": 735
+    },
+    {
+      "stage": "teacher-paraphrase-b:target_question",
+      "elapsedMs": 11490,
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "routeLatencyMs": 11470
+    }
+  ],
+  "transientFailure": false,
+  "passed": true,
+  "programFallbackCount": 0,
+  "attemptCount": 1,
+  "firstAttemptPassed": true,
+  "transientErrorCount": 0,
+  "recoveredAfterTransientFailure": false
+}

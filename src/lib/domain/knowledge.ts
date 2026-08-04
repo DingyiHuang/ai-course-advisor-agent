@@ -6,6 +6,26 @@ export type Source = {
   section?: string;
 };
 
+export type KnowledgeChunkDomain = "student" | "teacher" | "platform";
+
+export type KnowledgeChunkSource = {
+  material: SourceDocument;
+  documentTitle: string;
+  chapter: string;
+  section?: string;
+};
+
+export type KnowledgeChunk = {
+  id: string;
+  domain: KnowledgeChunkDomain;
+  title: string;
+  content: string;
+  topics: string[];
+  entityIds: string[];
+  source: KnowledgeChunkSource;
+  factIds: string[];
+};
+
 export type FieldSources<T> = Partial<Record<keyof T, Source>>;
 
 export type CampDay = {

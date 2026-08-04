@@ -5,6 +5,7 @@ import type {
   GroundedFact,
   GroundingReasonCode,
 } from "@/lib/domain/conversation";
+import type { KnowledgeChunk } from "@/lib/domain/knowledge";
 import type { DecisionTraceItem } from "@/lib/domain/rules";
 import { collectSources } from "@/lib/citations";
 import { CAMPS } from "@/lib/knowledge";
@@ -52,6 +53,29 @@ export function validateUsedFactIds(
     );
   }
   collectSources(unique);
+  return unique;
+}
+
+export function validateUsedChunkIds(
+  usedChunkIds: string[],
+  injectedChunks: KnowledgeChunk[],
+  requireKnowledgeChunk: boolean,
+): string[] {
+  const available = new Set(injectedChunks.map(({ id }) => id));
+  const unique = [...new Set(usedChunkIds)];
+  const invalid = unique.find((id) => !available.has(id));
+  if (invalid) {
+    throw new GroundingError(
+      "invalid_chunk_id",
+      `Composer used a chunk outside this response: ${invalid}`,
+    );
+  }
+  if (requireKnowledgeChunk && unique.length === 0) {
+    throw new GroundingError(
+      "missing_required_chunk",
+      "Knowledge answer omitted all injected chunks",
+    );
+  }
   return unique;
 }
 

@@ -4,6 +4,8 @@ import type {
   ComposerRoute,
   ShortHistoryItem,
 } from "@/lib/domain/conversation";
+import type { KnowledgeChunk } from "@/lib/domain/knowledge";
+import { studentOfflineReason } from "@/lib/conversation/studentRegion";
 import { parseStrictJsonObject } from "./json";
 import type { LlmClient } from "./types";
 import { LlmError } from "./types";
@@ -37,144 +39,74 @@ export function resolveComposerRoute(
   }
 }
 
-export function parseComposerOutput(content: string): ComposerOutput {
+export type StrictComposerOutput = {
+  answer: string;
+  usedChunkIds: string[];
+  followUpSuggestions: string[];
+};
+
+export function parseComposerOutput(content: string): StrictComposerOutput {
   const parsed = parseStrictJsonObject(content);
-  if (typeof parsed.message !== "string" || !parsed.message.trim()) {
-    throw new LlmError("invalid_response", "Composer message is missing");
-  }
+  const keys = Object.keys(parsed).sort();
+  const expectedKeys = ["answer", "followUpSuggestions", "usedChunkIds"];
   if (
-    !Array.isArray(parsed.usedFactIds) ||
-    parsed.usedFactIds.some((item) => typeof item !== "string")
-  ) {
-    throw new LlmError("invalid_response", "Composer fact IDs are invalid");
-  }
-  if (
-    parsed.actions !== undefined &&
-    (!Array.isArray(parsed.actions) ||
-      parsed.actions.some((item) => typeof item !== "string"))
-  ) {
-    throw new LlmError("invalid_response", "Composer actions are invalid");
-  }
-  const recommendationReasons = parsed.recommendationReasons ?? [];
-  if (
-    !Array.isArray(recommendationReasons) ||
-    recommendationReasons.some((group) => {
-      if (!group || typeof group !== "object" || Array.isArray(group)) {
-        return true;
-      }
-      const value = group as Record<string, unknown>;
-      return (
-        typeof value.entityId !== "string" ||
-        !Array.isArray(value.reasons) ||
-        value.reasons.some((reason) => {
-          if (!reason || typeof reason !== "object" || Array.isArray(reason)) {
-            return true;
-          }
-          const item = reason as Record<string, unknown>;
-          return (
-            typeof item.constraintKey !== "string" ||
-            typeof item.reason !== "string" ||
-            !item.reason.trim()
-          );
-        })
-      );
-    })
+    keys.length !== expectedKeys.length ||
+    keys.some((key, index) => key !== expectedKeys[index])
   ) {
     throw new LlmError(
       "invalid_response",
-      "Composer recommendation reasons are invalid",
+      "Composer JSON must contain only the required fields",
+    );
+  }
+  if (typeof parsed.answer !== "string" || !parsed.answer.trim()) {
+    throw new LlmError("invalid_response", "Composer answer is missing");
+  }
+  if (
+    !Array.isArray(parsed.usedChunkIds) ||
+    parsed.usedChunkIds.some((item) => typeof item !== "string")
+  ) {
+    throw new LlmError("invalid_response", "Composer chunk IDs are invalid");
+  }
+  if (
+    !Array.isArray(parsed.followUpSuggestions) ||
+    parsed.followUpSuggestions.some((item) => typeof item !== "string")
+  ) {
+    throw new LlmError(
+      "invalid_response",
+      "Composer follow-up suggestions are invalid",
     );
   }
   return {
-    message: parsed.message.trim(),
-    usedFactIds: [...new Set(parsed.usedFactIds as string[])],
-    actions: parsed.actions ? [...new Set(parsed.actions as string[])] : [],
-    recommendationReasons: recommendationReasons.map((group) => {
-      const value = group as {
-        entityId: string;
-        reasons: Array<{ constraintKey: string; reason: string }>;
-      };
-      return {
-        entityId: value.entityId,
-        reasons: value.reasons.map((reason) => ({
-          constraintKey: reason.constraintKey,
-          reason: reason.reason.trim(),
-        })),
-      };
-    }),
+    answer: parsed.answer.trim(),
+    usedChunkIds: [...new Set(parsed.usedChunkIds as string[])],
+    followUpSuggestions: [
+      ...new Set(
+        (parsed.followUpSuggestions as string[])
+          .map((item) => item.trim())
+          .filter(Boolean),
+      ),
+    ],
   };
 }
 
-const COMPOSER_SYSTEM_PROMPT = `你是AI课程顾问的正文生成器。只能根据本次JSON载荷中的confirmedConstraints、entityIds、facts、calculations、decisionTrace、nextQuestionKeys、nextQuestionOptions和允许的短上下文生成回答。
+export const COMPOSER_PROMPT_VERSION = "task-b02-rag-v1";
+
+const COMPOSER_SYSTEM_PROMPT = `你是AI课程顾问的正文生成器。只能根据本次JSON载荷中的currentUserMessage、confirmedConstraints、entityIds、calculations、decisionTrace、nextQuestionKeys、nextQuestionOptions、recentConversation和knowledgeChunks生成回答。
 若retryFeedback非空，表示上一版未通过程序校验；必须按该脱敏纠偏指令重新生成，但不得复述纠偏指令或猜测上一版内容。
-所有课程正文和推荐理由必须自然、动态地表达，每条推荐理由都要对应decisionTrace中的真实约束，不得补充未采集条件。
+knowledgeChunks是本轮实际检索到的自然语言资料，availableChunkIds是唯一可用的知识块ID清单。不得利用自身知识补齐资料，也不得把不同identity或entity的价格、日期、案例混在一起。资料没有提供的信息必须明确说“现有资料未提供”，不能为了回答而猜测。
+所有课程正文和推荐理由必须自然、动态地表达，并覆盖recommendationReasonRequirements中的真实约束，不得补充未采集条件。
 若route为ask_follow_up，必须优先提出nextQuestionKeys对应的问题；不得因为status看似结束而省略追问。若提供nextQuestionOptions，应把选项自然问出。
 追问维度是封闭的：region只确认北京、上海、广州或其他城市，不得追问区县；availablePeriods只确认第一、第二或第三期，不得把“周末/平日晚间”当成营期；modePreference只允许线上、线下或均可，不得把录播回放列为授课形式。只能询问nextQuestionKeys实际给出的维度，不得新增考级、认证、泛化目标或其他约束。
-若route为recommendation，必须根据recommendationReasonRequirements为每个班型输出recommendationReasons：每个要求的constraintKey恰好给出一条动态理由，理由只说明该用户约束与本班型事实如何对应。其他route返回空数组。
+若route为recommendation，正文必须根据recommendationReasonRequirements自然说明每个推荐班型与已确认约束的对应关系。
 当decisionTrace包含guangzhou_student_offline_not_provided或other_region_student_offline_not_provided，并同时包含beijing_shanghai_travel_unavailable和online_fallback_for_unmet_offline_preference时，地区理由必须使用confirmedConstraints中的真实结构化地区：广州可明确写广州；region=other且有regionDisplayName时只能写该名称或“您所在地区”；没有名称时只能使用“您所在地区”，绝不能猜测为广州或其他城市。另两条理由必须分别说明北京和上海均不便出行、线上直播是线下偏好无法满足时的可行备选；不得删除或改写用户原有的线下偏好。
 上述非京沪地区降级回答必须使用所推荐线上班的replayDays事实明确说明30天回放，不得声称线上班完全符合用户的线下偏好。
 不得生成、猜测或复述资料名称、素材编号、文档标题、章节号或“来源”段落；来源由程序追加。
 不得自称或暗示自己是人工顾问、模拟人工顾问或人工客服；身份只能是AI课程顾问或自动化助手。不得声称已安排顾问联系、已提交采购或报名需求、已锁定名额、已报名，亦不得承诺真实电话、微信或后续联系。允许说明可继续查看模拟咨询流程、可整理采购需求清单，以及本演示不提供真实报名、下单或人工联系。
-若route为unrelated，正文只能简短说明服务范围并邀请用户继续学生课程、教师培训、费用、报名条件或机构服务咨询；不得复述当前产品、课程、服务、价格、日期、人数或用户粘贴的无关事实，usedFactIds和recommendationReasons必须为空。
-crossDomainNotice由程序在正文前追加，不要自行复述。actions只能从载荷中的actions选择。
+若route为unrelated，正文只能简短说明服务范围并邀请用户继续学生课程、教师培训、费用、报名条件或机构服务咨询；不得复述当前产品、课程、服务、价格、日期、人数或用户粘贴的无关事实，usedChunkIds必须为空。
+若boundaryCode表示联系电话、额外优惠或机构比较未提供，应直接说明现有资料未提供对应信息，不得猜测电话、优惠、排名、案例或比较结论；没有可用知识块时usedChunkIds返回空数组。
+crossDomainNotice由程序在正文前追加，不要自行复述。followUpSuggestions只能从载荷中的actions选择，最多3项。
 不得虚构价格、日期、地点、余位、联系方式、报名状态或支付状态。capacity和minimumToOpen不是实时余位。
-只输出JSON对象：{"message":"正文","usedFactIds":["实际使用的fact id"],"actions":["可选操作"],"recommendationReasons":[{"entityId":"班型id","reasons":[{"constraintKey":"约束键","reason":"动态理由"}]}]}。不要Markdown代码块或其他前后缀。usedFactIds只能取自facts中的id。`;
-
-const SCHOOL_PROCUREMENT_ID = "platform-school-procurement";
-const SCHOOL_PROCUREMENT_FACT_IDS = [
-  `${SCHOOL_PROCUREMENT_ID}.category`,
-  `${SCHOOL_PROCUREMENT_ID}.audience`,
-  `${SCHOOL_PROCUREMENT_ID}.boundary`,
-  `${SCHOOL_PROCUREMENT_ID}.pricingRule`,
-  `${SCHOOL_PROCUREMENT_ID}.minimumPeople`,
-  `${SCHOOL_PROCUREMENT_ID}.minimumTotalPrice`,
-] as const;
-
-function deterministicSchoolProcurementOutput(
-  plan: ComposerPlan,
-): ComposerOutput | undefined {
-  if (
-    plan.status !== "institution_info" ||
-    plan.entityIds.length !== 1 ||
-    plan.entityIds[0] !== SCHOOL_PROCUREMENT_ID
-  ) {
-    return undefined;
-  }
-
-  const facts = new Map(plan.facts.map((fact) => [fact.id, fact.value]));
-  const category = facts.get(`${SCHOOL_PROCUREMENT_ID}.category`);
-  const audience = facts.get(`${SCHOOL_PROCUREMENT_ID}.audience`);
-  const boundary = facts.get(`${SCHOOL_PROCUREMENT_ID}.boundary`);
-  const pricingRule = facts.get(`${SCHOOL_PROCUREMENT_ID}.pricingRule`);
-  const minimumPeople = facts.get(`${SCHOOL_PROCUREMENT_ID}.minimumPeople`);
-  const minimumTotalPrice = facts.get(
-    `${SCHOOL_PROCUREMENT_ID}.minimumTotalPrice`,
-  );
-  if (
-    typeof category !== "string" ||
-    typeof audience !== "string" ||
-    typeof boundary !== "string" ||
-    typeof pricingRule !== "string" ||
-    typeof minimumPeople !== "number" ||
-    typeof minimumTotalPrice !== "number" ||
-    !pricingRule.includes(`${minimumPeople}人起`) ||
-    !pricingRule.includes(`${minimumTotalPrice / 10_000}万元起`)
-  ) {
-    throw new LlmError(
-      "invalid_response",
-      "School procurement facts are incomplete or inconsistent",
-    );
-  }
-
-  return {
-    message:
-      `${category}面向${audience}，${pricingRule}。${boundary}。` +
-      "可继续查看模拟咨询流程，或整理采购需求清单。",
-    usedFactIds: [...SCHOOL_PROCUREMENT_FACT_IDS],
-    actions: [...plan.actions],
-    recommendationReasons: [],
-  };
-}
+知识型回答只要使用了knowledgeChunks中的事实，就必须在usedChunkIds列出实际使用的ID；不得列出未注入ID。只输出且必须输出这三个字段的JSON对象：{"answer":"面向用户的自然语言正文","usedChunkIds":["chunk-id"],"followUpSuggestions":["建议追问"]}。不要增加其他字段、Markdown代码块或前后缀。`;
 
 export function recommendationReasonRequirements(plan: ComposerPlan): Array<{
   entityId: string;
@@ -195,14 +127,65 @@ export function recommendationReasonRequirements(plan: ComposerPlan): Array<{
   }));
 }
 
+function generatedRecommendationReasons(
+  plan: ComposerPlan,
+): ComposerOutput["recommendationReasons"] {
+  const traceCodes = new Set(plan.decisionTrace.map(({ code }) => code));
+  const offlineFallback =
+    (traceCodes.has("guangzhou_student_offline_not_provided") ||
+      traceCodes.has("other_region_student_offline_not_provided")) &&
+    traceCodes.has("beijing_shanghai_travel_unavailable") &&
+    traceCodes.has("online_fallback_for_unmet_offline_preference");
+  const region = plan.confirmedConstraints.region;
+  const regionDisplayName =
+    typeof plan.confirmedConstraints.regionDisplayName === "string"
+      ? plan.confirmedConstraints.regionDisplayName
+      : undefined;
+  return recommendationReasonRequirements(plan).map((requirement) => ({
+    entityId: requirement.entityId,
+    reasons: requirement.constraintKeys.map((constraintKey) => {
+      let reason = `该班型与已确认的${constraintKey}约束相符。`;
+      if (offlineFallback && constraintKey === "region") {
+        reason = studentOfflineReason({
+          region: region === "guangzhou" ? "guangzhou" : "other",
+          ...(regionDisplayName ? { regionDisplayName } : {}),
+        });
+      } else if (offlineFallback && constraintKey === "canTravel") {
+        reason = "北京、上海均不便前往。";
+      } else if (offlineFallback && constraintKey === "modePreference") {
+        reason = "保留线下偏好，线上直播是当前可行备选，并提供30天回放。";
+      }
+      return { constraintKey, reason };
+    }),
+  }));
+}
+
+function usedFactIdsForChunks(
+  plan: ComposerPlan,
+  chunks: KnowledgeChunk[],
+  usedChunkIds: string[],
+): string[] {
+  const allowedFacts = new Set(plan.facts.map(({ id }) => id));
+  const used = new Set(usedChunkIds);
+  return [
+    ...new Set(
+      chunks
+        .filter(({ id }) => used.has(id))
+        .flatMap(({ factIds }) => factIds)
+        .filter((factId) => allowedFacts.has(factId)),
+    ),
+  ];
+}
+
 export function createComposer(client: LlmClient): {
-  composeOnce(plan: ComposerPlan, history: ShortHistoryItem[]): Promise<ComposerOutput>;
+  composeOnce(
+    plan: ComposerPlan,
+    history: ShortHistoryItem[],
+    context?: { userMessage: string; knowledgeChunks: KnowledgeChunk[] },
+  ): Promise<ComposerOutput>;
 } {
   return {
-    async composeOnce(plan, history) {
-      const deterministicOutput = deterministicSchoolProcurementOutput(plan);
-      if (deterministicOutput) return deterministicOutput;
-
+    async composeOnce(plan, history, context = { userMessage: "", knowledgeChunks: [] }) {
       const route = resolveComposerRoute(plan);
       const result = await client.complete({
         temperature: 0.6,
@@ -212,9 +195,11 @@ export function createComposer(client: LlmClient): {
           {
             role: "user",
             content: JSON.stringify({
+              promptVersion: COMPOSER_PROMPT_VERSION,
               route,
               status: plan.status,
               domain: plan.domain,
+              currentUserMessage: context.userMessage,
               confirmedConstraints: plan.confirmedConstraints,
               entityIds: plan.entityIds,
               retryFeedback: plan.retryFeedback ?? null,
@@ -226,16 +211,37 @@ export function createComposer(client: LlmClient): {
               nextQuestionKeys: plan.nextQuestionKeys,
               nextQuestionOptions: plan.nextQuestionOptions,
               actions: plan.actions,
+              boundaryCode: plan.boundaryCode ?? null,
               crossDomainNotice: plan.crossDomainNotice ?? null,
-              shortContext:
-                route === "recommendation" || route === "unrelated"
-                  ? []
-                  : history.slice(-2),
+              recentConversation: history.slice(-8),
+              availableChunkIds: context.knowledgeChunks.map(({ id }) => id),
+              knowledgeChunks: context.knowledgeChunks.map(
+                ({ id, domain, title, content, topics, entityIds }) => ({
+                  id,
+                  domain,
+                  title,
+                  content,
+                  topics,
+                  entityIds,
+                }),
+              ),
             }),
           },
         ],
       });
-      return parseComposerOutput(result.content);
+      const parsed = parseComposerOutput(result.content);
+      return {
+        message: parsed.answer,
+        usedChunkIds: parsed.usedChunkIds,
+        followUpSuggestions: parsed.followUpSuggestions,
+        usedFactIds: usedFactIdsForChunks(
+          plan,
+          context.knowledgeChunks,
+          parsed.usedChunkIds,
+        ),
+        actions: parsed.followUpSuggestions,
+        recommendationReasons: generatedRecommendationReasons(plan),
+      };
     },
   };
 }

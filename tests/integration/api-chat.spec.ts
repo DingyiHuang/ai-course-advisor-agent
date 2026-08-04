@@ -32,10 +32,14 @@ const providerControl = vi.hoisted(() => ({
     | "other_region_boundary_first_guangzhou_then_ok"
     | "always_ungrounded"
     | "programmatic_content_omits_fact_ids"
-    | "valid_chinese_amount",
+    | "valid_chinese_amount"
+    | "first_invalid_chunk_then_ok"
+    | "always_invalid_chunk"
+    | "first_forged_source_then_ok",
   classifierCalls: 0,
   composerCalls: 0,
   retryFeedbacks: [] as unknown[],
+  composerPayloads: [] as Record<string, unknown>[],
 }));
 
 function completion(content: string): LlmCompletionResult {
@@ -284,7 +288,9 @@ function classify(message: string): Record<string, unknown> {
 function compose(payload: Record<string, unknown>): Record<string, unknown> {
   providerControl.composerCalls += 1;
   providerControl.retryFeedbacks.push(payload.retryFeedback);
+  providerControl.composerPayloads.push(structuredClone(payload));
   const facts = payload.facts as Array<{ id: string; value: unknown }>;
+  const chunks = (payload.knowledgeChunks ?? []) as Array<{ id: string }>;
   const plan = payload as unknown as ComposerPlan & {
     recommendationReasonRequirements: Array<{
       entityId: string;
@@ -296,13 +302,6 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
       .map(({ code }) => code)
       .filter((code): code is string => typeof code === "string"),
   );
-  const usedFactIds =
-    providerControl.composerMode === "programmatic_content_omits_fact_ids" &&
-    (plan.status === "catalog" ||
-      (plan.status === "boundary_follow_up" &&
-        traceCodes.has("teacher_outside_city_travel_required")))
-      ? []
-      : facts.map(({ id }) => id);
   const recommendationReasons =
     plan.recommendationReasonRequirements?.map((group) => ({
       entityId: group.entityId,
@@ -353,7 +352,7 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
     : "已根据已确认事实完成核对。";
   if (plan.status === "institution_info") {
     message = plan.entityIds.includes("platform-membership")
-      ? "现有资料未提供会员售价；6980元属于教师L2个人培训。会员不授予订单权限，大赛只提供测试资格，测试通过后才开通订单权限。"
+      ? "现有资料未提供会员售价。会员不授予订单权限，大赛只提供测试资格，测试通过后才开通订单权限。"
       : "学校采购需满足20人起，项目总价5万元起。";
   }
   if (hasOfflineFallback) {
@@ -467,6 +466,20 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
     if (typeof minimumPeople === "number") {
       message = `这个方案至少${minimumPeople}人起。`;
     }
+    const availabilityKnown = facts.find(({ id }) =>
+      id.endsWith(".availabilityKnown")
+    )?.value;
+    if (availabilityKnown === false) {
+      message = "现有资料未提供实时余位，不能用班型规模推断剩余名额。";
+    }
+  }
+
+  if (payload.boundaryCode === "material_contact_not_provided") {
+    message = "现有资料未提供报名联系电话，我不能猜测联系方式。";
+  } else if (payload.boundaryCode === "material_extra_discount_not_provided") {
+    message = "现有资料未提供额外优惠，不能在既有规则之外承诺折扣。";
+  } else if (payload.boundaryCode === "material_comparison_not_provided") {
+    message = "现有资料未提供其他培训机构的可比信息，不能据此判断哪家更好。";
   }
 
   if (
@@ -507,13 +520,24 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
     message = "可为学校整理教师培训采购需求清单。";
   } else if (providerControl.composerMode === "valid_chinese_amount") {
     message = "学校采购需满足20人起，项目总价五万元起。";
+  } else if (
+    providerControl.composerMode === "first_forged_source_then_ok" &&
+    providerControl.composerCalls === 1
+  ) {
+    message = "根据素材A第九章，这个班型已经核对完成。";
   }
 
+  const usedChunkIds =
+    providerControl.composerMode === "always_invalid_chunk" ||
+    (providerControl.composerMode === "first_invalid_chunk_then_ok" &&
+      providerControl.composerCalls === 1)
+      ? ["not-injected-chunk"]
+      : chunks.map(({ id }) => id);
+
   return {
-    message,
-    usedFactIds,
-    actions: (payload.actions as string[]).slice(0, 1),
-    recommendationReasons,
+    answer: message,
+    usedChunkIds,
+    followUpSuggestions: (payload.actions as string[]).slice(0, 1),
   };
 }
 
@@ -589,6 +613,7 @@ beforeEach(() => {
   providerControl.classifierCalls = 0;
   providerControl.composerCalls = 0;
   providerControl.retryFeedbacks = [];
+  providerControl.composerPayloads = [];
 });
 
 describe("TASK-05 real Route Handler integration", () => {
@@ -1624,7 +1649,7 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(unrelated.status).toBe("institution_info");
     expect(unrelated.entityIds).toEqual(["platform-school-procurement"]);
     expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
-    expect(providerControl.composerCalls).toBe(callsBefore);
+    expect(providerControl.composerCalls).toBe(callsBefore + 1);
   });
 
   it("keeps an explicit non-course poetry request unrelated without classifier or business composer", async () => {
@@ -2138,7 +2163,7 @@ describe("TASK-05 real Route Handler integration", () => {
     ]);
   });
 
-  it("keeps canonical school pricing when provider wording is configured differently", async () => {
+  it("accepts grounded Chinese-unit school pricing from the composer", async () => {
     providerControl.composerMode = "valid_chinese_amount";
     const { response } = await postChat({
       action: "message",
@@ -2147,13 +2172,116 @@ describe("TASK-05 real Route Handler integration", () => {
       testMode: false,
     });
     expect(response.error).toBeUndefined();
-    expect(response.message).toContain("5万元起");
-    expect(response.message).not.toContain("五万元");
+    expect(response.message).toContain("五万元起");
     expect(providerControl.classifierCalls).toBe(0);
-    expect(providerControl.composerCalls).toBe(0);
+    expect(providerControl.composerCalls).toBe(1);
   });
 
-  it("answers school procurement without classifier or model provider calls", async () => {
+  it("injects retrieved chunks into the real composer and accepts legal usedChunkIds", async () => {
+    const { response } = await postChat({
+      action: "message",
+      message: "零基础教师，周末有空，工作日不能脱岗",
+      state: createInitialConversationState(),
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(providerControl.composerCalls).toBe(1);
+    const payload = providerControl.composerPayloads[0];
+    const chunks = payload.knowledgeChunks as Array<{
+      id: string;
+      content: string;
+    }>;
+    expect(chunks.length).toBeGreaterThanOrEqual(5);
+    expect(chunks.length).toBeLessThanOrEqual(8);
+    expect(chunks.every(({ content }) => content.length > 0)).toBe(true);
+    expect(payload.currentUserMessage).toBe(
+      "零基础教师，周末有空，工作日不能脱岗",
+    );
+    expect(response.diagnostics?.usedChunkIds).toEqual(
+      response.diagnostics?.retrievedChunkIds,
+    );
+    expect(response.diagnostics).toMatchObject({
+      composerAttempts: 1,
+      modelCallCount: 1,
+      regenerationCount: 0,
+      promptVersion: "task-b02-rag-v1",
+    });
+  });
+
+  it("silently retries one invalid usedChunkId", async () => {
+    providerControl.composerMode = "first_invalid_chunk_then_ok";
+    const { httpStatus, response } = await postChat({
+      action: "message",
+      message: "家长，北京，可参加第一期，希望线下",
+      state: createInitialConversationState(),
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(httpStatus).toBe(200);
+    expect(providerControl.composerCalls).toBe(2);
+    expect(response.diagnostics).toMatchObject({
+      composerAttempts: 2,
+      composerRetries: 1,
+      regenerationCount: 1,
+      groundingFailures: [
+        { attempt: 1, reasonCode: "invalid_chunk_id" },
+      ],
+    });
+    expect(response.diagnostics?.usedChunkIds).not.toContain(
+      "not-injected-chunk",
+    );
+  });
+
+  it("returns a source-free safe fallback after two invalid usedChunkIds", async () => {
+    providerControl.composerMode = "always_invalid_chunk";
+    const { httpStatus, response } = await postChat({
+      action: "message",
+      message: "家长，北京，可参加第一期，希望线下",
+      state: createInitialConversationState(),
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(httpStatus).toBe(503);
+    expect(providerControl.composerCalls).toBe(2);
+    expect(response).toMatchObject({
+      status: "error",
+      sources: [],
+      error: { code: "grounding_rejected", retryable: true },
+    });
+    expect(response.message).not.toContain("来源：");
+    expect(response.diagnostics?.groundingFailures).toEqual([
+      { attempt: 1, reasonCode: "invalid_chunk_id" },
+      { attempt: 2, reasonCode: "invalid_chunk_id" },
+    ]);
+  });
+
+  it("drops a forged chapter and appends only program-derived chunk sources", async () => {
+    providerControl.composerMode = "first_forged_source_then_ok";
+    const { response } = await postChat({
+      action: "message",
+      message: "家长，北京，可参加第一期，希望线下",
+      state: createInitialConversationState(),
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(providerControl.composerCalls).toBe(2);
+    expect(response.message).not.toContain("第九章");
+    expect(response.message).toContain("来源：");
+    expect(response.diagnostics?.groundingFailures).toEqual([
+      {
+        attempt: 1,
+        reasonCode: "source_metadata_forbidden",
+        detailCode: "material_identifier",
+      },
+    ]);
+    expect(response.sources.length).toBeGreaterThan(0);
+  });
+
+  it("answers school procurement without classifier but with a real composer call", async () => {
     const { response } = await postChat({
       action: "message",
       message: "学校计划采购20人的教师培训",
@@ -2166,10 +2294,11 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(response.message).toContain("5万元起");
     expect(response.message).not.toContain("2980");
     expect(providerControl.classifierCalls).toBe(0);
-    expect(providerControl.composerCalls).toBe(0);
+    expect(providerControl.composerCalls).toBe(1);
     expect(response.diagnostics).toMatchObject({
       composerAttempts: 1,
       groundingFailures: [],
+      externalModelCalls: 1,
     });
     expect(
       response.sources.flatMap(({ factIds }) => factIds),
@@ -2182,7 +2311,7 @@ describe("TASK-05 real Route Handler integration", () => {
     );
   });
 
-  it("does not let provider omissions affect deterministic school minimums", async () => {
+  it("retries once when the composer omits school procurement minimums", async () => {
     providerControl.composerMode =
       "first_missing_procurement_minimum_then_ok";
     const { httpStatus, response } = await postChat({
@@ -2195,8 +2324,10 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(httpStatus).toBe(200);
     expect(response.message).toContain("20人起");
     expect(response.message).toContain("5万元起");
-    expect(response.diagnostics?.groundingFailures).toEqual([]);
-    expect(providerControl.composerCalls).toBe(0);
+    expect(response.diagnostics?.groundingFailures).toEqual([
+      { attempt: 1, reasonCode: "missing_required_fact" },
+    ]);
+    expect(providerControl.composerCalls).toBe(2);
   });
 
   it("silently retries an attempted human-advisor impersonation", async () => {
@@ -2665,9 +2796,63 @@ describe("TASK-05 real Route Handler integration", () => {
       expect(response.status).toBe("institution_info");
       expect(response.entityIds).toEqual(["platform-membership"]);
       expect(response.message).toMatch(expectedText);
-      expect(response.sources.flatMap(({ document }) => document)).toEqual(
-        expect.arrayContaining(["B", "C"]),
+      expect(response.sources.every(({ document }) => document === "C")).toBe(
+        true,
       );
+      expect(response.message).not.toContain("6980");
+    },
+  );
+
+  it("answers current real-time availability only from the availability boundary chunk", async () => {
+    const recommended = (
+      await postChat({
+        action: "message",
+        message: "家长，北京，可参加第一期，希望线下",
+        state: createInitialConversationState(),
+        testMode: false,
+      })
+    ).response;
+    providerControl.composerPayloads = [];
+
+    const { response } = await postChat({
+      action: "message",
+      message: "当前实时余位还有多少？",
+      state: recommended.state,
+      testMode: false,
+      diagnostics: true,
+    });
+
+    expect(response.message).toContain("资料未提供实时余位");
+    expect(response.message).not.toMatch(/剩余\s*\d+/u);
+    expect(response.diagnostics?.retrievedChunkIds).toContain(
+      "student-camp-availability-unknown",
+    );
+  });
+
+  it.each([
+    ["报名联系电话是多少？", "报名联系电话"],
+    ["是否还能获得额外优惠？", "额外优惠"],
+    ["与其他培训机构相比哪家更好？", "其他培训机构"],
+  ])(
+    "uses the composer for an out-of-material question without injecting unrelated chunks: %s",
+    async (message, expectedText) => {
+      const { response } = await postChat({
+        action: "message",
+        message,
+        state: createInitialConversationState(),
+        testMode: false,
+        diagnostics: true,
+      });
+
+      expect(response.status).toBe("fact_answer");
+      expect(response.message).toContain("现有资料未提供");
+      expect(response.message).toContain(expectedText);
+      expect(response.sources).toEqual([]);
+      expect(response.diagnostics).toMatchObject({
+        composerAttempts: 1,
+        retrievedChunkIds: [],
+        usedChunkIds: [],
+      });
     },
   );
 });

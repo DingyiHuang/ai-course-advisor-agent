@@ -30,6 +30,13 @@ export {
   TEACHER_PRODUCT_FIELD_SOURCES,
   getTeacherProduct,
 } from "./teachers";
+export {
+  getKnowledgeChunk,
+  hasCompleteChunkSource,
+  KNOWLEDGE_CHUNKS,
+  MATERIAL_TITLES,
+  RUNTIME_KNOWLEDGE_CHUNKS,
+} from "./chunks";
 
 export type KnowledgeDomain = "camp" | "teacher" | "platform";
 

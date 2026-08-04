@@ -1,0 +1,138 @@
+{
+  "scenarioId": "06-membership-price-unavailable",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T02:03:25.098Z",
+  "finishedAt": "2026-08-04T02:03:39.707Z",
+  "elapsedMs": 14609,
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "目前现有资料未提供平台会员（您提到的“专业会员”）的具体售价，因此我无法确认是否为6980元。资料中能确认的是：这项服务被归为平台会员，面向使用课程、工具和社区服务的平台用户；同时，平台会员不授予订单权限。如需进一步了解会员价格，建议后续咨询时补充确认；现有资料暂不包含该金额信息。\n\n来源：素材C《OPC超级个体赋能平台产品白皮书》第一、六章；素材C《OPC超级个体赋能平台产品白皮书》第六章；素材C《OPC超级个体赋能平台产品白皮书》第五、六、七章；素材C《OPC超级个体赋能平台产品白皮书》第五章（会员权益表未提供价格）；素材C《OPC超级个体赋能平台产品白皮书》第五章",
+  "retrievedChunkIds": [
+    "platform-membership-category",
+    "platform-membership-audience",
+    "platform-membership-boundary",
+    "platform-membership-price-unavailable",
+    "platform-membership-order-permission"
+  ],
+  "usedChunkIds": [
+    "platform-membership-category",
+    "platform-membership-audience",
+    "platform-membership-boundary",
+    "platform-membership-price-unavailable",
+    "platform-membership-order-permission"
+  ],
+  "sources": [
+    "素材C《OPC超级个体赋能平台产品白皮书》第一、六章",
+    "素材C《OPC超级个体赋能平台产品白皮书》第六章",
+    "素材C《OPC超级个体赋能平台产品白皮书》第五、六、七章",
+    "素材C《OPC超级个体赋能平台产品白皮书》第五章（会员权益表未提供价格）",
+    "素材C《OPC超级个体赋能平台产品白皮书》第五章"
+  ],
+  "modelCallCount": 1,
+  "regenerationCount": 0,
+  "expected": "说明会员价格未提供，正文不得出现教师L2价格6980元。",
+  "actual": {
+    "status": "institution_info",
+    "entityIds": [
+      "platform-membership"
+    ],
+    "flowResults": [
+      {
+        "label": "isolated",
+        "answer": "目前现有资料未提供平台会员（您提到的“专业会员”）的具体售价，因此我无法确认是否为6980元。资料中能确认的是：这项服务被归为平台会员，面向使用课程、工具和社区服务的平台用户；同时，平台会员不授予订单权限。如需进一步了解会员价格，建议后续咨询时补充确认；现有资料暂不包含该金额信息。\n\n来源：素材C《OPC超级个体赋能平台产品白皮书》第一、六章；素材C《OPC超级个体赋能平台产品白皮书》第六章；素材C《OPC超级个体赋能平台产品白皮书》第五、六、七章；素材C《OPC超级个体赋能平台产品白皮书》第五章（会员权益表未提供价格）；素材C《OPC超级个体赋能平台产品白皮书》第五章",
+        "retrievedChunkIds": [
+          "platform-membership-category",
+          "platform-membership-audience",
+          "platform-membership-boundary",
+          "platform-membership-price-unavailable",
+          "platform-membership-order-permission"
+        ],
+        "usedChunkIds": [
+          "platform-membership-category",
+          "platform-membership-audience",
+          "platform-membership-boundary",
+          "platform-membership-price-unavailable",
+          "platform-membership-order-permission"
+        ],
+        "sources": [
+          "素材C《OPC超级个体赋能平台产品白皮书》第一、六章",
+          "素材C《OPC超级个体赋能平台产品白皮书》第六章",
+          "素材C《OPC超级个体赋能平台产品白皮书》第五、六、七章",
+          "素材C《OPC超级个体赋能平台产品白皮书》第五章（会员权益表未提供价格）",
+          "素材C《OPC超级个体赋能平台产品白皮书》第五章"
+        ],
+        "sourceDocuments": [
+          "C",
+          "C",
+          "C",
+          "C",
+          "C"
+        ],
+        "entityIds": [
+          "platform-membership"
+        ],
+        "modelCallCount": 1,
+        "regenerationCount": 0
+      }
+    ],
+    "checks": [
+      {
+        "label": "usedChunkIds全部来自本轮retrievedChunkIds",
+        "pass": true
+      },
+      {
+        "label": "来源由程序追加且与usedChunkIds对应",
+        "pass": true
+      },
+      {
+        "label": "明确会员售价未提供",
+        "pass": true
+      },
+      {
+        "label": "未把6980元表述为教师L2课程价格示例",
+        "pass": true
+      },
+      {
+        "label": "来源只属于素材C",
+        "pass": true
+      }
+    ]
+  },
+  "conclusion": "通过",
+  "requestStages": [
+    {
+      "stage": "isolated:create_session",
+      "elapsedMs": 299,
+      "httpStatus": 201,
+      "publicErrorCode": null,
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "routeLatencyMs": null
+    },
+    {
+      "stage": "isolated:target_question",
+      "elapsedMs": 14282,
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "routeLatencyMs": 14261
+    }
+  ],
+  "transientFailure": false,
+  "passed": true,
+  "programFallbackCount": 0,
+  "recheckHistory": [
+    {
+      "recheckedAt": "2026-08-04T02:08:05.513Z",
+      "previousConclusion": "失败",
+      "reason": "运行器断言修正后对已保存公开证据复核；未发起模型请求。"
+    }
+  ],
+  "attemptCount": 1,
+  "firstAttemptPassed": true,
+  "transientErrorCount": 0,
+  "recoveredAfterTransientFailure": false,
+  "reclassifiedAfterRunnerCheckFix": true,
+  "recheckReason": "运行器断言修正后对已保存公开证据复核；未发起模型请求。"
+}

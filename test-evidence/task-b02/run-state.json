@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "mode": "local real model; testMode=false",
+  "updatedAt": "2026-08-04T02:18:44.256Z",
+  "scenarios": {
+    "01-student-day-five": {
+      "status": "passed",
+      "attemptCount": 1,
+      "transientErrorCount": 0,
+      "conclusion": "通过"
+    },
+    "06-membership-price-unavailable": {
+      "status": "passed",
+      "attemptCount": 1,
+      "transientErrorCount": 0,
+      "conclusion": "通过",
+      "reclassifiedAfterRunnerCheckFix": true
+    },
+    "07-live-availability-unavailable": {
+      "status": "passed",
+      "attemptCount": 1,
+      "transientErrorCount": 0,
+      "conclusion": "通过"
+    },
+    "02-student-preparation-followup": {
+      "status": "passed",
+      "attemptCount": 1,
+      "transientErrorCount": 0,
+      "conclusion": "通过"
+    },
+    "03-teacher-l2-weekend-schedule": {
+      "status": "passed",
+      "attemptCount": 1,
+      "transientErrorCount": 0,
+      "conclusion": "通过"
+    },
+    "04-teacher-device": {
+      "status": "superseded",
+      "attemptCount": 3,
+      "transientErrorCount": 2,
+      "conclusion": "原运行器未先建立教师身份上下文，证据保留但不计入正式统计。",
+      "excludedFromSummary": true,
+      "supersededBy": "04-teacher-device-context"
+    },
+    "05-school-procurement-pricing": {
+      "status": "passed",
+      "attemptCount": 1,
+      "transientErrorCount": 0,
+      "conclusion": "通过"
+    },
+    "04-teacher-device-context": {
+      "status": "passed",
+      "attemptCount": 1,
+      "transientErrorCount": 0,
+      "conclusion": "通过"
+    },
+    "08-contact-unavailable": {
+      "status": "passed",
+      "attemptCount": 1,
+      "transientErrorCount": 0,
+      "conclusion": "通过"
+    },
+    "09-extra-discount-unavailable": {
+      "status": "passed",
+      "attemptCount": 1,
+      "transientErrorCount": 0,
+      "conclusion": "通过"
+    },
+    "10-provider-comparison-unavailable": {
+      "status": "passed",
+      "attemptCount": 1,
+      "transientErrorCount": 0,
+      "conclusion": "通过"
+    },
+    "11-dynamic-teacher-paraphrases": {
+      "status": "passed",
+      "attemptCount": 1,
+      "transientErrorCount": 0,
+      "conclusion": "通过"
+    }
+  }
+}

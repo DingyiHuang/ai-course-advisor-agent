@@ -26,7 +26,11 @@ export type DeterministicTurnRouting = {
   intent?: ConversationIntent;
   factTopics: FactTopic[];
   referencedEntityIds?: string[];
-  boundaryCode?: "unsupported_external_claims";
+  boundaryCode?:
+    | "unsupported_external_claims"
+    | "material_contact_not_provided"
+    | "material_extra_discount_not_provided"
+    | "material_comparison_not_provided";
   catalogRequested?: boolean;
 };
 
@@ -270,6 +274,22 @@ function unsupportedExternalClaims(message: string): boolean {
   );
 }
 
+function unsupportedMaterialInformation(
+  message: string,
+): DeterministicTurnRouting["boundaryCode"] | undefined {
+  const text = normalized(message);
+  if (/(?:报名|咨询).{0,8}(?:联系电话|电话|手机号|微信|联系方式)/u.test(text)) {
+    return "material_contact_not_provided";
+  }
+  if (/(?:额外|更多|另外|还能).{0,6}(?:优惠|折扣|减免)/u.test(text)) {
+    return "material_extra_discount_not_provided";
+  }
+  if (/(?:与|和).{0,8}(?:其他|别的).{0,6}(?:培训机构|课程机构).{0,8}(?:相比|比较|哪家更好|哪个好)/u.test(text)) {
+    return "material_comparison_not_provided";
+  }
+  return undefined;
+}
+
 function refusesFurtherQuestions(message: string): boolean {
   return /(?:不想|不要|拒绝).{0,8}(?:再|继续)?(?:回答|补充)|不再补充/u.test(
     normalized(message),
@@ -425,7 +445,7 @@ function explicitTeacherConstraints(
   } else if (/(?:完成过|已经完成|已完成|学完)l1/iu.test(text)) {
     patch.startingLevel = "L1";
     patch.prerequisiteStatus = "met";
-  } else if (/(?:零基础|没学过|刚入门|学过一点)/u.test(text)) {
+  } else if (/(?:零基础|没学过|刚入门|刚开始接触|学过一点)/u.test(text)) {
     patch.startingLevel = "beginner";
   }
   if (/(?:已|已经)?具备l1同等能力|通过l1同等能力测评/iu.test(text)) {
@@ -460,7 +480,7 @@ function explicitTeacherConstraints(
     patch.availableProductIds = TEACHER_PRODUCTS.map(({ id }) => id);
   }
   if (
-    /(?:工作日)?(?:不能|不便|无法).{0,8}(?:连续|脱岗|请假|参加)|只能周末|平时没有时间|只能分段上课/u.test(
+    /(?:工作日)?(?:不能|不便|无法).{0,8}(?:连续|脱岗|请假|参加)|只能周末|平时没有时间|平日走不开|工作日走不开|只能分段上课/u.test(
       text,
     )
   ) {
@@ -570,7 +590,7 @@ function currentEntityFactTopics(
       text,
     );
   const isEllipticalCurrentQuestion =
-    /^(?:多少钱|费用(?:多少|是多少|呢)?|价格(?:多少|是多少|呢)?|总价(?:多少|是多少|呢)?|什么时候(?:报名|上课)?|哪天(?:报名|上课)?|在哪里(?:上课)?|在哪儿(?:上课)?|哪里上课|需要带(?:什么|电脑|笔记本电脑|设备)(?:吗)?|准备什么|怎么报名|如何报名|有回放吗|可以回放吗|能回放吗|可以退款吗|能退款吗|还有名额吗|有名额吗|课程内容是什么|学什么|需要什么基础|有什么前置条件|如果.{0,16}(?:加|含|选择)食宿.{0,12}(?:总价(?:多少|是多少)?|多少钱))[?？]?$/u.test(
+    /^(?:多少钱|费用(?:多少|是多少|呢)?|价格(?:多少|是多少|呢)?|总价(?:多少|是多少|呢)?|什么时候(?:报名|上课)?|哪天(?:报名|上课)?|在哪里(?:上课)?|在哪儿(?:上课)?|哪里上课|需要带(?:什么|电脑|笔记本电脑|设备)(?:吗)?|准备什么|怎么报名|如何报名|有回放吗|可以回放吗|能回放吗|可以退款吗|能退款吗|还有名额吗|有名额吗|(?:当前)?(?:实时)?余位(?:还有)?(?:多少|吗)?|还有多少余位|课程内容是什么|第\s*[一二三四五六七1234567]\s*天学什么|学什么|需要什么基础|有什么前置条件|如果.{0,16}(?:加|含|选择)食宿.{0,12}(?:总价(?:多少|是多少)?|多少钱))[?？]?$/u.test(
       text,
     );
   if (!hasCurrentReference && !isEllipticalCurrentQuestion) {
@@ -678,6 +698,16 @@ export function resolveDeterministicTurnRouting(input: {
       intent: "unrelated",
       factTopics: [],
       boundaryCode: "unsupported_external_claims",
+    };
+  }
+  const unsupportedMaterial = unsupportedMaterialInformation(input.message);
+  if (unsupportedMaterial) {
+    return {
+      studentConstraints: {},
+      teacherConstraints: {},
+      intent: "fact_question",
+      factTopics: [],
+      boundaryCode: unsupportedMaterial,
     };
   }
   if (refusesFurtherQuestions(input.message)) {

@@ -3,6 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 import type { ChatResponse } from "@/lib/domain/conversation";
+import type { ShortHistoryItem } from "@/lib/domain/conversation";
 import type { ConversationStore } from "./conversationStore";
 import {
   ConversationStoreError,
@@ -22,7 +23,28 @@ export type PersistedTurn = {
   store: ConversationStore;
   sessionId: string;
   clientRequestId: string;
+  recentHistory: ShortHistoryItem[];
 };
+
+function withoutProgrammaticSources(content: string): string {
+  return content.replace(/\n\n来源：[^\n]+$/u, "").trim();
+}
+
+export function recentConversationHistory(
+  messages: ChatMessage[],
+  limit = 8,
+): ShortHistoryItem[] {
+  return messages
+    .filter(
+      (message): message is ChatMessage & { role: "user" | "assistant" } =>
+        message.role === "user" || message.role === "assistant",
+    )
+    .slice(-Math.max(1, Math.min(8, limit)))
+    .map(({ role, content }) => ({
+      role,
+      content: withoutProgrammaticSources(content).slice(0, 2_000),
+    }));
+}
 
 function stableMessageId(clientRequestId: string, phase: string): string {
   const bytes = createHash("sha256")
@@ -82,6 +104,7 @@ export async function preparePersistedTurn(input: {
   }
 
   const existing = await input.store.getMessages(input.body.sessionId);
+  const recentHistory = recentConversationHistory(existing);
   if (
     typeof input.body.message === "string" &&
     input.body.message.trim().length > 0
@@ -102,6 +125,7 @@ export async function preparePersistedTurn(input: {
     store: input.store,
     sessionId: input.body.sessionId,
     clientRequestId: input.body.clientRequestId,
+    recentHistory,
   };
 }
 

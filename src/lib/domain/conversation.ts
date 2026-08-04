@@ -110,6 +110,8 @@ export type ComposerPlan = {
 
 export type ComposerOutput = {
   message: string;
+  usedChunkIds?: string[];
+  followUpSuggestions?: string[];
   usedFactIds: string[];
   actions: string[];
   recommendationReasons: RecommendationReasonGroup[];
@@ -184,7 +186,9 @@ export type ClassifierCorrection = {
 export type GroundingReasonCode =
   | "invalid_decision_trace"
   | "invalid_fact_id"
+  | "invalid_chunk_id"
   | "missing_required_fact"
+  | "missing_required_chunk"
   | "ungrounded_amount"
   | "ungrounded_date"
   | "source_metadata_forbidden"
@@ -216,6 +220,11 @@ export type TurnDiagnostics = {
     reasonCode: GroundingReasonCode;
     detailCode?: string;
   }>;
+  retrievedChunkIds: string[];
+  usedChunkIds: string[];
+  modelCallCount: number;
+  regenerationCount: number;
+  promptVersion: string;
   composerAttempts: number;
   composerRetries: number;
   externalModelCalls: number;

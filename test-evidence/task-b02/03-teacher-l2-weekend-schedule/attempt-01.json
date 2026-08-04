@@ -1,0 +1,107 @@
+{
+  "scenarioId": "03-teacher-l2-weekend-schedule",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T02:10:03.336Z",
+  "finishedAt": "2026-08-04T02:10:12.122Z",
+  "elapsedMs": 8786,
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "L2周末研修班的上课安排为：8月8日线上8课时，8月9日线下8课时，8月15日上午线上4课时，共20课时。报名截止日期为2026年8月1日。线上部分使用腾讯会议，线下部分为线下工作坊。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二、四章",
+  "retrievedChunkIds": [
+    "teacher-l2-weekend-schedule",
+    "teacher-product-overview",
+    "teacher-l2-pricing",
+    "teacher-l2-prerequisite",
+    "teacher-l2-curriculum",
+    "teacher-device-and-replay"
+  ],
+  "usedChunkIds": [
+    "teacher-l2-weekend-schedule"
+  ],
+  "sources": [
+    "素材B《初高中教师AI素养培训体系介绍》第二、四章"
+  ],
+  "modelCallCount": 1,
+  "regenerationCount": 0,
+  "expected": "给出8月8日、8月9日和8月15日，不混用其他班型。",
+  "actual": {
+    "status": "fact_answer",
+    "entityIds": [
+      "teacher-l2-weekend"
+    ],
+    "flowResults": [
+      {
+        "label": "isolated",
+        "answer": "L2周末研修班的上课安排为：8月8日线上8课时，8月9日线下8课时，8月15日上午线上4课时，共20课时。报名截止日期为2026年8月1日。线上部分使用腾讯会议，线下部分为线下工作坊。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第二、四章",
+        "retrievedChunkIds": [
+          "teacher-l2-weekend-schedule",
+          "teacher-product-overview",
+          "teacher-l2-pricing",
+          "teacher-l2-prerequisite",
+          "teacher-l2-curriculum",
+          "teacher-device-and-replay"
+        ],
+        "usedChunkIds": [
+          "teacher-l2-weekend-schedule"
+        ],
+        "sources": [
+          "素材B《初高中教师AI素养培训体系介绍》第二、四章"
+        ],
+        "sourceDocuments": [
+          "B"
+        ],
+        "entityIds": [
+          "teacher-l2-weekend"
+        ],
+        "modelCallCount": 1,
+        "regenerationCount": 0
+      }
+    ],
+    "checks": [
+      {
+        "label": "usedChunkIds全部来自本轮retrievedChunkIds",
+        "pass": true
+      },
+      {
+        "label": "来源由程序追加且与usedChunkIds对应",
+        "pass": true
+      },
+      {
+        "label": "包含三天课程日期",
+        "pass": true
+      },
+      {
+        "label": "实体为L2周末研修班",
+        "pass": true
+      },
+      {
+        "label": "来源只属于素材B",
+        "pass": true
+      }
+    ]
+  },
+  "conclusion": "通过",
+  "requestStages": [
+    {
+      "stage": "isolated:create_session",
+      "elapsedMs": 1077,
+      "httpStatus": 201,
+      "publicErrorCode": null,
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "routeLatencyMs": null
+    },
+    {
+      "stage": "isolated:target_question",
+      "elapsedMs": 7704,
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "routeLatencyMs": 7688
+    }
+  ],
+  "transientFailure": false,
+  "passed": true,
+  "programFallbackCount": 0
+}

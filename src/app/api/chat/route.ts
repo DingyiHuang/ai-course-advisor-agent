@@ -1,6 +1,9 @@
 import { runConversationTurn } from "@/lib/conversation/orchestrator";
 import { createClassifier } from "@/lib/llm/classifier";
-import { createComposer } from "@/lib/llm/composer";
+import {
+  COMPOSER_PROMPT_VERSION,
+  createComposer,
+} from "@/lib/llm/composer";
 import { createRuntimeLlmClient } from "@/lib/llm/runtime";
 import { shanghaiToday } from "@/lib/time/shanghai";
 import type { ConversationState, TurnDiagnostics } from "@/lib/domain/conversation";
@@ -82,6 +85,11 @@ export async function POST(request: Request): Promise<Response> {
         entityIds: [],
         decisionTrace: [],
         groundingFailures: [],
+        retrievedChunkIds: [],
+        usedChunkIds: [],
+        modelCallCount: 0,
+        regenerationCount: 0,
+        promptVersion: COMPOSER_PROMPT_VERSION,
         composerAttempts: 0,
         composerRetries: 0,
         externalModelCalls: 0,
@@ -103,7 +111,10 @@ export async function POST(request: Request): Promise<Response> {
       const client = createRuntimeLlmClient();
       runtimeClient = {
         async complete(request) {
-          if (diagnostics) diagnostics.externalModelCalls += 1;
+          if (diagnostics) {
+            diagnostics.externalModelCalls += 1;
+            diagnostics.modelCallCount += 1;
+          }
           return client.complete(request);
         },
       };
@@ -117,9 +128,10 @@ export async function POST(request: Request): Promise<Response> {
         createClassifier(getClient()).classify(message, state),
     },
     composer: {
-      composeOnce: (plan, history) =>
-        createComposer(getClient()).composeOnce(plan, history),
+      composeOnce: (plan, history, context) =>
+        createComposer(getClient()).composeOnce(plan, history, context),
     },
+    recentHistory: persistedTurn?.recentHistory,
     diagnostics,
   });
   try {
@@ -144,6 +156,7 @@ export async function POST(request: Request): Promise<Response> {
     diagnostics.pendingQuestionKeys = [...response.state.pendingQuestionKeys];
     diagnostics.entityIds = [...response.entityIds];
     diagnostics.finalStatus = response.status;
+    diagnostics.regenerationCount = diagnostics.composerRetries;
     diagnostics.routeLatencyMs = Math.round(performance.now() - startedAt);
     for (const field of [
       "contextParsingMs",

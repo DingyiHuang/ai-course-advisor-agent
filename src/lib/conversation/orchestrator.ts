@@ -10,9 +10,11 @@ import type {
 } from "@/lib/domain/conversation";
 import type { BusinessDate } from "@/lib/time/shanghai";
 import {
-  collectSources,
-  formatSourceFootnotes,
+  collectChunkSources,
+  formatChunkSourceFootnotes,
 } from "@/lib/citations";
+import type { KnowledgeChunk } from "@/lib/domain/knowledge";
+import { retrieveKnowledgeChunks } from "@/lib/retrieval/knowledgeRetriever";
 import {
   appendHistory,
   collectedConstraintKeys,
@@ -20,7 +22,11 @@ import {
   sanitizeConversationState,
   transitionConversationDomain,
 } from "./session";
-import { buildCatalogPlan, buildComposerPlan } from "./plan";
+import {
+  buildCatalogPlan,
+  buildComposerPlan,
+  buildMaterialBoundaryPlan,
+} from "./plan";
 import { buildChatPresentation } from "./presentation";
 import { resolveDeterministicTurnRouting } from "./routing";
 import {
@@ -42,6 +48,7 @@ import {
   inferFactIdsForMentionedHighRiskValues,
   GroundingError,
   validateUsedFactIds,
+  validateUsedChunkIds,
 } from "@/lib/validation/grounding";
 import {
   InputValidationError,
@@ -57,8 +64,10 @@ export type ConversationDependencies = {
     composeOnce(
       plan: ComposerPlan,
       history: ConversationState["shortHistory"],
+      context?: { userMessage: string; knowledgeChunks: KnowledgeChunk[] },
     ): Promise<ComposerOutput>;
   };
+  recentHistory?: ConversationState["shortHistory"];
   diagnostics?: TurnDiagnostics;
 };
 
@@ -942,7 +951,24 @@ function validateComposerOutput(input: {
   output: LlmComposerOutput;
   plan: ComposerPlan;
   userMessage: string;
-}): { output: LlmComposerOutput; usedFactIds: string[] } {
+  injectedChunks: KnowledgeChunk[];
+}): {
+  output: LlmComposerOutput;
+  usedFactIds: string[];
+  usedChunkIds: string[];
+} {
+  const legacyChunkIds = input.output.usedChunkIds
+    ? input.output.usedChunkIds
+    : input.injectedChunks
+        .filter((chunk) =>
+          chunk.factIds.some((factId) => input.output.usedFactIds.includes(factId)),
+        )
+        .map(({ id }) => id);
+  const usedChunkIds = validateUsedChunkIds(
+    legacyChunkIds,
+    input.injectedChunks,
+    input.plan.facts.length > 0 && input.injectedChunks.length > 0,
+  );
   assertComposerDidNotWriteSources(input.output.message);
   for (const group of input.output.recommendationReasons) {
     for (const item of group.reasons) {
@@ -1006,7 +1032,8 @@ function validateComposerOutput(input: {
         group.reasons.map(({ reason }) => reason),
       ),
     ].join("\n"),
-    userMessage: input.userMessage,
+    userMessage:
+      input.plan.domain === "platform" ? undefined : input.userMessage,
     facts: input.plan.facts.filter(({ id }) => usedFactIds.includes(id)),
     calculations: input.plan.calculations,
   });
@@ -1031,7 +1058,11 @@ function validateComposerOutput(input: {
       "Composer introduced an unsupported action",
     );
   }
-  return { output: input.output, usedFactIds };
+  return {
+    output: { ...input.output, usedChunkIds },
+    usedFactIds,
+    usedChunkIds,
+  };
 }
 
 function retryFeedbackFor(error: unknown): string | undefined {
@@ -1074,8 +1105,12 @@ function retryFeedbackFor(error: unknown): string | undefined {
       "只按已确认约束和decisionTrace生成，不得改变或新增约束。",
     invalid_fact_id:
       "usedFactIds只能使用本次facts中提供的合法ID。",
+    invalid_chunk_id:
+      "usedChunkIds只能使用本轮availableChunkIds中的合法ID。",
     missing_required_fact:
       "补齐decisionTrace要求的事实，并在usedFactIds中列出实际使用的对应ID。",
+    missing_required_chunk:
+      "知识型回答必须使用至少一个已注入知识块，并在usedChunkIds中列出实际使用的ID。",
     ungrounded_amount:
       "删除或改正facts与calculations之外的金额，只使用已提供金额。",
     ungrounded_date:
@@ -1106,6 +1141,30 @@ async function completeComposerPlan(input: {
   userMessage: string;
   dependencies: ConversationDependencies;
 }): Promise<ChatResponse> {
+  const recentHistory = (
+    input.dependencies.recentHistory ?? input.workingState.shortHistory
+  ).slice(-8);
+  const retrievedChunks = retrieveKnowledgeChunks({
+    message: input.userMessage,
+    domain: input.workingState.domain,
+    entityIds: [
+      ...new Set([
+        ...(input.workingState.selectedEntityId
+          ? [input.workingState.selectedEntityId]
+          : []),
+        ...input.plan.entityIds,
+        ...input.workingState.lastRecommendationIds,
+      ]),
+    ],
+    confirmedConstraints: input.plan.confirmedConstraints,
+    pendingQuestionKeys: input.plan.nextQuestionKeys,
+    history: recentHistory,
+  });
+  if (input.dependencies.diagnostics) {
+    input.dependencies.diagnostics.retrievedChunkIds = retrievedChunks.map(
+      ({ id }) => id,
+    );
+  }
   const initialGroundingStartedAt = performance.now();
   try {
     assertPlanMatchesConfirmedState(input.workingState, input.plan);
@@ -1121,7 +1180,11 @@ async function completeComposerPlan(input: {
     );
   }
   let generated:
-    | { output: LlmComposerOutput; usedFactIds: string[] }
+    | {
+        output: LlmComposerOutput;
+        usedFactIds: string[];
+        usedChunkIds: string[];
+      }
     | undefined;
   let lastError: unknown;
   let retryFeedback: string | undefined;
@@ -1140,7 +1203,11 @@ async function completeComposerPlan(input: {
           retryFeedback
             ? { ...input.plan, retryFeedback }
             : input.plan,
-          input.workingState.shortHistory,
+          recentHistory,
+          {
+            userMessage: input.userMessage,
+            knowledgeChunks: retrievedChunks,
+          },
         );
       } finally {
         addDiagnosticDuration(
@@ -1160,6 +1227,7 @@ async function completeComposerPlan(input: {
             output,
             plan: input.plan,
             userMessage: input.userMessage,
+            injectedChunks: retrievedChunks,
           });
         } catch (error) {
           const canNormalizeLocally =
@@ -1180,6 +1248,7 @@ async function completeComposerPlan(input: {
               output: normalizedOutput,
               plan: input.plan,
               userMessage: input.userMessage,
+              injectedChunks: retrievedChunks,
             });
           } catch {
             throw error;
@@ -1219,12 +1288,18 @@ async function completeComposerPlan(input: {
   }
   if (!generated) throw lastError;
 
-  const sources = collectSources(generated.usedFactIds);
+  const sources = collectChunkSources(
+    generated.usedChunkIds,
+    generated.usedFactIds,
+  );
   const prefixes = [input.plan.requiredPrefix].filter(
     (item): item is string => Boolean(item),
   );
   const body = [...prefixes, generated.output.message].join("\n");
-  const finalMessage = `${body}${formatSourceFootnotes(generated.usedFactIds)}`;
+  const finalMessage = `${body}${formatChunkSourceFootnotes(generated.usedChunkIds)}`;
+  if (input.dependencies.diagnostics) {
+    input.dependencies.diagnostics.usedChunkIds = [...generated.usedChunkIds];
+  }
   let state = prepareStateForPlan(input.workingState, input.plan);
   state = appendHistory(state, { role: "assistant", content: body });
 
@@ -1478,6 +1553,35 @@ export async function runConversationTurn(
         dependencies.diagnostics.effectiveIntent = "unrelated";
       }
       return unsupportedExternalClaimsResponse(originalState);
+    }
+    if (
+      deterministic.boundaryCode === "material_contact_not_provided" ||
+      deterministic.boundaryCode === "material_extra_discount_not_provided" ||
+      deterministic.boundaryCode === "material_comparison_not_provided"
+    ) {
+      const workingState = appendHistory(originalState, {
+        role: "user",
+        content: message,
+      });
+      const plan = measureRuleExecution(dependencies, () =>
+        buildMaterialBoundaryPlan({
+          state: workingState,
+          boundaryCode: deterministic.boundaryCode as
+            | "material_contact_not_provided"
+            | "material_extra_discount_not_provided"
+            | "material_comparison_not_provided",
+        }),
+      );
+      if (dependencies.diagnostics) {
+        dependencies.diagnostics.effectiveIntent = "fact_question";
+      }
+      recordPlanDiagnostics(dependencies, workingState, plan);
+      return await completeComposerPlan({
+        workingState,
+        plan,
+        userMessage: message,
+        dependencies,
+      });
     }
     if (deterministic.intent === "unrelated") {
       const plan = measureRuleExecution(dependencies, () =>

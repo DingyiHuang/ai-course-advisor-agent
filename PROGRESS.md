@@ -111,3 +111,18 @@
 - Preview 真实联调：创建会话、保存用户与 AI 消息、按 `user > assistant` 顺序查询、刷新恢复同一会话和完整消息、第二会话隔离、浏览器仅保存 `ai-course-advisor.sessionId`、标准 JSON 错误脱敏均通过。变量核对仅检查名称及 Preview 适用环境，未读取、显示或记录变量值。
 H5检查：Supabase五项全部达成，决定继续使用Supabase。当前CONVERSATION_STORE=supabase。
 - 第三阶段有效工时停止：2026-08-03 16:19:41（Asia/Shanghai），本阶段 0 小时 15 分 38 秒；H5 累计有效工时 1 小时 0 分 36 秒。完成后停止在 TASK-B01，不进入 TASK-B02。
+
+## TASK-B02 检索增强的资料注入与 LLM 结构化生成
+
+- 开始时间：2026-08-03 16:30:59（Asia/Shanghai）。
+- 开始检查：当前分支 `feature/b-level-v2`，HEAD 与 `origin/feature/b-level-v2` 均为 `6dd3097aef1d1dcbfb8db2fd3b676251381768b8`，工作区干净；`origin/main` 仍为 `319d709dce71406cd87c0f9c60fa327b284334f5`。
+- TASK-B01 保护标签：本地注释标签 `task-b01-complete-20260803` 已创建并核验指向 `6dd3097aef1d1dcbfb8db2fd3b676251381768b8`，未指向较早的 `34b873d929e076ddc1545c2a36effc27e71680f9` 功能提交。
+- TASK-B01 Preview：部署 `dpl_EfvwSToiRhPGtVQiwetFGASWRnQb` 经 Vercel 只读接口复核仍为 `READY`；未部署新 Preview，未修改 Production。
+- TASK-B02实现：新增83个带稳定ID和来源的类型化知识块，素材A/学生24个、素材B/教师19个、素材C/机构40个；检索器每轮按当前身份、实体、约束、待追问和最近会话历史选择5—8块，资料外问题不为凑数注入无关块。
+- 生成链路固定为四步：检索知识块；注入自然语言转述资料与最近会话；LLM以`temperature=0.6`严格生成`answer`、`usedChunkIds`和`followUpSuggestions`；程序校验chunk白名单、金额、日期、来源与推荐一致性后，根据`usedChunkIds`追加来源。classifier保持低温，ConversationStore选型和TASK-B01存储边界未修改。
+- TASK-B02E真实验证运行器：Node.js直接发送UTF-8 JSON，串行并发1；每个请求后原子保存attempt与`run-state.json`，每个场景独立session，瞬时错误使用新会话按10秒/30秒等待且最多3次，场景间等待8秒、每3场景暂停30秒；通过检查点不会重复调用。
+- 三组小批与三批正式真实模型验证全部完成：11/11功能场景通过，首次请求成功率100%，库内知识6/6、资料外拒答4/4、教师同义表达1/1通过；同义表达均推荐`teacher-l1-weekend`，5个关键chunk重合且正文不同。会员回答明确价格未提供，没有把6980元作为教师L2价格示例；实时余位明确资料未提供。
+- 运行器审计保留：旧教师设备验证因未先建立教师身份，检索混入学生块，3份attempt原样保留并标记为superseded，不计入功能准确率；其中2次`model_unavailable`分别保留HTTP状态、公开错误码、耗时和应用模型调用次数。修正后的教师身份场景首次通过，6个检索块全部属于教师域。汇总仍统计旧证据的2次瞬时错误、2次grounding重生成和2次程序兜底，不隐藏失败尝试。
+- 真实证据：`test-evidence/task-b02/`包含`run-state.json`、`summary.json`、`summary.md`、11个正式结果目录和1个superseded审计目录，共14份attempt；无临时半截文件，所有正式场景`usedChunkIds`均为本轮`retrievedChunkIds`子集。
+- 最终本地门禁（2026-08-04）：26个测试文件、326条测试全部通过，原有301条未删除、跳过或弱化；TypeScript、ESLint、Next.js 16.2.11 Production Build、`git diff --check`、敏感信息扫描、原始Word扫描和长段原文扫描全部通过。构建仅保留既有Local JSON会话存储的Turbopack文件追踪警告。
+- TASK-B02有效工作于2026-08-04 10:25:20（Asia/Shanghai）完成本地验证；未部署Preview或Production，未推送，未合并`main`，未进入TASK-B03。

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ComposerPlan, GroundedFact } from "@/lib/domain/conversation";
-import { createComposer, resolveComposerRoute } from "@/lib/llm/composer";
+import {
+  createComposer,
+  parseComposerOutput,
+  resolveComposerRoute,
+} from "@/lib/llm/composer";
 import {
   assertComposerDidNotMakeExternalCommitment,
   assertComposerDidNotImpersonateHuman,
@@ -18,6 +22,7 @@ import { extractMoneyAmounts } from "@/lib/validation/money";
 import { formatSourceFootnotes } from "@/lib/citations";
 import { completion, ScriptedLlmClient } from "./helpers/scriptedLlm";
 import { createInitialConversationState } from "@/lib/conversation/session";
+import { getKnowledgeChunk } from "@/lib/knowledge";
 
 function emptyPlan(overrides: Partial<ComposerPlan> = {}): ComposerPlan {
   return {
@@ -37,6 +42,28 @@ function emptyPlan(overrides: Partial<ComposerPlan> = {}): ComposerPlan {
 }
 
 describe("composer routing and contracts", () => {
+  it("accepts only the strict TASK-B02 three-field JSON schema", () => {
+    expect(
+      parseComposerOutput(
+        '{"answer":"已核对。","usedChunkIds":["chunk-1"],"followUpSuggestions":[]}',
+      ),
+    ).toEqual({
+      answer: "已核对。",
+      usedChunkIds: ["chunk-1"],
+      followUpSuggestions: [],
+    });
+    expect(() =>
+      parseComposerOutput(
+        '{"answer":"已核对。","usedChunkIds":[],"followUpSuggestions":[],"source":"第九章"}',
+      ),
+    ).toThrow("only the required fields");
+    expect(() =>
+      parseComposerOutput(
+        '{"message":"旧格式","usedFactIds":[],"actions":[]}',
+      ),
+    ).toThrow("only the required fields");
+  });
+
   it("routes nextQuestionKeys before a terminal-looking status", () => {
     expect(
       resolveComposerRoute({
@@ -47,18 +74,24 @@ describe("composer routing and contracts", () => {
   });
 
   it("uses temperature 0.6 and permits different wording for the same facts", async () => {
+    const pricingChunk = getKnowledgeChunk("student-camp-p1-bj-pricing");
+    if (!pricingChunk) throw new Error("pricing chunk fixture is missing");
     const firstClient = new ScriptedLlmClient([
-      completion('{"message":"费用信息已核对。","usedFactIds":["camp-p1-bj.standardPrice"],"actions":[]}'),
+      completion('{"answer":"费用信息已核对。","usedChunkIds":["student-camp-p1-bj-pricing"],"followUpSuggestions":[]}'),
     ]);
     const secondClient = new ScriptedLlmClient([
-      completion('{"message":"我已为你确认课程费用。","usedFactIds":["camp-p1-bj.standardPrice"],"actions":[]}'),
+      completion('{"answer":"我已为你确认课程费用。","usedChunkIds":["student-camp-p1-bj-pricing"],"followUpSuggestions":[]}'),
     ]);
     const facts: GroundedFact[] = [
       { id: "camp-p1-bj.standardPrice", label: "标准价格", value: 6980 },
     ];
     const plan = emptyPlan({ status: "fact_answer", route: "fact_answer", facts });
-    const first = await createComposer(firstClient).composeOnce(plan, []);
-    const second = await createComposer(secondClient).composeOnce(plan, []);
+    const context = {
+      userMessage: "这个班多少钱？",
+      knowledgeChunks: [pricingChunk],
+    };
+    const first = await createComposer(firstClient).composeOnce(plan, [], context);
+    const second = await createComposer(secondClient).composeOnce(plan, [], context);
 
     expect(firstClient.calls[0]).toMatchObject({
       temperature: 0.6,
@@ -74,21 +107,22 @@ describe("composer routing and contracts", () => {
       "不得把录播回放列为授课形式",
     );
     expect(first.message).not.toBe(second.message);
+    expect(first.usedChunkIds).toEqual(second.usedChunkIds);
     expect(first.usedFactIds).toEqual(second.usedFactIds);
     expect(formatSourceFootnotes(first.usedFactIds)).toBe(
       formatSourceFootnotes(second.usedFactIds),
     );
   });
 
-  it("omits history for recommendations and limits other routes to two recent turns", async () => {
+  it("injects at most eight recent turns for recommendations and fact answers", async () => {
     const recommendationClient = new ScriptedLlmClient([
       completion(
-        '{"message":"推荐结果已核对。","usedFactIds":[],"actions":[],"recommendationReasons":[]}',
+        '{"answer":"推荐结果已核对。","usedChunkIds":[],"followUpSuggestions":[]}',
       ),
     ]);
     const factClient = new ScriptedLlmClient([
       completion(
-        '{"message":"课程信息已核对。","usedFactIds":[],"actions":[],"recommendationReasons":[]}',
+        '{"answer":"课程信息已核对。","usedChunkIds":[],"followUpSuggestions":[]}',
       ),
     ]);
     const history = [
@@ -117,16 +151,34 @@ describe("composer routing and contracts", () => {
 
     const recommendationPayload = JSON.parse(
       recommendationClient.calls[0].messages[1].content,
-    ) as { shortContext: unknown[] };
+    ) as { recentConversation: unknown[] };
     const factPayload = JSON.parse(
       factClient.calls[0].messages[1].content,
-    ) as { shortContext: unknown[] };
-    expect(recommendationPayload.shortContext).toEqual([]);
-    expect(factPayload.shortContext).toEqual(history.slice(-2));
+    ) as { recentConversation: unknown[] };
+    expect(recommendationPayload.recentConversation).toEqual(history);
+    expect(factPayload.recentConversation).toEqual(history);
   });
 
-  it("answers school procurement from deterministic facts without calling the model", async () => {
-    const client = new ScriptedLlmClient([]);
+  it("answers school procurement through the real composer contract", async () => {
+    const procurementChunks = [
+      "platform-school-procurement-category",
+      "platform-school-procurement-audience",
+      "platform-school-procurement-boundary",
+      "platform-school-procurement-pricing",
+      "platform-school-procurement-minimum-people",
+      "platform-school-procurement-minimum-total-price",
+    ].map((id) => getKnowledgeChunk(id));
+    if (procurementChunks.some((chunk) => !chunk)) {
+      throw new Error("procurement chunk fixture is missing");
+    }
+    const completeProcurementChunks = procurementChunks.filter(
+      (chunk): chunk is NonNullable<typeof chunk> => Boolean(chunk),
+    );
+    const client = new ScriptedLlmClient([
+      completion(
+        `{"answer":"学校采购需满足20人起，项目总价5万元起。","usedChunkIds":${JSON.stringify(completeProcurementChunks.map(({ id }) => id))},"followUpSuggestions":["整理采购需求清单"]}`,
+      ),
+    ]);
     const plan = emptyPlan({
       status: "institution_info",
       route: "institution",
@@ -168,14 +220,23 @@ describe("composer routing and contracts", () => {
       entityIds: ["platform-school-procurement"],
     });
 
-    const output = await createComposer(client).composeOnce(plan, []);
+    const output = await createComposer(client).composeOnce(plan, [], {
+      userMessage: "学校采购20人的教师培训怎么收费？",
+      knowledgeChunks: completeProcurementChunks,
+    });
 
-    expect(client.calls).toHaveLength(0);
+    expect(client.calls).toHaveLength(1);
     expect(output.message).toContain("20人起");
     expect(output.message).toContain("5万元起");
     expect(output.message).not.toContain("2980");
-    expect(output.usedFactIds).toEqual(plan.facts.map(({ id }) => id));
-    expect(output.actions).toEqual(plan.actions);
+    expect(output.usedChunkIds).toEqual(
+      completeProcurementChunks.map(({ id }) => id),
+    );
+    expect(output.usedFactIds).toEqual(
+      expect.arrayContaining(plan.facts.map(({ id }) => id)),
+    );
+    expect(output.usedFactIds).toHaveLength(plan.facts.length);
+    expect(output.actions).toEqual(["整理采购需求清单"]);
   });
 });
 

@@ -1,3 +1,9 @@
-export { collectSources } from "./collectSources";
-export type { CollectedSource } from "./collectSources";
-export { formatSourceFootnotes } from "./formatSources";
+export { collectChunkSources, collectSources } from "./collectSources";
+export type {
+  ChunkCollectedSource,
+  CollectedSource,
+} from "./collectSources";
+export {
+  formatChunkSourceFootnotes,
+  formatSourceFootnotes,
+} from "./formatSources";

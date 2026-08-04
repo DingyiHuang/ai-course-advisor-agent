@@ -1,0 +1,131 @@
+{
+  "scenarioId": "05-school-procurement-pricing",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T02:13:37.686Z",
+  "finishedAt": "2026-08-04T02:13:47.937Z",
+  "elapsedMs": 10251,
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "学校采购20人的教师培训，属于“学校教师培训采购”服务，面向学校或教育局统一采购，按项目整体计价。当前资料显示：最低20人起，项目总价5万元起；个人教师报名价格不适用于学校统一采购，不能直接按个人课程价格乘以人数来算。现有资料未提供更细化的分项单价或逐项报价，具体费用需要根据采购需求整体核算。您可以继续查看模拟咨询流程，或让我帮您整理采购需求清单。\n\n来源：素材C《OPC超级个体赋能平台产品白皮书》第一、六章；素材C《OPC超级个体赋能平台产品白皮书》第六章；素材C《OPC超级个体赋能平台产品白皮书》第五、六、七章",
+  "retrievedChunkIds": [
+    "platform-school-procurement-pricing",
+    "platform-school-procurement-minimum-people",
+    "platform-school-procurement-minimum-total-price",
+    "platform-school-procurement-category",
+    "platform-school-procurement-audience",
+    "platform-school-procurement-boundary"
+  ],
+  "usedChunkIds": [
+    "platform-school-procurement-category",
+    "platform-school-procurement-audience",
+    "platform-school-procurement-boundary",
+    "platform-school-procurement-pricing",
+    "platform-school-procurement-minimum-people",
+    "platform-school-procurement-minimum-total-price"
+  ],
+  "sources": [
+    "素材C《OPC超级个体赋能平台产品白皮书》第一、六章",
+    "素材C《OPC超级个体赋能平台产品白皮书》第六章",
+    "素材C《OPC超级个体赋能平台产品白皮书》第五、六、七章"
+  ],
+  "modelCallCount": 1,
+  "regenerationCount": 0,
+  "expected": "说明20人起、项目总价5万元起，不混用个人课程价格。",
+  "actual": {
+    "status": "institution_info",
+    "entityIds": [
+      "platform-school-procurement"
+    ],
+    "flowResults": [
+      {
+        "label": "isolated",
+        "answer": "学校采购20人的教师培训，属于“学校教师培训采购”服务，面向学校或教育局统一采购，按项目整体计价。当前资料显示：最低20人起，项目总价5万元起；个人教师报名价格不适用于学校统一采购，不能直接按个人课程价格乘以人数来算。现有资料未提供更细化的分项单价或逐项报价，具体费用需要根据采购需求整体核算。您可以继续查看模拟咨询流程，或让我帮您整理采购需求清单。\n\n来源：素材C《OPC超级个体赋能平台产品白皮书》第一、六章；素材C《OPC超级个体赋能平台产品白皮书》第六章；素材C《OPC超级个体赋能平台产品白皮书》第五、六、七章",
+        "retrievedChunkIds": [
+          "platform-school-procurement-pricing",
+          "platform-school-procurement-minimum-people",
+          "platform-school-procurement-minimum-total-price",
+          "platform-school-procurement-category",
+          "platform-school-procurement-audience",
+          "platform-school-procurement-boundary"
+        ],
+        "usedChunkIds": [
+          "platform-school-procurement-category",
+          "platform-school-procurement-audience",
+          "platform-school-procurement-boundary",
+          "platform-school-procurement-pricing",
+          "platform-school-procurement-minimum-people",
+          "platform-school-procurement-minimum-total-price"
+        ],
+        "sources": [
+          "素材C《OPC超级个体赋能平台产品白皮书》第一、六章",
+          "素材C《OPC超级个体赋能平台产品白皮书》第六章",
+          "素材C《OPC超级个体赋能平台产品白皮书》第五、六、七章"
+        ],
+        "sourceDocuments": [
+          "C",
+          "C",
+          "C"
+        ],
+        "entityIds": [
+          "platform-school-procurement"
+        ],
+        "modelCallCount": 1,
+        "regenerationCount": 0
+      }
+    ],
+    "checks": [
+      {
+        "label": "usedChunkIds全部来自本轮retrievedChunkIds",
+        "pass": true
+      },
+      {
+        "label": "来源由程序追加且与usedChunkIds对应",
+        "pass": true
+      },
+      {
+        "label": "包含20人起和5万元起",
+        "pass": true
+      },
+      {
+        "label": "不含个人课程价格",
+        "pass": true
+      },
+      {
+        "label": "实体为学校采购",
+        "pass": true
+      },
+      {
+        "label": "真实composer被调用",
+        "pass": true
+      }
+    ]
+  },
+  "conclusion": "通过",
+  "requestStages": [
+    {
+      "stage": "isolated:create_session",
+      "elapsedMs": 697,
+      "httpStatus": 201,
+      "publicErrorCode": null,
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "routeLatencyMs": null
+    },
+    {
+      "stage": "isolated:target_question",
+      "elapsedMs": 9473,
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "routeLatencyMs": 9457
+    }
+  ],
+  "transientFailure": false,
+  "passed": true,
+  "programFallbackCount": 0,
+  "attemptCount": 1,
+  "firstAttemptPassed": true,
+  "transientErrorCount": 0,
+  "recoveredAfterTransientFailure": false
+}

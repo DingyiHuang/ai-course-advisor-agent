@@ -1,0 +1,75 @@
+{
+  "scenarioId": "09-extra-discount-unavailable",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T02:17:12.861Z",
+  "finishedAt": "2026-08-04T02:17:17.892Z",
+  "elapsedMs": 5031,
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "现有资料未提供关于额外优惠的信息，因此我无法确认当前是否还能获得额外优惠。建议您以官方最新发布为准，也可以继续了解其他课程、费用或报名条件等问题。",
+  "retrievedChunkIds": [],
+  "usedChunkIds": [],
+  "sources": [],
+  "modelCallCount": 1,
+  "regenerationCount": 0,
+  "expected": "明确资料未提供额外优惠，不承诺新折扣。",
+  "actual": {
+    "status": "fact_answer",
+    "entityIds": [],
+    "flowResults": [
+      {
+        "label": "isolated",
+        "answer": "现有资料未提供关于额外优惠的信息，因此我无法确认当前是否还能获得额外优惠。建议您以官方最新发布为准，也可以继续了解其他课程、费用或报名条件等问题。",
+        "retrievedChunkIds": [],
+        "usedChunkIds": [],
+        "sources": [],
+        "sourceDocuments": [],
+        "entityIds": [],
+        "modelCallCount": 1,
+        "regenerationCount": 0
+      }
+    ],
+    "checks": [
+      {
+        "label": "usedChunkIds全部来自本轮retrievedChunkIds",
+        "pass": true
+      },
+      {
+        "label": "来源由程序追加且与usedChunkIds对应",
+        "pass": true
+      },
+      {
+        "label": "明确额外优惠未提供",
+        "pass": true
+      },
+      {
+        "label": "不注入无关知识块或来源",
+        "pass": true
+      }
+    ]
+  },
+  "conclusion": "通过",
+  "requestStages": [
+    {
+      "stage": "isolated:create_session",
+      "elapsedMs": 240,
+      "httpStatus": 201,
+      "publicErrorCode": null,
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "routeLatencyMs": null
+    },
+    {
+      "stage": "isolated:target_question",
+      "elapsedMs": 4786,
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "routeLatencyMs": 4770
+    }
+  ],
+  "transientFailure": false,
+  "passed": true,
+  "programFallbackCount": 0
+}
