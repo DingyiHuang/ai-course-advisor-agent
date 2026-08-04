@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   FormEvent,
   KeyboardEvent,
   useEffect,
@@ -406,6 +407,10 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
       if (message.presentation.institutionService?.entityId === state.selectedEntityId) {
         return message.presentation.institutionService.name;
       }
+      const service = message.presentation.institutionServices?.find(
+        ({ entityId }) => entityId === state.selectedEntityId,
+      );
+      if (service) return service.name;
     }
     return "已选择当前班型";
   }, [messages, state.domain, state.institutionNeed, state.selectedEntityId]);
@@ -861,8 +866,8 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
           </section>
 
           <div className={styles.sideActions}>
-            <button type="button" onClick={() => void sendMessage("查看全部课程", "catalog")} disabled={interactionDisabled}>
-              查看全部课程
+            <button type="button" onClick={() => void sendMessage("查看所有班型", "catalog")} disabled={interactionDisabled}>
+              查看所有班型
             </button>
             <button type="button" onClick={() => void returnMenu()} disabled={interactionDisabled}>
               返回菜单
@@ -928,11 +933,12 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
                 </div>
                 <div className={styles.messageBubble}>{message.content}</div>
 
-                {message.presentation.recommendations.map((card) => (
-                  <section
-                    className={styles.recommendationCard}
-                    key={`${message.clientRequestId ?? message.id}:${card.entityId}`}
-                  >
+                {message.presentation.recommendations.map((card, index, cards) => (
+                  <Fragment key={`${message.clientRequestId ?? message.id}:${card.entityId}`}>
+                    {card.catalogGroup && card.catalogGroup !== cards[index - 1]?.catalogGroup && (
+                      <h3 className={styles.catalogGroup}>{card.catalogGroup}</h3>
+                    )}
+                    <section className={styles.recommendationCard}>
                     <div className={styles.cardTopline}>
                       <span>{card.kind === "student" ? "学生课程推荐" : "教师培训推荐"}</span>
                       <span>已核对</span>
@@ -968,7 +974,8 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
                     >
                       继续咨询该班
                     </button>
-                  </section>
+                    </section>
+                  </Fragment>
                 ))}
 
                 {message.presentation.institutionService && (
@@ -986,6 +993,35 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
                     </div>
                   </section>
                 )}
+
+                {message.presentation.institutionServices?.map((service, index, services) => (
+                  <Fragment key={`${message.clientRequestId ?? message.id}:${service.entityId}`}>
+                    {service.catalogGroup && service.catalogGroup !== services[index - 1]?.catalogGroup && (
+                      <h3 className={styles.catalogGroup}>{service.catalogGroup}</h3>
+                    )}
+                    <section className={styles.serviceCard}>
+                      <span className={styles.welcomeEyebrow}>机构服务 · 资料数据</span>
+                      <h3>{service.name}</h3>
+                      <dl>
+                        <div><dt>适用对象</dt><dd>{service.audience}</dd></div>
+                        <div><dt>计价规则</dt><dd>{service.pricingRule}</dd></div>
+                        <div><dt>服务边界</dt><dd>{service.boundary}</dd></div>
+                      </dl>
+                      <div className={styles.sourceBlock}>
+                        <strong>资料来源（程序追加）</strong>
+                        {service.sources.map((source) => <span key={sourceLabel(source)}>{sourceLabel(source)}</span>)}
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.cardButton}
+                        onClick={() => void selectEntity(service.entityId, service.name)}
+                        disabled={messageControlsDisabled}
+                      >
+                        继续咨询该服务
+                      </button>
+                    </section>
+                  </Fragment>
+                ))}
 
                 {message.options.length > 0 && (
                   <div className={styles.optionRow} aria-label="可选回答">

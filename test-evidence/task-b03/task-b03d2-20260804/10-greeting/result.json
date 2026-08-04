@@ -1,0 +1,70 @@
+{
+  "scenarioId": "10-greeting",
+  "category": "conversation",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T05:08:46.571Z",
+  "finishedAt": "2026-08-04T05:08:46.638Z",
+  "elapsedMs": 64,
+  "expected": "HTTP 200简短问候，不重复课程卡片或来源。",
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "你好，我是AI课程顾问。请选择学生或家长、教师、机构或企业人员，也可以直接描述学习需求。",
+  "entityIds": [],
+  "selectedEntityId": null,
+  "retrievedChunkIds": [],
+  "usedChunkIds": [],
+  "sources": [],
+  "modelCallCount": 0,
+  "messageSha256": [
+    "670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e"
+  ],
+  "regenerationCount": 0,
+  "calculationMode": null,
+  "responseMode": null,
+  "groundingReasonCodes": [],
+  "dateAdvisoryAttemptResults": [],
+  "expectedAmount": null,
+  "modelAmount": null,
+  "firstPassMatched": null,
+  "transientFailure": false,
+  "checks": [
+    {
+      "label": "问候HTTP 200",
+      "pass": true
+    },
+    {
+      "label": "问候不生成业务卡片或来源",
+      "pass": true
+    }
+  ],
+  "passed": true,
+  "conclusion": "通过",
+  "flowResults": [
+    {
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "status": "needs_identity",
+      "answer": "你好，我是AI课程顾问。请选择学生或家长、教师、机构或企业人员，也可以直接描述学习需求。",
+      "entityIds": [],
+      "selectedEntityId": null,
+      "sources": [],
+      "retrievedChunkIds": [],
+      "usedChunkIds": [],
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "calculationMode": null,
+      "responseMode": null,
+      "groundingReasonCodes": [],
+      "dateAdvisoryAttemptResults": [],
+      "expectedAmount": null,
+      "modelAmount": null,
+      "firstPassMatched": null,
+      "routeLatencyMs": 2,
+      "messageSha256": "670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e",
+      "recommendationCount": 0,
+      "institutionServiceCount": 0
+    }
+  ],
+  "attemptCount": 1,
+  "transientErrorCount": 0
+}

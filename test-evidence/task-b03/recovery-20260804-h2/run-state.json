@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "mode": "local real model; testMode=false; TASK-B03H2 single-call recovery",
+  "updatedAt": "2026-08-04T04:04:55.295Z",
+  "scenarios": {
+    "01-fee-p1-beijing-single": {
+      "status": "passed",
+      "attemptCount": 1
+    },
+    "02-fee-p1-beijing-group": {
+      "status": "failed",
+      "attemptCount": 1
+    }
+  }
+}

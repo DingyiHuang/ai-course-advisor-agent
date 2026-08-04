@@ -1,0 +1,166 @@
+{
+  "scenarioId": "07-primary-recommendation-fee-followup",
+  "category": "conversation",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T04:12:26.243Z",
+  "finishedAt": "2026-08-04T04:12:56.753Z",
+  "elapsedMs": 30509,
+  "expected": "自动继承首选第一期北京线下班，不再次要求选择身份或班型。",
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "您问的第1期北京线下班费用核算如下：该班型标准价为6980元。按2026-08-04（Asia/Shanghai）核对，早鸟截止日期为2026-07-11，目前已过早鸟期，因此不享受5980元早鸟价，按标准价6980元计算。团报方面，同一期、同一班型满3人团报每人可优惠300元，但当前未提供团报人数及同班信息，本次暂不叠加团报优惠；早鸟与团报不可叠加，此场景也不涉及叠加。您未选择食宿套餐，食宿费按0元处理。综合以上，当前应付金额为6980元。若后续能确认3人及以上同班团报，或明确选择食宿套餐，我可以重新核算。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章",
+  "entityIds": [
+    "camp-p1-bj"
+  ],
+  "selectedEntityId": "camp-p1-bj",
+  "retrievedChunkIds": [
+    "student-camp-p1-bj-logistics",
+    "student-camp-p2-bj-logistics",
+    "student-camp-overview",
+    "student-camp-p1-bj-pricing",
+    "student-camp-p2-bj-pricing",
+    "student-camp-refund"
+  ],
+  "usedChunkIds": [
+    "student-camp-p1-bj-pricing"
+  ],
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第五章",
+      "factIds": [
+        "camp-p1-bj.earlyBirdDeadline",
+        "camp-p1-bj.standardPrice",
+        "camp-p1-bj.earlyBirdPrice",
+        "camp-p1-bj.groupDiscount",
+        "camp-p1-bj.groupMinimum",
+        "camp-p1-bj.groupScope"
+      ]
+    }
+  ],
+  "modelCallCount": 2,
+  "messageSha256": [
+    "e35d5649165a804c87dca8775167bc792e693518c697246254901e45a74c6fbe",
+    "a3fe765897d9b52101b71d90bd016862892cd51f4e9b794f8c6dda44e11958ef"
+  ],
+  "regenerationCount": 0,
+  "calculationMode": "model",
+  "expectedAmount": 6980,
+  "modelAmount": 6980,
+  "firstPassMatched": true,
+  "transientFailure": false,
+  "checks": [
+    {
+      "label": "首轮存在明确首选和备选",
+      "pass": true
+    },
+    {
+      "label": "追问继承首选班型",
+      "pass": true
+    }
+  ],
+  "passed": true,
+  "conclusion": "通过",
+  "flowResults": [
+    {
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "status": "recommended",
+      "answer": "根据您在北京、偏好线下授课的需求，为您推荐以下两个北京线下营期：\n1. 第1期北京线下班：2026-08-01至2026-08-07，地点为AI教育中心北京教学基地（北京市海淀区中关村南大街5号，模拟地址），线下授课。\n2. 第2期北京线下班：2026-08-10至2026-08-16，地点同样为AI教育中心北京教学基地（北京市海淀区中关村南大街5号，模拟地址），线下授课。\n两个班型都与您确认的北京地区和线下授课偏好匹配。如需继续了解课程安排、费用或报名条件，可以随时问我。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章",
+      "entityIds": [
+        "camp-p1-bj",
+        "camp-p2-bj"
+      ],
+      "selectedEntityId": "camp-p1-bj",
+      "sources": [
+        {
+          "document": "A",
+          "chapter": "第三章",
+          "factIds": [
+            "camp-p1-bj.campus",
+            "camp-p1-bj.deliveryMode",
+            "camp-p1-bj.locationName",
+            "camp-p1-bj.addressOrPlatform",
+            "camp-p1-bj.startDate",
+            "camp-p1-bj.endDate",
+            "camp-p1-bj.registrationDeadline",
+            "camp-p2-bj.campus",
+            "camp-p2-bj.deliveryMode",
+            "camp-p2-bj.locationName",
+            "camp-p2-bj.addressOrPlatform",
+            "camp-p2-bj.startDate",
+            "camp-p2-bj.endDate",
+            "camp-p2-bj.registrationDeadline"
+          ]
+        }
+      ],
+      "retrievedChunkIds": [
+        "student-camp-overview",
+        "student-camp-p1-bj-logistics",
+        "student-camp-p2-bj-logistics",
+        "student-camp-daily-outline",
+        "student-camp-required-items",
+        "student-camp-equipment"
+      ],
+      "usedChunkIds": [
+        "student-camp-p1-bj-logistics",
+        "student-camp-p2-bj-logistics"
+      ],
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "calculationMode": null,
+      "expectedAmount": null,
+      "modelAmount": null,
+      "firstPassMatched": null,
+      "routeLatencyMs": 12684,
+      "messageSha256": "e35d5649165a804c87dca8775167bc792e693518c697246254901e45a74c6fbe",
+      "recommendationCount": 2,
+      "institutionServiceCount": 0
+    },
+    {
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "status": "contextual_followup",
+      "answer": "您问的第1期北京线下班费用核算如下：该班型标准价为6980元。按2026-08-04（Asia/Shanghai）核对，早鸟截止日期为2026-07-11，目前已过早鸟期，因此不享受5980元早鸟价，按标准价6980元计算。团报方面，同一期、同一班型满3人团报每人可优惠300元，但当前未提供团报人数及同班信息，本次暂不叠加团报优惠；早鸟与团报不可叠加，此场景也不涉及叠加。您未选择食宿套餐，食宿费按0元处理。综合以上，当前应付金额为6980元。若后续能确认3人及以上同班团报，或明确选择食宿套餐，我可以重新核算。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章",
+      "entityIds": [
+        "camp-p1-bj"
+      ],
+      "selectedEntityId": "camp-p1-bj",
+      "sources": [
+        {
+          "document": "A",
+          "chapter": "第五章",
+          "factIds": [
+            "camp-p1-bj.earlyBirdDeadline",
+            "camp-p1-bj.standardPrice",
+            "camp-p1-bj.earlyBirdPrice",
+            "camp-p1-bj.groupDiscount",
+            "camp-p1-bj.groupMinimum",
+            "camp-p1-bj.groupScope"
+          ]
+        }
+      ],
+      "retrievedChunkIds": [
+        "student-camp-p1-bj-logistics",
+        "student-camp-p2-bj-logistics",
+        "student-camp-overview",
+        "student-camp-p1-bj-pricing",
+        "student-camp-p2-bj-pricing",
+        "student-camp-refund"
+      ],
+      "usedChunkIds": [
+        "student-camp-p1-bj-pricing"
+      ],
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "calculationMode": "model",
+      "expectedAmount": 6980,
+      "modelAmount": 6980,
+      "firstPassMatched": true,
+      "routeLatencyMs": 17777,
+      "messageSha256": "a3fe765897d9b52101b71d90bd016862892cd51f4e9b794f8c6dda44e11958ef",
+      "recommendationCount": 0,
+      "institutionServiceCount": 0
+    }
+  ]
+}

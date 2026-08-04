@@ -1,0 +1,192 @@
+{
+  "scenarioId": "12-student-catalog",
+  "category": "conversation",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T05:09:02.753Z",
+  "finishedAt": "2026-08-04T05:09:34.908Z",
+  "elapsedMs": 32153,
+  "expected": "返回9个学生实体、三期分组，且不形成当前班型。",
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "好的，以下是学生夏令营目前开设的全部班型概览。夏令营共分三期，每期都有北京线下、上海线下和腾讯会议线上直播三种选择。\n\n【第一期：8月1日–8月7日】\n- 北京线下：AI教育中心北京教学基地（北京市海淀区中关村南大街5号，模拟地址）；标准价6980元，早鸟价5980元。\n- 上海线下：AI教育中心上海教学基地（上海市浦东新区张江路1000号，模拟地址）；标准价6980元，早鸟价5980元。\n- 线上直播：腾讯会议直播（会议号缴费确认后发送）；标准价3980元，早鸟价3280元。\n\n【第二期：8月10日–8月16日】\n- 北京线下：AI教育中心北京教学基地（北京市海淀区中关村南大街5号，模拟地址）；标准价6980元，早鸟价5980元。\n- 上海线下：AI教育中心上海教学基地（上海市浦东新区张江路1000号，模拟地址）；标准价6980元，早鸟价5980元。\n- 线上直播：腾讯会议直播（会议号缴费确认后发送）；标准价3980元，早鸟价3280元。\n\n【第三期：8月20日–8月26日】\n- 北京线下：AI教育中心北京教学基地（北京市海淀区中关村南大街5号，模拟地址）；标准价6980元，早鸟价5980元。\n- 上海线下：AI教育中心上海教学基地（上海市浦东新区张江路1000号，模拟地址）；标准价6980元，早鸟价5980元。\n- 线上直播：腾讯会议直播（会议号缴费确认后发送）；标准价3980元，早鸟价3280元。\n\n以上价格均为资料中记载的标准价和早鸟价。需要进一步了解某期或某个班型时，可以继续问我课程安排、参营准备或费用计算。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章",
+  "entityIds": [
+    "camp-p1-bj",
+    "camp-p1-sh",
+    "camp-p1-online",
+    "camp-p2-bj",
+    "camp-p2-sh",
+    "camp-p2-online",
+    "camp-p3-bj",
+    "camp-p3-sh",
+    "camp-p3-online"
+  ],
+  "selectedEntityId": null,
+  "retrievedChunkIds": [
+    "student-camp-overview",
+    "student-camp-daily-outline",
+    "student-camp-required-items",
+    "student-camp-equipment",
+    "student-camp-refund",
+    "student-camp-availability-unknown"
+  ],
+  "usedChunkIds": [
+    "student-camp-overview"
+  ],
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p1-bj.period",
+        "camp-p1-bj.deliveryMode",
+        "camp-p1-bj.startDate",
+        "camp-p1-bj.endDate",
+        "camp-p1-sh.period",
+        "camp-p1-sh.deliveryMode",
+        "camp-p1-sh.startDate",
+        "camp-p1-sh.endDate",
+        "camp-p1-online.period",
+        "camp-p1-online.deliveryMode",
+        "camp-p1-online.startDate",
+        "camp-p1-online.endDate",
+        "camp-p2-bj.period",
+        "camp-p2-bj.deliveryMode",
+        "camp-p2-bj.startDate",
+        "camp-p2-bj.endDate",
+        "camp-p2-sh.period",
+        "camp-p2-sh.deliveryMode",
+        "camp-p2-sh.startDate",
+        "camp-p2-sh.endDate",
+        "camp-p2-online.period",
+        "camp-p2-online.deliveryMode",
+        "camp-p2-online.startDate",
+        "camp-p2-online.endDate",
+        "camp-p3-bj.period",
+        "camp-p3-bj.deliveryMode",
+        "camp-p3-bj.startDate",
+        "camp-p3-bj.endDate",
+        "camp-p3-sh.period",
+        "camp-p3-sh.deliveryMode",
+        "camp-p3-sh.startDate",
+        "camp-p3-sh.endDate",
+        "camp-p3-online.period",
+        "camp-p3-online.deliveryMode",
+        "camp-p3-online.startDate",
+        "camp-p3-online.endDate"
+      ]
+    }
+  ],
+  "modelCallCount": 2,
+  "messageSha256": [
+    "75fd24e24726a4fd3e0f6abf0138c701662c8a85a51383ef38863bfe06af3145"
+  ],
+  "regenerationCount": 1,
+  "calculationMode": null,
+  "responseMode": null,
+  "groundingReasonCodes": [],
+  "dateAdvisoryAttemptResults": [],
+  "expectedAmount": null,
+  "modelAmount": null,
+  "firstPassMatched": null,
+  "transientFailure": false,
+  "checks": [
+    {
+      "label": "学生9个实体完整",
+      "pass": true
+    },
+    {
+      "label": "目录不擅自聚焦",
+      "pass": true
+    }
+  ],
+  "passed": true,
+  "conclusion": "通过",
+  "flowResults": [
+    {
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "status": "catalog",
+      "answer": "好的，以下是学生夏令营目前开设的全部班型概览。夏令营共分三期，每期都有北京线下、上海线下和腾讯会议线上直播三种选择。\n\n【第一期：8月1日–8月7日】\n- 北京线下：AI教育中心北京教学基地（北京市海淀区中关村南大街5号，模拟地址）；标准价6980元，早鸟价5980元。\n- 上海线下：AI教育中心上海教学基地（上海市浦东新区张江路1000号，模拟地址）；标准价6980元，早鸟价5980元。\n- 线上直播：腾讯会议直播（会议号缴费确认后发送）；标准价3980元，早鸟价3280元。\n\n【第二期：8月10日–8月16日】\n- 北京线下：AI教育中心北京教学基地（北京市海淀区中关村南大街5号，模拟地址）；标准价6980元，早鸟价5980元。\n- 上海线下：AI教育中心上海教学基地（上海市浦东新区张江路1000号，模拟地址）；标准价6980元，早鸟价5980元。\n- 线上直播：腾讯会议直播（会议号缴费确认后发送）；标准价3980元，早鸟价3280元。\n\n【第三期：8月20日–8月26日】\n- 北京线下：AI教育中心北京教学基地（北京市海淀区中关村南大街5号，模拟地址）；标准价6980元，早鸟价5980元。\n- 上海线下：AI教育中心上海教学基地（上海市浦东新区张江路1000号，模拟地址）；标准价6980元，早鸟价5980元。\n- 线上直播：腾讯会议直播（会议号缴费确认后发送）；标准价3980元，早鸟价3280元。\n\n以上价格均为资料中记载的标准价和早鸟价。需要进一步了解某期或某个班型时，可以继续问我课程安排、参营准备或费用计算。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章",
+      "entityIds": [
+        "camp-p1-bj",
+        "camp-p1-sh",
+        "camp-p1-online",
+        "camp-p2-bj",
+        "camp-p2-sh",
+        "camp-p2-online",
+        "camp-p3-bj",
+        "camp-p3-sh",
+        "camp-p3-online"
+      ],
+      "selectedEntityId": null,
+      "sources": [
+        {
+          "document": "A",
+          "chapter": "第三章",
+          "factIds": [
+            "camp-p1-bj.period",
+            "camp-p1-bj.deliveryMode",
+            "camp-p1-bj.startDate",
+            "camp-p1-bj.endDate",
+            "camp-p1-sh.period",
+            "camp-p1-sh.deliveryMode",
+            "camp-p1-sh.startDate",
+            "camp-p1-sh.endDate",
+            "camp-p1-online.period",
+            "camp-p1-online.deliveryMode",
+            "camp-p1-online.startDate",
+            "camp-p1-online.endDate",
+            "camp-p2-bj.period",
+            "camp-p2-bj.deliveryMode",
+            "camp-p2-bj.startDate",
+            "camp-p2-bj.endDate",
+            "camp-p2-sh.period",
+            "camp-p2-sh.deliveryMode",
+            "camp-p2-sh.startDate",
+            "camp-p2-sh.endDate",
+            "camp-p2-online.period",
+            "camp-p2-online.deliveryMode",
+            "camp-p2-online.startDate",
+            "camp-p2-online.endDate",
+            "camp-p3-bj.period",
+            "camp-p3-bj.deliveryMode",
+            "camp-p3-bj.startDate",
+            "camp-p3-bj.endDate",
+            "camp-p3-sh.period",
+            "camp-p3-sh.deliveryMode",
+            "camp-p3-sh.startDate",
+            "camp-p3-sh.endDate",
+            "camp-p3-online.period",
+            "camp-p3-online.deliveryMode",
+            "camp-p3-online.startDate",
+            "camp-p3-online.endDate"
+          ]
+        }
+      ],
+      "retrievedChunkIds": [
+        "student-camp-overview",
+        "student-camp-daily-outline",
+        "student-camp-required-items",
+        "student-camp-equipment",
+        "student-camp-refund",
+        "student-camp-availability-unknown"
+      ],
+      "usedChunkIds": [
+        "student-camp-overview"
+      ],
+      "modelCallCount": 2,
+      "regenerationCount": 1,
+      "calculationMode": null,
+      "responseMode": null,
+      "groundingReasonCodes": [],
+      "dateAdvisoryAttemptResults": [],
+      "expectedAmount": null,
+      "modelAmount": null,
+      "firstPassMatched": null,
+      "routeLatencyMs": 32141,
+      "messageSha256": "75fd24e24726a4fd3e0f6abf0138c701662c8a85a51383ef38863bfe06af3145",
+      "recommendationCount": 9,
+      "institutionServiceCount": 0
+    }
+  ]
+}

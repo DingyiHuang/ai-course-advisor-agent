@@ -286,7 +286,8 @@ describe("TASK-04 session orchestration", () => {
     const firstDeps = dependencies({
       candidates: [makeCandidate("费用", "费用")],
       outputs: [{
-        message: "费用信息已经为你核对。",
+        message:
+          "标准价为6980元；7月22日不满足早鸟条件，1人不满足3人团报条件；早鸟与团报不可叠加并取较高优惠，本次未选食宿，最终应付6980元。",
         usedFactIds: ["camp-p1-bj.standardPrice"],
         actions: ["继续询问当前班型"],
         recommendationReasons: [],
@@ -299,7 +300,8 @@ describe("TASK-04 session orchestration", () => {
     const secondDeps = dependencies({
       candidates: [makeCandidate("价格", "价格")],
       outputs: [{
-        message: "我已查清这个班的价格信息。",
+        message:
+          "这个班标准价6980元。按7月22日缴费，早鸟已不适用，单人也不满足团报；两项优惠不可叠加并采用较高者，未加食宿，最后应付6980元。",
         usedFactIds: ["camp-p1-bj.standardPrice"],
         actions: ["继续询问当前班型"],
         recommendationReasons: [],

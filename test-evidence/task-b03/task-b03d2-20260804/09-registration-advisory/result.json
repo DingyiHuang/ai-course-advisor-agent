@@ -1,0 +1,162 @@
+{
+  "scenarioId": "09-registration-advisory",
+  "category": "conversation",
+  "attemptNumber": 3,
+  "startedAt": "2026-08-04T05:08:16.360Z",
+  "finishedAt": "2026-08-04T05:08:28.790Z",
+  "elapsedMs": 12427,
+  "expected": "提供两项截止日期、中国标准时间基准和主办方通知边界，不作最终裁决。",
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "关于第1期报名，现有资料显示：报名截止时间为2026年7月25日24:00，早鸟缴费截止日期为2026年7月11日。上述日期按中国标准时间理解，具体请以主办方最新通知为准。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章；素材A《2026暑期AI素养夏令营课程手册》第五章",
+  "entityIds": [
+    "camp-p1-bj",
+    "camp-p1-sh",
+    "camp-p1-online"
+  ],
+  "selectedEntityId": null,
+  "retrievedChunkIds": [
+    "student-camp-p1-bj-logistics",
+    "student-camp-p1-sh-logistics",
+    "student-camp-p1-online-logistics",
+    "student-camp-refund",
+    "student-camp-p1-bj-pricing",
+    "student-camp-p1-sh-pricing"
+  ],
+  "usedChunkIds": [
+    "student-camp-p1-bj-logistics",
+    "student-camp-p1-bj-pricing"
+  ],
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第三章",
+      "factIds": [
+        "camp-p1-bj.registrationDeadline"
+      ]
+    },
+    {
+      "document": "A",
+      "chapter": "第五章",
+      "factIds": [
+        "camp-p1-bj.earlyBirdDeadline"
+      ]
+    }
+  ],
+  "modelCallCount": 1,
+  "messageSha256": [
+    "7ed9c3edf24080f624b2cdf31c07db6d80cab3686871e8a9a001acd353805c3f"
+  ],
+  "regenerationCount": 0,
+  "calculationMode": null,
+  "responseMode": null,
+  "groundingReasonCodes": [],
+  "dateAdvisoryAttemptResults": [
+    {
+      "attemptIndex": 1,
+      "stage": "completed",
+      "publicReasonCode": null,
+      "elapsedMs": 12039,
+      "groundingReasonCodes": [],
+      "hasValidUsedChunkIds": true
+    }
+  ],
+  "expectedAmount": null,
+  "modelAmount": null,
+  "firstPassMatched": null,
+  "transientFailure": false,
+  "checks": [
+    {
+      "label": "日期咨询HTTP 200且无公开错误",
+      "pass": true
+    },
+    {
+      "label": "包含两项截止日期和时间基准",
+      "pass": true
+    },
+    {
+      "label": "同时使用报名截止和早鸟截止知识块",
+      "pass": true
+    },
+    {
+      "label": "保留主办方通知边界且不作报名裁决",
+      "pass": true
+    },
+    {
+      "label": "不推荐其他营期或课程",
+      "pass": true
+    },
+    {
+      "label": "来源只覆盖两个日期事实",
+      "pass": true
+    }
+  ],
+  "passed": true,
+  "conclusion": "通过",
+  "flowResults": [
+    {
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "status": "fact_answer",
+      "answer": "关于第1期报名，现有资料显示：报名截止时间为2026年7月25日24:00，早鸟缴费截止日期为2026年7月11日。上述日期按中国标准时间理解，具体请以主办方最新通知为准。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第三章；素材A《2026暑期AI素养夏令营课程手册》第五章",
+      "entityIds": [
+        "camp-p1-bj",
+        "camp-p1-sh",
+        "camp-p1-online"
+      ],
+      "selectedEntityId": null,
+      "sources": [
+        {
+          "document": "A",
+          "chapter": "第三章",
+          "factIds": [
+            "camp-p1-bj.registrationDeadline"
+          ]
+        },
+        {
+          "document": "A",
+          "chapter": "第五章",
+          "factIds": [
+            "camp-p1-bj.earlyBirdDeadline"
+          ]
+        }
+      ],
+      "retrievedChunkIds": [
+        "student-camp-p1-bj-logistics",
+        "student-camp-p1-sh-logistics",
+        "student-camp-p1-online-logistics",
+        "student-camp-refund",
+        "student-camp-p1-bj-pricing",
+        "student-camp-p1-sh-pricing"
+      ],
+      "usedChunkIds": [
+        "student-camp-p1-bj-logistics",
+        "student-camp-p1-bj-pricing"
+      ],
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "calculationMode": null,
+      "responseMode": null,
+      "groundingReasonCodes": [],
+      "dateAdvisoryAttemptResults": [
+        {
+          "attemptIndex": 1,
+          "stage": "completed",
+          "publicReasonCode": null,
+          "elapsedMs": 12039,
+          "groundingReasonCodes": [],
+          "hasValidUsedChunkIds": true
+        }
+      ],
+      "expectedAmount": null,
+      "modelAmount": null,
+      "firstPassMatched": null,
+      "routeLatencyMs": 12066,
+      "messageSha256": "7ed9c3edf24080f624b2cdf31c07db6d80cab3686871e8a9a001acd353805c3f",
+      "recommendationCount": 0,
+      "institutionServiceCount": 0
+    }
+  ],
+  "attemptCount": 3,
+  "transientErrorCount": 0
+}

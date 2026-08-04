@@ -1,0 +1,27 @@
+{
+  "kind": "diagnostic_only",
+  "scenarioId": "09-registration-advisory",
+  "formalPass": false,
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "modelCallCount": 1,
+  "composerAttempts": 1,
+  "regenerationCount": 0,
+  "groundingReasonCodes": [],
+  "retrievedChunkIds": [
+    "student-camp-p1-bj-logistics",
+    "student-camp-p1-sh-logistics",
+    "student-camp-p1-online-logistics",
+    "student-camp-refund",
+    "student-camp-p1-bj-pricing",
+    "student-camp-p1-sh-pricing"
+  ],
+  "usedChunkIds": [
+    "student-camp-p1-bj-logistics",
+    "student-camp-p1-sh-logistics",
+    "student-camp-p1-online-logistics"
+  ],
+  "sourceCount": 1,
+  "diagnosticConclusion": "The response passed the pre-fix grounding path but omitted an earlyBirdDeadline knowledge chunk, so it is not formal scenario evidence.",
+  "redaction": "No prompt, model answer, knowledge chunk content, or environment value is stored."
+}

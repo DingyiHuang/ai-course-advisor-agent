@@ -165,6 +165,9 @@ function recommendationCard(input: {
       reasons: reasonsForEntity(input),
       sources: sourcesForEntity(input.sources, camp.id),
       availabilityNote: "资料未提供实时余位；班型规模和最低开班人数均不代表剩余名额。",
+      ...(input.plan.status === "catalog"
+        ? { catalogGroup: `第${camp.period}期` }
+        : {}),
     };
   }
 
@@ -182,20 +185,32 @@ function recommendationCard(input: {
       reasons: reasonsForEntity(input),
       sources: sourcesForEntity(input.sources, product.id),
       availabilityNote: "资料未提供实时余位；班型规模和最低开班人数均不代表剩余名额。",
+      ...(input.plan.status === "catalog"
+        ? { catalogGroup: product.level }
+        : {}),
     };
   }
 
   return undefined;
 }
 
-function institutionServiceCard(
-  plan: ComposerPlan,
-  sources: CollectedSource[],
-): ChatPresentation["institutionService"] {
-  if (plan.status !== "institution_info" || plan.entityIds.length !== 1) {
-    return undefined;
+function platformCatalogGroup(
+  entityId: string,
+): NonNullable<ChatPresentation["institutionServices"]>[number]["catalogGroup"] {
+  if (entityId === "platform-enterprise-training") return "企业培训";
+  if (entityId === "platform-school-procurement") return "学校采购";
+  if (entityId === "platform-membership" || entityId === "platform-contest") {
+    return "会员";
   }
-  const entity = getKnowledgeEntityById(plan.entityIds[0]) as
+  return "项目服务";
+}
+
+function platformServiceCard(
+  entityId: string,
+  sources: CollectedSource[],
+  catalog: boolean,
+): NonNullable<ChatPresentation["institutionService"]> | undefined {
+  const entity = getKnowledgeEntityById(entityId) as
     | PlatformService
     | undefined;
   if (!entity || !entity.id.startsWith("platform-")) return undefined;
@@ -206,7 +221,17 @@ function institutionServiceCard(
     pricingRule: entity.pricingRule ?? "资料未提供具体价格",
     boundary: entity.boundary,
     sources: sourcesForEntity(sources, entity.id),
+    ...(catalog ? { catalogGroup: platformCatalogGroup(entity.id) } : {}),
   };
+}
+
+function institutionServiceCard(
+  plan: ComposerPlan,
+  sources: CollectedSource[],
+): ChatPresentation["institutionService"] {
+  return plan.status === "institution_info" && plan.entityIds.length === 1
+    ? platformServiceCard(plan.entityIds[0], sources, false)
+    : undefined;
 }
 
 export function buildChatPresentation(input: {
@@ -222,8 +247,16 @@ export function buildChatPresentation(input: {
           return card ? [card] : [];
         })
       : [];
+  const institutionServices =
+    input.plan.status === "catalog" && input.plan.domain === "platform"
+      ? input.plan.entityIds.flatMap((entityId) => {
+          const card = platformServiceCard(entityId, input.sources, true);
+          return card ? [card] : [];
+        })
+      : [];
   return {
     recommendations,
     institutionService: institutionServiceCard(input.plan, input.sources),
+    ...(institutionServices.length ? { institutionServices } : {}),
   };
 }

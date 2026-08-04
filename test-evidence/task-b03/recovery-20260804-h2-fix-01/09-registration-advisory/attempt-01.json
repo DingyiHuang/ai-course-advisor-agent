@@ -1,0 +1,67 @@
+{
+  "scenarioId": "09-registration-advisory",
+  "category": "conversation",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T04:14:02.227Z",
+  "finishedAt": "2026-08-04T04:14:29.872Z",
+  "elapsedMs": 27644,
+  "expected": "提供两项截止日期、中国标准时间基准和主办方通知边界，不作最终裁决。",
+  "httpStatus": 503,
+  "publicErrorCode": "grounding_rejected",
+  "finalPublicAnswer": "当前资料核对未通过，请重试。原有对话已保留。",
+  "entityIds": [],
+  "selectedEntityId": null,
+  "retrievedChunkIds": [
+    "student-camp-p1-bj-logistics",
+    "student-camp-p1-sh-logistics",
+    "student-camp-p1-online-logistics",
+    "student-camp-refund",
+    "student-camp-p1-bj-pricing",
+    "student-camp-p1-sh-pricing"
+  ],
+  "usedChunkIds": [],
+  "sources": [],
+  "modelCallCount": 2,
+  "messageSha256": [
+    "7ed9c3edf24080f624b2cdf31c07db6d80cab3686871e8a9a001acd353805c3f"
+  ],
+  "regenerationCount": 1,
+  "calculationMode": null,
+  "expectedAmount": null,
+  "modelAmount": null,
+  "firstPassMatched": null,
+  "transientFailure": true,
+  "checks": [],
+  "passed": false,
+  "conclusion": "供应商瞬时故障",
+  "flowResults": [
+    {
+      "httpStatus": 503,
+      "publicErrorCode": "grounding_rejected",
+      "status": "error",
+      "answer": "当前资料核对未通过，请重试。原有对话已保留。",
+      "entityIds": [],
+      "selectedEntityId": null,
+      "sources": [],
+      "retrievedChunkIds": [
+        "student-camp-p1-bj-logistics",
+        "student-camp-p1-sh-logistics",
+        "student-camp-p1-online-logistics",
+        "student-camp-refund",
+        "student-camp-p1-bj-pricing",
+        "student-camp-p1-sh-pricing"
+      ],
+      "usedChunkIds": [],
+      "modelCallCount": 2,
+      "regenerationCount": 1,
+      "calculationMode": null,
+      "expectedAmount": null,
+      "modelAmount": null,
+      "firstPassMatched": null,
+      "routeLatencyMs": 27630,
+      "messageSha256": "7ed9c3edf24080f624b2cdf31c07db6d80cab3686871e8a9a001acd353805c3f",
+      "recommendationCount": 0,
+      "institutionServiceCount": 0
+    }
+  ]
+}

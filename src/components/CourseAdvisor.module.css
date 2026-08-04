@@ -544,6 +544,13 @@
   box-shadow: 0 13px 34px rgba(35, 58, 94, 0.08);
 }
 
+.catalogGroup {
+  margin: 20px 2px 4px;
+  color: #1e2d49;
+  font-size: 15px;
+  font-weight: 800;
+}
+
 .cardTopline {
   display: flex;
   justify-content: space-between;

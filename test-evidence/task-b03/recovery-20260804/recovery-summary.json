@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "startedAt": "2026-08-04T03:46:54.362Z",
+  "status": "stopped",
+  "stoppedStage": "roundtrip",
+  "failure": {
+    "code": "deterministic_roundtrip_gate_failed",
+    "scenarioId": "gate-roundtrip-procurement",
+    "stage": "roundtrip",
+    "publicErrorCode": "model_unavailable"
+  },
+  "formalValidationReady": false,
+  "finishedAt": "2026-08-04T03:47:43.081Z"
+}

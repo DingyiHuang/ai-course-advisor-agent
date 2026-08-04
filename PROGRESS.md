@@ -126,3 +126,16 @@ H5检查：Supabase五项全部达成，决定继续使用Supabase。当前CONVE
 - 真实证据：`test-evidence/task-b02/`包含`run-state.json`、`summary.json`、`summary.md`、11个正式结果目录和1个superseded审计目录，共14份attempt；无临时半截文件，所有正式场景`usedChunkIds`均为本轮`retrievedChunkIds`子集。
 - 最终本地门禁（2026-08-04）：26个测试文件、326条测试全部通过，原有301条未删除、跳过或弱化；TypeScript、ESLint、Next.js 16.2.11 Production Build、`git diff --check`、敏感信息扫描、原始Word扫描和长段原文扫描全部通过。构建仅保留既有Local JSON会话存储的Turbopack文件追踪警告。
 - TASK-B02有效工作于2026-08-04 10:25:20（Asia/Shanghai）完成本地验证；未部署Preview或Production，未推送，未合并`main`，未进入TASK-B03。
+
+## TASK-B03 上轮扣分项定向修复与费用问答增强
+
+- 开始时间：2026-08-04 10:41:30（Asia/Shanghai）。
+- 开始检查：当前分支 `feature/b-level-v2`，HEAD 为 `50a1e49e3ec42af2a6b7e0ba9d7d5018ea6eb04a`，工作区干净；`origin/main` 仍为 `319d709dce71406cd87c0f9c60fa327b284334f5`；注释标签 `task-b01-complete-20260803` 剥离后仍指向 `6dd3097aef1d1dcbfb8db2fd3b676251381768b8`。
+- TASK-B02 保护标签：本地注释标签 `task-b02-complete-20260804` 已创建并核验指向 `50a1e49e3ec42af2a6b7e0ba9d7d5018ea6eb04a`，未覆盖任何已有标签。
+- TASK-B03费用与对话修复已完成：六组费用均由LLM给出有效金额，首次命中5/6；最终金额依次为6980、6680、9040、3280、3280、5980元，最终通过证据中的费用fallback为0。场景01至08在日期修复期间保持冻结且未重跑。
+- TASK-B03D旧场景09证据保持原样：attempt-01证据不足，原因码维持10；attempt-02保留HTTP 503及第二次composer缺少完整报名截止事实的诊断，未追溯补写第一次失败类别。TASK-B03D2将两个日期、精确知识块ID和必含短语作为结构化事实清单注入日期Prompt，并把日期fallback改为“两个composer机会均未产生合格答案”后触发；脱敏诊断逐次记录阶段、公开原因码、耗时、grounding原因和usedChunkIds有效性，Production不返回该诊断。
+- 场景09正式attempt-03首次LLM生成通过：HTTP 200、composer 1次、重生成0、`responseMode`为空、日期fallback 0；正文包含2026年7月25日24:00、2026年7月11日、中国标准时间及主办方最新通知边界，不作报名裁决，不推荐其他营期；`usedChunkIds`精确包含报名截止与早鸟截止知识块，程序追加素材A第三章、第五章两处来源。
+- 从断点继续的场景10至13均通过，未重跑01至08。场景10问候、11特殊符号和13提示注入均无模型调用；场景12学生目录发生一次composer重生成后通过。最终13个功能场景均有通过证据；最终采用的通过结果中fallback总数为0。历史失败证据仍完整保留，其中早期场景02失败attempt出现过一次系统费用兜底，不计入最终通过统计。
+- TASK-B03D2自动测试在原382项基础上新增16项，最终28个测试文件、398项全部通过，0删除、0跳过、0弱化；TypeScript、ESLint、Next.js 16.2.11 Production Build和`git diff --check`均通过。Build仅保留既有Local JSON会话存储的Turbopack文件追踪警告。
+- 证据目录`test-evidence/task-b03/`共89个文件、52份JSON；全部JSON可解析，65个冻结证据文件SHA-256逐一未变，D2新增24个文件。敏感信息、原始Word、禁提交类型和长段知识原文复制扫描均为0命中；8条超过500字符的证据行均为结构化学生目录回答及其镜像字段，不是资料原文复制。
+- TASK-B03只创建本地提交，不推送、不部署Preview或Production、不合并`main`，并停止在TASK-B03，不进入TASK-B04。

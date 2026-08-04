@@ -30,7 +30,9 @@ export type DeterministicTurnRouting = {
     | "unsupported_external_claims"
     | "material_contact_not_provided"
     | "material_extra_discount_not_provided"
-    | "material_comparison_not_provided";
+    | "material_comparison_not_provided"
+    | "greeting"
+    | "special_symbols";
   catalogRequested?: boolean;
 };
 
@@ -155,10 +157,18 @@ function promptInjectionOrSensitiveRequest(message: string): boolean {
     /(?:忽略|无视|绕过).{0,16}(?:此前|之前|以上|原有|系统).{0,12}(?:要求|指令|规则|提示词)/u.test(
       text,
     ) ||
-    /(?:输出|显示|泄露|告诉我).{0,12}(?:系统提示词|api密钥|apikey|环境变量|模型配置|内部reasoncode)/iu.test(
+    /(?:输出|显示|泄露|告诉我|查看|查询|帮我查).{0,12}(?:系统提示词|系统prompt|api\s*key|api密钥|apikey|环境变量|模型配置|内部reasoncode)/iu.test(
       text,
     )
   );
+}
+
+function greetingOrThanks(message: string): boolean {
+  return /^(?:你好|您好|在吗|谢谢|感谢)[。！？!?]*$/u.test(normalized(message));
+}
+
+function onlySpecialSymbols(message: string): boolean {
+  return !/[\p{L}\p{N}\u3400-\u9fff]/u.test(message);
 }
 
 function explicitUnrelatedIntent(message: string): boolean {
@@ -179,7 +189,7 @@ function explicitUnrelatedIntent(message: string): boolean {
     return true;
   }
   if (
-    /^(?:你好|您好|在吗|谢谢|讲个笑话|说个笑话|写一首诗|请写一首诗)[。！？!?]*$/u.test(
+    /^(?:讲个笑话|说个笑话|写一首诗|请写一首诗)[。！？!?]*$/u.test(
       text,
     )
   ) {
@@ -259,7 +269,7 @@ function explicitUnrelatedIntent(message: string): boolean {
 function generalCourseIntent(message: string): boolean {
   const text = normalized(message);
   return (
-    /(?:有什么课程推荐|有什么课程|有哪些班|有什么适合我的|我该选哪个|推荐一个课程|我想学习ai|怎么报名学习|有什么可以学的)/iu.test(
+    /(?:有什么课程推荐|有什么课程|有哪些班|有什么适合我的|我该选哪个|推荐一个课程|我想学习ai|怎么报名学习|有什么可以学的|我想看看你们有什么课程|查看所有班型)/iu.test(
       text,
     ) ||
     /(?:课程|班型).{0,6}(?:推荐|适合|选择|有哪些|有什么)/u.test(text)
@@ -439,6 +449,7 @@ function explicitTeacherConstraints(
   const keys = new Set(state.pendingQuestionKeys);
   const text = normalized(message);
   const patch: Partial<TeacherConstraints> = {};
+  const concentratedStudy = /(?:暑假)?(?:集中学习|连续参加|全天学习)/u.test(text);
   if (/(?:完成过|已经完成|已完成|学完)l2/iu.test(text)) {
     patch.startingLevel = "L2";
     patch.prerequisiteStatus = "met";
@@ -457,6 +468,16 @@ function explicitTeacherConstraints(
     /(?:没|未|没有).{0,4}(?:通过|具备).{0,4}同等能力/u.test(text)
   ) {
     patch.prerequisiteStatus = "not_met";
+  }
+  if (
+    concentratedStudy &&
+    patch.startingLevel === undefined &&
+    state.teacherConstraints.startingLevel === undefined &&
+    state.teacherConstraints.level === undefined &&
+    state.teacherConstraints.goal === undefined &&
+    !/(?:l[123]|等级|基础)/iu.test(text)
+  ) {
+    patch.startingLevel = "beginner";
   }
   if (/(?:报名|参加|学习|目标|想上|想报)l2/iu.test(text)) {
     patch.level = "L2";
@@ -489,6 +510,7 @@ function explicitTeacherConstraints(
     /(?:可以|能|可).{0,12}(?:连续参加|连续脱岗|连续安排|脱岗|请假)|连续几天没问题|都可以参加|可以连续参加|时间可以连续安排/u.test(
       text,
     ) ||
+    concentratedStudy ||
     (keys.has("canTakeContinuousLeave") &&
       /(?:可以|能).{0,8}(?:连续|脱岗|请假|参加)/u.test(text))
   ) {
@@ -527,7 +549,7 @@ function explicitTeacherConstraints(
 function factTopicsFromText(message: string): FactTopic[] {
   const text = normalized(message);
   const topics: FactTopic[] = [];
-  if (/(?:什么时候|时间安排|哪几天|哪天|日期|怎么安排)/u.test(text)) {
+  if (/(?:什么时候|开课时间|开课和结束日期|时间安排|哪几天|哪天|日期|怎么安排)/u.test(text)) {
     topics.push("schedule");
   }
   if (/(?:需要带什么|带什么|准备什么|携带|电脑|设备)/u.test(text)) {
@@ -698,6 +720,24 @@ export function resolveDeterministicTurnRouting(input: {
       intent: "unrelated",
       factTopics: [],
       boundaryCode: "unsupported_external_claims",
+    };
+  }
+  if (greetingOrThanks(input.message)) {
+    return {
+      studentConstraints: {},
+      teacherConstraints: {},
+      intent: "unrelated",
+      factTopics: [],
+      boundaryCode: "greeting",
+    };
+  }
+  if (onlySpecialSymbols(input.message)) {
+    return {
+      studentConstraints: {},
+      teacherConstraints: {},
+      intent: "unrelated",
+      factTopics: [],
+      boundaryCode: "special_symbols",
     };
   }
   const unsupportedMaterial = unsupportedMaterialInformation(input.message);

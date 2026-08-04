@@ -1,0 +1,122 @@
+{
+  "scenarioId": "06-fee-teacher-l2-weekend",
+  "category": "fee",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T04:12:10.857Z",
+  "finishedAt": "2026-08-04T04:12:18.209Z",
+  "elapsedMs": 7352,
+  "expected": "最终金额5980元，回答说明五步计算过程，并由程序复算一致。",
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "L2周末研修班的标准价为6980元。以2026-07-22为缴费日期，早鸟截止日为2026-07-25，您符合早鸟条件，可享受1000元早鸟优惠。单人缴费不满足同一班型满3人的团报条件，因此不适用300元团报优惠；早鸟与团报不可叠加，按金额较高的一项采用早鸟优惠1000元。您未选择食宿，食宿费按0元计算。最终应付金额为6980-1000=5980元。该费用包含课程、资料、考核和模拟云资源。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第五章",
+  "entityIds": [
+    "teacher-l2-weekend"
+  ],
+  "selectedEntityId": "teacher-l2-weekend",
+  "retrievedChunkIds": [
+    "teacher-l2-weekend-schedule",
+    "teacher-l2-pricing",
+    "teacher-l2-prerequisite",
+    "teacher-l2-curriculum",
+    "teacher-product-overview",
+    "teacher-device-and-replay"
+  ],
+  "usedChunkIds": [
+    "teacher-l2-pricing"
+  ],
+  "sources": [
+    {
+      "document": "B",
+      "chapter": "第五章",
+      "factIds": [
+        "teacher-l2-weekend.standardPrice",
+        "teacher-l2-weekend.earlyBirdDiscount",
+        "teacher-l2-weekend.groupDiscount",
+        "teacher-l2-weekend.groupMinimum",
+        "teacher-l2-weekend.earlyBirdDeadline"
+      ]
+    }
+  ],
+  "modelCallCount": 1,
+  "messageSha256": [
+    "2b306baec3af90cb1a54911a5c1559e3ce502e35abccc152b92e19e8012b1e7a"
+  ],
+  "regenerationCount": 0,
+  "calculationMode": "model",
+  "expectedAmount": 5980,
+  "modelAmount": 5980,
+  "firstPassMatched": true,
+  "transientFailure": false,
+  "checks": [
+    {
+      "label": "HTTP 200且无公开错误",
+      "pass": true
+    },
+    {
+      "label": "最终金额为5980元",
+      "pass": true
+    },
+    {
+      "label": "正文包含五步费用规则",
+      "pass": true
+    },
+    {
+      "label": "实体与费用知识块正确",
+      "pass": true
+    },
+    {
+      "label": "费用回答由模型正文或一次重生成完成",
+      "pass": true
+    }
+  ],
+  "passed": true,
+  "conclusion": "通过",
+  "flowResults": [
+    {
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "status": "fact_answer",
+      "answer": "L2周末研修班的标准价为6980元。以2026-07-22为缴费日期，早鸟截止日为2026-07-25，您符合早鸟条件，可享受1000元早鸟优惠。单人缴费不满足同一班型满3人的团报条件，因此不适用300元团报优惠；早鸟与团报不可叠加，按金额较高的一项采用早鸟优惠1000元。您未选择食宿，食宿费按0元计算。最终应付金额为6980-1000=5980元。该费用包含课程、资料、考核和模拟云资源。\n\n来源：素材B《初高中教师AI素养培训体系介绍》第五章",
+      "entityIds": [
+        "teacher-l2-weekend"
+      ],
+      "selectedEntityId": "teacher-l2-weekend",
+      "sources": [
+        {
+          "document": "B",
+          "chapter": "第五章",
+          "factIds": [
+            "teacher-l2-weekend.standardPrice",
+            "teacher-l2-weekend.earlyBirdDiscount",
+            "teacher-l2-weekend.groupDiscount",
+            "teacher-l2-weekend.groupMinimum",
+            "teacher-l2-weekend.earlyBirdDeadline"
+          ]
+        }
+      ],
+      "retrievedChunkIds": [
+        "teacher-l2-weekend-schedule",
+        "teacher-l2-pricing",
+        "teacher-l2-prerequisite",
+        "teacher-l2-curriculum",
+        "teacher-product-overview",
+        "teacher-device-and-replay"
+      ],
+      "usedChunkIds": [
+        "teacher-l2-pricing"
+      ],
+      "modelCallCount": 1,
+      "regenerationCount": 0,
+      "calculationMode": "model",
+      "expectedAmount": 5980,
+      "modelAmount": 5980,
+      "firstPassMatched": true,
+      "routeLatencyMs": 7340,
+      "messageSha256": "2b306baec3af90cb1a54911a5c1559e3ce502e35abccc152b92e19e8012b1e7a",
+      "recommendationCount": 0,
+      "institutionServiceCount": 0
+    }
+  ],
+  "attemptCount": 1,
+  "transientErrorCount": 0
+}

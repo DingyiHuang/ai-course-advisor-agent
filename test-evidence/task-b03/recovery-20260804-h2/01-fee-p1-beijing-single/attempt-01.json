@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "scenarioId": "01-fee-p1-beijing-single",
+  "startedAt": "2026-08-04T04:03:25.728Z",
+  "finishedAt": "2026-08-04T04:03:45.074Z",
+  "sessionHttpStatus": 201,
+  "historyHttpStatus": 200,
+  "httpStatus": 200,
+  "routeElapsedMs": 13915,
+  "serverRouteLatencyMs": 13838,
+  "publicErrorCode": null,
+  "runnerRetryCount": 0,
+  "composerCallCount": 1,
+  "composerAttemptResults": [
+    {
+      "attempt": 1,
+      "elapsedMs": 6083,
+      "category": "success",
+      "enteredGrounding": true
+    }
+  ],
+  "enteredGrounding": true,
+  "groundingFailureReasonCodes": [],
+  "expectedAmount": 6980,
+  "modelAmount": 6980,
+  "calculationMode": "model",
+  "firstPassMatched": true,
+  "eligibleForFeeFirstPassStatistics": true,
+  "sentMessageSha256": "064b590d6b5f51acec0a769954bb38e8608b91ec51366e31a5470cca30443c9e",
+  "receivedMessageSha256": "064b590d6b5f51acec0a769954bb38e8608b91ec51366e31a5470cca30443c9e",
+  "exactRoundTrip": true,
+  "passed": true,
+  "outcome": "passed_first_hit",
+  "category": "fee",
+  "attemptNumber": 1,
+  "elapsedMs": 13915,
+  "transientFailure": false,
+  "regenerationCount": 0,
+  "conclusion": "通过"
+}

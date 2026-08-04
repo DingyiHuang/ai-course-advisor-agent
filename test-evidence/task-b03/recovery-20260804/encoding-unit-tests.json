@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "count": 3,
+  "checks": [
+    {
+      "scenarioId": "encoding-model-health",
+      "sha256": "aa720d485a5e185a93486341ce5454a8247eacae26aaa9187e01d618bd1fbe77"
+    },
+    {
+      "scenarioId": "encoding-fee-recovery",
+      "sha256": "064b590d6b5f51acec0a769954bb38e8608b91ec51366e31a5470cca30443c9e"
+    },
+    {
+      "scenarioId": "encoding-special-symbols",
+      "sha256": "56ded3f72bc19d4c405283835409ae811713f5f18936ae5875c525dc9e8d3eb6"
+    }
+  ]
+}

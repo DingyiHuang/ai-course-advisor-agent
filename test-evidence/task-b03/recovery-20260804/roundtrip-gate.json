@@ -1,0 +1,22 @@
+{
+  "scenarioId": "gate-roundtrip-procurement",
+  "httpStatus": 503,
+  "sessionHttpStatus": 201,
+  "historyHttpStatus": 200,
+  "elapsedMs": 48698,
+  "routeLatencyMs": 42967,
+  "publicErrorCode": "model_unavailable",
+  "directJsonParse": true,
+  "sentMessageSha256": "8f6ed98c396e35fb54238df25b5d27311d4ae1c066525ed823c40456ee7dfc9a",
+  "receivedMessageSha256": "8f6ed98c396e35fb54238df25b5d27311d4ae1c066525ed823c40456ee7dfc9a",
+  "exactRoundTrip": true,
+  "classifierCallCount": 0,
+  "composerCallCount": 2,
+  "externalModelCalls": 2,
+  "answerChecks": {
+    "containsMinimumPeople": false,
+    "containsMinimumPrice": false,
+    "excludesPersonalPrice": true
+  },
+  "passed": false
+}

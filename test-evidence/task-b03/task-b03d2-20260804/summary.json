@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-08-04T05:10:13.038Z",
+  "totalScenarios": 13,
+  "completedScenarios": 5,
+  "passedScenarios": 5,
+  "functionalPassRate": 100,
+  "completedFeeScenarios": 0,
+  "feeFirstPassHitCount": 0,
+  "feeFirstPassHitRate": 0,
+  "groundingRegenerationCount": 1,
+  "fallbackCount": 0,
+  "transientModelErrorCount": 0,
+  "averageAttemptElapsedMs": 8938,
+  "longestAttemptElapsedMs": 32153
+}

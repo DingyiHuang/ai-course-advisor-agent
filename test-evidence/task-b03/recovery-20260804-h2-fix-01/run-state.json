@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "mode": "local real model; testMode=false",
+  "updatedAt": "2026-08-04T04:14:29.876Z",
+  "scenarios": {
+    "02-fee-p1-beijing-group": {
+      "status": "passed",
+      "attemptCount": 1
+    },
+    "03-fee-p1-beijing-group-lodging": {
+      "status": "passed",
+      "attemptCount": 1
+    },
+    "04-fee-p3-online-single": {
+      "status": "passed",
+      "attemptCount": 1
+    },
+    "05-fee-p3-online-group": {
+      "status": "passed",
+      "attemptCount": 1
+    },
+    "06-fee-teacher-l2-weekend": {
+      "status": "passed",
+      "attemptCount": 1
+    },
+    "07-primary-recommendation-fee-followup": {
+      "status": "passed",
+      "attemptCount": 1
+    },
+    "08-teacher-concentrated-learning": {
+      "status": "passed",
+      "attemptCount": 1
+    },
+    "09-registration-advisory": {
+      "status": "stopped",
+      "attemptCount": 1
+    }
+  }
+}

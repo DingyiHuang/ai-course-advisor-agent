@@ -1,0 +1,70 @@
+{
+  "scenarioId": "11-special-symbols",
+  "category": "conversation",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T05:08:54.688Z",
+  "finishedAt": "2026-08-04T05:08:54.702Z",
+  "elapsedMs": 14,
+  "expected": "HTTP 200范围提示，不返回HTTP 500。",
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "我暂时无法从这些符号中识别咨询内容。可以询问学生课程、教师培训、费用、报名条件或机构服务。",
+  "entityIds": [],
+  "selectedEntityId": null,
+  "retrievedChunkIds": [],
+  "usedChunkIds": [],
+  "sources": [],
+  "modelCallCount": 0,
+  "messageSha256": [
+    "c0a1c99c24f86b7e5b0e6902bb116f526977918f0cdf163894be7a53b6fe0a25"
+  ],
+  "regenerationCount": 0,
+  "calculationMode": null,
+  "responseMode": null,
+  "groundingReasonCodes": [],
+  "dateAdvisoryAttemptResults": [],
+  "expectedAmount": null,
+  "modelAmount": null,
+  "firstPassMatched": null,
+  "transientFailure": false,
+  "checks": [
+    {
+      "label": "特殊符号HTTP 200",
+      "pass": true
+    },
+    {
+      "label": "返回资料范围提示",
+      "pass": true
+    }
+  ],
+  "passed": true,
+  "conclusion": "通过",
+  "flowResults": [
+    {
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "status": "needs_identity",
+      "answer": "我暂时无法从这些符号中识别咨询内容。可以询问学生课程、教师培训、费用、报名条件或机构服务。",
+      "entityIds": [],
+      "selectedEntityId": null,
+      "sources": [],
+      "retrievedChunkIds": [],
+      "usedChunkIds": [],
+      "modelCallCount": 0,
+      "regenerationCount": 0,
+      "calculationMode": null,
+      "responseMode": null,
+      "groundingReasonCodes": [],
+      "dateAdvisoryAttemptResults": [],
+      "expectedAmount": null,
+      "modelAmount": null,
+      "firstPassMatched": null,
+      "routeLatencyMs": 1,
+      "messageSha256": "c0a1c99c24f86b7e5b0e6902bb116f526977918f0cdf163894be7a53b6fe0a25",
+      "recommendationCount": 0,
+      "institutionServiceCount": 0
+    }
+  ],
+  "attemptCount": 1,
+  "transientErrorCount": 0
+}

@@ -1,0 +1,124 @@
+{
+  "scenarioId": "05-fee-p3-online-group",
+  "category": "fee",
+  "attemptNumber": 1,
+  "startedAt": "2026-08-04T04:11:13.656Z",
+  "finishedAt": "2026-08-04T04:11:32.794Z",
+  "elapsedMs": 19137,
+  "expected": "最终金额3280元，回答说明五步计算过程，并由程序复算一致。",
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "finalPublicAnswer": "您咨询的是2026年第三期线上直播班，日期为2026年7月22日。以下是每人费用的计算过程：\n\n1. 该班型标准价为3980元。\n2. 早鸟截止日期为2026年7月30日，您的日期7月22日符合早鸟条件，早鸟价为3280元。\n3. 3人团报且为同一期、同一班型，满足团报条件，每人可优惠300元。\n4. 早鸟优惠金额为3980-3280=700元，高于团报优惠300元，且两项优惠不可叠加，因此采用优惠金额较高的早鸟价。\n5. 您未明确选择食宿费用，因此食宿费按0元计算。\n\n最终每人应付金额为3280元。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章",
+  "entityIds": [
+    "camp-p3-online"
+  ],
+  "selectedEntityId": "camp-p3-online",
+  "retrievedChunkIds": [
+    "student-camp-p3-online-logistics",
+    "student-camp-overview",
+    "student-camp-p3-online-pricing",
+    "student-camp-daily-outline",
+    "student-camp-required-items",
+    "student-camp-equipment"
+  ],
+  "usedChunkIds": [
+    "student-camp-p3-online-pricing"
+  ],
+  "sources": [
+    {
+      "document": "A",
+      "chapter": "第五章",
+      "factIds": [
+        "camp-p3-online.earlyBirdDeadline",
+        "camp-p3-online.standardPrice",
+        "camp-p3-online.earlyBirdPrice",
+        "camp-p3-online.groupDiscount",
+        "camp-p3-online.groupMinimum",
+        "camp-p3-online.groupScope"
+      ]
+    }
+  ],
+  "modelCallCount": 2,
+  "messageSha256": [
+    "ed1ca303d8ac97ddccccdb038f975501b6792f02fb1c81b734d421a23a5e8e39"
+  ],
+  "regenerationCount": 1,
+  "calculationMode": "regenerated_model",
+  "expectedAmount": 3280,
+  "modelAmount": 3280,
+  "firstPassMatched": false,
+  "transientFailure": false,
+  "checks": [
+    {
+      "label": "HTTP 200且无公开错误",
+      "pass": true
+    },
+    {
+      "label": "最终金额为3280元",
+      "pass": true
+    },
+    {
+      "label": "正文包含五步费用规则",
+      "pass": true
+    },
+    {
+      "label": "实体与费用知识块正确",
+      "pass": true
+    },
+    {
+      "label": "费用回答由模型正文或一次重生成完成",
+      "pass": true
+    }
+  ],
+  "passed": true,
+  "conclusion": "通过",
+  "flowResults": [
+    {
+      "httpStatus": 200,
+      "publicErrorCode": null,
+      "status": "fact_answer",
+      "answer": "您咨询的是2026年第三期线上直播班，日期为2026年7月22日。以下是每人费用的计算过程：\n\n1. 该班型标准价为3980元。\n2. 早鸟截止日期为2026年7月30日，您的日期7月22日符合早鸟条件，早鸟价为3280元。\n3. 3人团报且为同一期、同一班型，满足团报条件，每人可优惠300元。\n4. 早鸟优惠金额为3980-3280=700元，高于团报优惠300元，且两项优惠不可叠加，因此采用优惠金额较高的早鸟价。\n5. 您未明确选择食宿费用，因此食宿费按0元计算。\n\n最终每人应付金额为3280元。\n\n来源：素材A《2026暑期AI素养夏令营课程手册》第五章",
+      "entityIds": [
+        "camp-p3-online"
+      ],
+      "selectedEntityId": "camp-p3-online",
+      "sources": [
+        {
+          "document": "A",
+          "chapter": "第五章",
+          "factIds": [
+            "camp-p3-online.earlyBirdDeadline",
+            "camp-p3-online.standardPrice",
+            "camp-p3-online.earlyBirdPrice",
+            "camp-p3-online.groupDiscount",
+            "camp-p3-online.groupMinimum",
+            "camp-p3-online.groupScope"
+          ]
+        }
+      ],
+      "retrievedChunkIds": [
+        "student-camp-p3-online-logistics",
+        "student-camp-overview",
+        "student-camp-p3-online-pricing",
+        "student-camp-daily-outline",
+        "student-camp-required-items",
+        "student-camp-equipment"
+      ],
+      "usedChunkIds": [
+        "student-camp-p3-online-pricing"
+      ],
+      "modelCallCount": 2,
+      "regenerationCount": 1,
+      "calculationMode": "regenerated_model",
+      "expectedAmount": 3280,
+      "modelAmount": 3280,
+      "firstPassMatched": false,
+      "routeLatencyMs": 19129,
+      "messageSha256": "ed1ca303d8ac97ddccccdb038f975501b6792f02fb1c81b734d421a23a5e8e39",
+      "recommendationCount": 0,
+      "institutionServiceCount": 0
+    }
+  ],
+  "attemptCount": 1,
+  "transientErrorCount": 0
+}

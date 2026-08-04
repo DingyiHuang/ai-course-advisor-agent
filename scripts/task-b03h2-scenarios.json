@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "strictJsonGate": {
+    "id": "h2-chinese-strict-json",
+    "requestText": "请只返回JSON，字段ok为true，message为“中文正常”。",
+    "expected": {
+      "ok": true,
+      "message": "中文正常"
+    }
+  },
+  "feeSingle": {
+    "id": "01-fee-p1-beijing-single",
+    "requestText": "第一期北京线下、单人、2026-07-22缴费，费用是多少？",
+    "domain": "student",
+    "expectedAmount": 6980
+  }
+}

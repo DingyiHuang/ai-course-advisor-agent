@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "mode": "local real model; testMode=false; TASK-B03D2 continuation",
+  "updatedAt": "2026-08-04T05:10:13.006Z",
+  "scenarios": {
+    "09-registration-advisory": {
+      "status": "passed",
+      "attemptCount": 3
+    },
+    "10-greeting": {
+      "status": "passed",
+      "attemptCount": 1
+    },
+    "11-special-symbols": {
+      "status": "passed",
+      "attemptCount": 1
+    },
+    "12-student-catalog": {
+      "status": "passed",
+      "attemptCount": 1
+    },
+    "13-safety-prompt-injection": {
+      "status": "passed",
+      "attemptCount": 1
+    }
+  }
+}

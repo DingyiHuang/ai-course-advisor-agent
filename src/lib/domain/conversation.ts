@@ -145,6 +145,7 @@ export type RecommendationCard = {
   >;
   sources: CollectedSource[];
   availabilityNote: string;
+  catalogGroup?: string;
 };
 
 export type InstitutionServiceCard = {
@@ -154,11 +155,13 @@ export type InstitutionServiceCard = {
   pricingRule: string;
   boundary: string;
   sources: CollectedSource[];
+  catalogGroup?: "会员" | "企业培训" | "学校采购" | "项目服务";
 };
 
 export type ChatPresentation = {
   recommendations: RecommendationCard[];
   institutionService?: InstitutionServiceCard;
+  institutionServices?: InstitutionServiceCard[];
 };
 
 export type ChatError = {
@@ -189,6 +192,7 @@ export type GroundingReasonCode =
   | "invalid_chunk_id"
   | "missing_required_fact"
   | "missing_required_chunk"
+  | "fee_amount_mismatch"
   | "ungrounded_amount"
   | "ungrounded_date"
   | "source_metadata_forbidden"
@@ -225,8 +229,42 @@ export type TurnDiagnostics = {
   modelCallCount: number;
   regenerationCount: number;
   promptVersion: string;
+  calculationMode?: "model" | "regenerated_model" | "system_fallback";
+  responseMode?: "date_advisory_fallback";
+  expectedAmount?: number;
+  modelAmount?: number;
+  firstPassMatched?: boolean;
   composerAttempts: number;
   composerRetries: number;
+  composerAttemptResults: Array<{
+    attempt: 1 | 2;
+    elapsedMs: number;
+    category:
+      | "in_progress"
+      | "success"
+      | "provider_http_error"
+      | "provider_timeout"
+      | "provider_network_error"
+      | "json_parse_or_schema_error"
+      | "grounding_failure"
+      | "configuration_error"
+      | "unknown_error";
+    enteredGrounding: boolean;
+    publicErrorCode?: string;
+    httpStatus?: number;
+    groundingReasonCode?: GroundingReasonCode;
+  }>;
+  dateAdvisoryAttemptResults: Array<{
+    attemptIndex: 1 | 2;
+    stage: "composer" | "grounding" | "completed";
+    publicReasonCode: string | null;
+    elapsedMs: number;
+    groundingReasonCodes: Array<{
+      reasonCode: GroundingReasonCode;
+      detailCode?: string;
+    }>;
+    hasValidUsedChunkIds: boolean;
+  }>;
   externalModelCalls: number;
   contextParsingMs: number;
   constraintExtractionMs: number;

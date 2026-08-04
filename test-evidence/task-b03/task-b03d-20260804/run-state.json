@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "mode": "local real model; testMode=false; TASK-B03D continuation",
+  "updatedAt": "2026-08-04T04:50:43.721Z",
+  "scenarios": {
+    "09-registration-advisory": {
+      "status": "failed",
+      "attemptCount": 2
+    }
+  }
+}

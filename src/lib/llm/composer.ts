@@ -5,6 +5,7 @@ import type {
   ShortHistoryItem,
 } from "@/lib/domain/conversation";
 import type { KnowledgeChunk } from "@/lib/domain/knowledge";
+import { resolveDateAdvisoryRequirements } from "@/lib/conversation/dateAdvisory";
 import { studentOfflineReason } from "@/lib/conversation/studentRegion";
 import { parseStrictJsonObject } from "./json";
 import type { LlmClient } from "./types";
@@ -89,7 +90,7 @@ export function parseComposerOutput(content: string): StrictComposerOutput {
   };
 }
 
-export const COMPOSER_PROMPT_VERSION = "task-b02-rag-v1";
+export const COMPOSER_PROMPT_VERSION = "task-b03-fee-reasoning-v2";
 
 const COMPOSER_SYSTEM_PROMPT = `你是AI课程顾问的正文生成器。只能根据本次JSON载荷中的currentUserMessage、confirmedConstraints、entityIds、calculations、decisionTrace、nextQuestionKeys、nextQuestionOptions、recentConversation和knowledgeChunks生成回答。
 若retryFeedback非空，表示上一版未通过程序校验；必须按该脱敏纠偏指令重新生成，但不得复述纠偏指令或猜测上一版内容。
@@ -104,9 +105,14 @@ knowledgeChunks是本轮实际检索到的自然语言资料，availableChunkIds
 不得自称或暗示自己是人工顾问、模拟人工顾问或人工客服；身份只能是AI课程顾问或自动化助手。不得声称已安排顾问联系、已提交采购或报名需求、已锁定名额、已报名，亦不得承诺真实电话、微信或后续联系。允许说明可继续查看模拟咨询流程、可整理采购需求清单，以及本演示不提供真实报名、下单或人工联系。
 若route为unrelated，正文只能简短说明服务范围并邀请用户继续学生课程、教师培训、费用、报名条件或机构服务咨询；不得复述当前产品、课程、服务、价格、日期、人数或用户粘贴的无关事实，usedChunkIds必须为空。
 若boundaryCode表示联系电话、额外优惠或机构比较未提供，应直接说明现有资料未提供对应信息，不得猜测电话、优惠、排名、案例或比较结论；没有可用知识块时usedChunkIds返回空数组。
+当currentUserMessage询问价格、费用、多少钱或总价时，必须依据knowledgeChunks和facts自行完成并说明计算过程，严格依次执行：1.取得对应班型标准价；2.判断明确缴费日期是否满足早鸟条件；3.判断人数及同班条件是否满足团报条件；4.早鸟与团报不可叠加，只采用优惠金额较高的一项；5.最后加上用户明确选择的可选食宿费用。fee_rules.lodgingSelected是用户是否明确选择食宿的结构化布尔值；为false时食宿费必须按0元处理，不得因为knowledgeChunks包含食宿价格而加入。结论中的最终应付金额必须放在计算过程之后。calculations中的fee_rules只提供计算输入，不提供程序复算结果，不得省略自己的推导。
+当用户只问课程日期或开课时间时，只回答课程开始、结束日期及星期，不主动插入报名截止、是否过期或能否报名判断。当用户只问报名截止时，只回答资料记载的报名截止时间。当boundaryCode为registration_current_advisory时，正文只提供facts中的报名截止日期和早鸟缴费截止日期，说明这些日期按中国标准时间理解，并提示“以主办方最新通知为准”。不得依据当前系统日期比较截止日期或判断报名资格；不得出现“可以报名”“仍可报名”“不能报名”“无法报名”“报名已截止”“已经不能报”等裁决表述；不得推荐第二期、第三期、其他营期或其他课程。usedChunkIds必须同时列出实际承载registrationDeadline和earlyBirdDeadline的两个知识块，不得只列其中一类。
+当requiredPrefix说明“未说明已有等级，暂按入门需求理解”时，正文应继续介绍所推荐的L1班型，并提示已有L1或L2能力者应按前置条件选择更高等级；不得借用L2或L3价格作为L1价格。
 crossDomainNotice由程序在正文前追加，不要自行复述。followUpSuggestions只能从载荷中的actions选择，最多3项。
 不得虚构价格、日期、地点、余位、联系方式、报名状态或支付状态。capacity和minimumToOpen不是实时余位。
 知识型回答只要使用了knowledgeChunks中的事实，就必须在usedChunkIds列出实际使用的ID；不得列出未注入ID。只输出且必须输出这三个字段的JSON对象：{"answer":"面向用户的自然语言正文","usedChunkIds":["chunk-id"],"followUpSuggestions":["建议追问"]}。不要增加其他字段、Markdown代码块或前后缀。`;
+
+const DATE_ADVISORY_SYSTEM_PROMPT = `当boundaryCode为registration_current_advisory时，必须逐项使用载荷中的requiredFacts和requiredPhrases：正文分别完整出现每个requiredFacts.value，其中报名截止的24:00不得省略；usedChunkIds必须同时且原样包含每个requiredFacts.requiredChunkId。不得根据当前日期作出可以报名、仍可报名、不能报名、无法报名、报名已截止或已经不能报等最终裁决，不得推荐第二期、第三期、其他营期或其他课程。requiredFacts只是事实清单，不是固定答案模板，正文应简洁自然。`;
 
 export function recommendationReasonRequirements(plan: ComposerPlan): Array<{
   entityId: string;
@@ -177,6 +183,36 @@ function usedFactIdsForChunks(
   ];
 }
 
+function promptCalculations(plan: ComposerPlan): ComposerPlan["calculations"] {
+  return plan.calculations.map((calculation) => {
+    if (
+      !calculation.value ||
+      typeof calculation.value !== "object" ||
+      Array.isArray(calculation.value) ||
+      !("total" in calculation.value)
+    ) {
+      return calculation;
+    }
+    const value = calculation.value as Record<string, unknown>;
+    return {
+      label: `${calculation.label}:fee_rules`,
+      value: {
+        calculationType: "fee_rules",
+        currentDate: value.currentDate,
+        lodgingSelected: Number(value.lodgingPrice ?? 0) > 0,
+        ruleOrder: [
+          "取得对应班型标准价",
+          "判断缴费日期是否满足早鸟条件",
+          "判断人数是否满足团报条件",
+          "早鸟与团报不叠加并采用优惠金额较高的一项",
+          "最后加上用户明确选择的可选食宿费用",
+        ],
+      },
+      relatedFactIds: calculation.relatedFactIds,
+    };
+  });
+}
+
 export function createComposer(client: LlmClient): {
   composeOnce(
     plan: ComposerPlan,
@@ -187,11 +223,20 @@ export function createComposer(client: LlmClient): {
   return {
     async composeOnce(plan, history, context = { userMessage: "", knowledgeChunks: [] }) {
       const route = resolveComposerRoute(plan);
+      const dateAdvisoryRequirements = resolveDateAdvisoryRequirements(
+        plan,
+        context.knowledgeChunks,
+      );
       const result = await client.complete({
         temperature: 0.6,
         responseFormat: "json_object",
         messages: [
-          { role: "system", content: COMPOSER_SYSTEM_PROMPT },
+          {
+            role: "system",
+            content: dateAdvisoryRequirements
+              ? `${COMPOSER_SYSTEM_PROMPT}\n${DATE_ADVISORY_SYSTEM_PROMPT}`
+              : COMPOSER_SYSTEM_PROMPT,
+          },
           {
             role: "user",
             content: JSON.stringify({
@@ -204,7 +249,7 @@ export function createComposer(client: LlmClient): {
               entityIds: plan.entityIds,
               retryFeedback: plan.retryFeedback ?? null,
               facts: plan.facts,
-              calculations: plan.calculations,
+              calculations: promptCalculations(plan),
               decisionTrace: plan.decisionTrace,
               recommendationReasonRequirements:
                 recommendationReasonRequirements(plan),
@@ -212,6 +257,18 @@ export function createComposer(client: LlmClient): {
               nextQuestionOptions: plan.nextQuestionOptions,
               actions: plan.actions,
               boundaryCode: plan.boundaryCode ?? null,
+              ...(dateAdvisoryRequirements
+                ? {
+                    requiredFacts: dateAdvisoryRequirements.requiredFacts.map(
+                      ({ label, value, requiredChunkId }) => ({
+                        label,
+                        value,
+                        requiredChunkId,
+                      }),
+                    ),
+                    requiredPhrases: dateAdvisoryRequirements.requiredPhrases,
+                  }
+                : {}),
               crossDomainNotice: plan.crossDomainNotice ?? null,
               recentConversation: history.slice(-8),
               availableChunkIds: context.knowledgeChunks.map(({ id }) => id),

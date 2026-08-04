@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "analyzedAt": "2026-08-04T04:02:30.5510889Z",
+  "classification": 5,
+  "classificationLabel": "现有证据不足，无法确认",
+  "reasonCode": "missing_first_attempt_outcome",
+  "observed": {
+    "httpStatus": 503,
+    "routeLatencyMs": 42967,
+    "composerCallCount": 2,
+    "publicErrorCode": "model_unavailable",
+    "firstAttemptCategoryAvailable": false,
+    "groundingFailureDetailsAvailable": false
+  }
+}

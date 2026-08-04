@@ -92,6 +92,8 @@ export async function POST(request: Request): Promise<Response> {
         promptVersion: COMPOSER_PROMPT_VERSION,
         composerAttempts: 0,
         composerRetries: 0,
+        composerAttemptResults: [],
+        dateAdvisoryAttemptResults: [],
         externalModelCalls: 0,
         contextParsingMs: 0,
         constraintExtractionMs: 0,

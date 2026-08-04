@@ -263,6 +263,15 @@ function teacherRecommendationPlan(
     const fees = result.recommendations.map(({ item }) =>
       calculateTeacherFee({ product: item, currentDate }),
     );
+    const lastUserMessage = [...state.shortHistory]
+      .reverse()
+      .find(({ role }) => role === "user")?.content ?? "";
+    const assumedEntryLevel =
+      state.teacherConstraints.startingLevel === "beginner" &&
+      /(?:暑假)?(?:集中学习|连续参加|全天学习)/u.test(lastUserMessage) &&
+      !/(?:零基础|没学过|刚入门|刚开始接触|已完成|具备|通过|l[123]|等级)/iu.test(
+        lastUserMessage,
+      );
     return basePlan({
       state,
       status: "recommended",
@@ -284,6 +293,9 @@ function teacherRecommendationPlan(
       decisionTrace: traces,
       actions: ["继续询问当前班型", "查看其他班型", "返回菜单"],
       entityIds: result.recommendations.map(({ item }) => item.id),
+      requiredPrefix: assumedEntryLevel
+        ? "您未说明已有等级，暂按入门需求理解，优先推荐L1暑期集训班；若已具备L1或L2能力，需要按照相应前置条件选择更高等级。"
+        : undefined,
       crossDomainFrom,
     });
   }
@@ -329,6 +341,7 @@ function factQuestionPlan(input: {
   state: ConversationState;
   factTopics: FactTopic[];
   currentDate: BusinessDate;
+  userMessage: string;
   allowMultipleEntities: boolean;
   crossDomainFrom?: "student" | "teacher" | "platform";
 }): ComposerPlan | undefined {
@@ -354,7 +367,29 @@ function factQuestionPlan(input: {
       crossDomainFrom: input.crossDomainFrom,
     });
   }
-  const candidateFacts = candidateIds.map((id) => factsForTopics(id, input.factTopics));
+  const asksCurrentRegistration =
+    /(?:(?:现在|当前|今天).{0,8})?(?:还能|能否|是否还可以|还可以|可以继续).{0,5}报名/u.test(
+      input.userMessage,
+    );
+  const asksRegistrationDeadlineOnly =
+    !asksCurrentRegistration &&
+    /(?:报名截止|截止报名|报名的截止)/u.test(input.userMessage) &&
+    !input.factTopics.includes("price");
+  const candidateFacts = candidateIds.map((id) =>
+    factsForTopics(id, input.factTopics).filter((fact) => {
+      if (
+        input.factTopics.includes("schedule") &&
+        !input.factTopics.includes("registration") &&
+        fact.id.endsWith(".registrationDeadline")
+      ) {
+        return false;
+      }
+      if (asksRegistrationDeadlineOnly) {
+        return fact.id.endsWith(".registrationDeadline");
+      }
+      return true;
+    }),
+  );
   if (candidateIds.length > 1) {
     const valuesByLabel = new Map<string, Set<string>>();
     for (const fact of candidateFacts.flat()) {
@@ -390,18 +425,16 @@ function factQuestionPlan(input: {
             new Date(`${date}T00:00:00Z`).getUTCDay()
           ];
         calculations.push({
-          label: `${camp.id}课程日期、星期与报名截止时间`,
+          label: `${camp.id}课程日期与星期`,
           value: {
             startDate: camp.startDate,
             startWeekday: weekday(camp.startDate),
             endDate: camp.endDate,
             endWeekday: weekday(camp.endDate),
-            registrationCutoff: `${camp.registrationDeadline} 24:00`,
           },
           relatedFactIds: [
             `${camp.id}.startDate`,
             `${camp.id}.endDate`,
-            `${camp.id}.registrationDeadline`,
           ],
         });
       } else if (entity?.id.startsWith("teacher-")) {
@@ -425,11 +458,7 @@ function factQuestionPlan(input: {
       }
     }
   }
-  if (
-    input.factTopics.some(
-      (topic) => topic === "price" || topic === "registration",
-    )
-  ) {
+  if (input.factTopics.includes("price")) {
     for (const entityId of candidateIds) {
       const entity = getKnowledgeEntityById(entityId);
       if (entity?.id.startsWith("camp-")) {
@@ -460,9 +489,12 @@ function factQuestionPlan(input: {
             registrationCutoff: `${camp.registrationDeadline} 24:00`,
             earlyBirdStatus: fee.earlyBirdStatus,
             basePrice: fee.basePrice,
+            availableEarlyBirdDiscount:
+              camp.standardPrice - camp.earlyBirdPrice,
             earlyBirdDiscount: fee.earlyBirdDiscount,
             groupDiscount: fee.groupDiscount,
             appliedDiscount: fee.appliedDiscount,
+            lodgingPrice: fee.lodgingPrice,
             total: fee.total,
             discountKind: fee.discountKind,
           },
@@ -486,15 +518,46 @@ function factQuestionPlan(input: {
             registrationCutoff: `${product.registrationDeadline} 24:00`,
             earlyBirdStatus: fee.earlyBirdStatus,
             basePrice: fee.basePrice,
+            availableEarlyBirdDiscount: product.earlyBirdDiscount,
             earlyBirdDiscount: fee.earlyBirdDiscount,
             groupDiscount: fee.groupDiscount,
             appliedDiscount: fee.appliedDiscount,
+            lodgingPrice: fee.lodgingPrice,
             total: fee.total,
             discountKind: fee.discountKind,
           },
           relatedFactIds: fee.factIds,
         });
       }
+    }
+  }
+  if (asksCurrentRegistration) {
+    for (const entityId of candidateIds) {
+      const entity = getKnowledgeEntityById(entityId);
+      if (
+        !entity ||
+        !("registrationDeadline" in entity) ||
+        !("earlyBirdDeadline" in entity)
+      ) {
+        continue;
+      }
+      const registrationDeadline = `${entityId}.registrationDeadline`;
+      const earlyBirdDeadline = `${entityId}.earlyBirdDeadline`;
+      facts = groundedFactsFromIds([
+        ...facts.map(({ id }) => id),
+        registrationDeadline,
+        earlyBirdDeadline,
+      ]);
+      calculations.push({
+        label: `${entityId}当前报名信息核对基准`,
+        value: {
+          timeBasis: "中国标准时间",
+          advisoryOnly: true,
+          latestOrganizerNoticeRequired: true,
+          requiredFactIds: [registrationDeadline, earlyBirdDeadline],
+        },
+        relatedFactIds: [registrationDeadline, earlyBirdDeadline],
+      });
     }
   }
   return basePlan({
@@ -504,6 +567,11 @@ function factQuestionPlan(input: {
     calculations,
     actions: ["继续询问当前班型", "返回菜单"],
     entityIds: candidateIds,
+    boundaryCode: asksCurrentRegistration
+      ? "registration_current_advisory"
+      : asksRegistrationDeadlineOnly
+        ? "registration_deadline_only"
+        : undefined,
     crossDomainFrom: input.crossDomainFrom,
   });
 }
@@ -513,6 +581,7 @@ export function buildComposerPlan(input: {
   intent: ConversationIntent;
   factTopics: FactTopic[];
   currentDate: BusinessDate;
+  userMessage?: string;
   crossDomainFrom?: "student" | "teacher" | "platform";
 }): ComposerPlan {
   if (input.intent === "unrelated") {
@@ -545,6 +614,7 @@ export function buildComposerPlan(input: {
   ) {
     const plan = factQuestionPlan({
       ...input,
+      userMessage: input.userMessage ?? "",
       allowMultipleEntities: input.intent === "fact_question",
     });
     if (plan) return plan;
@@ -688,8 +758,20 @@ export function buildCatalogPlan(input: {
     });
   }
 
-  const entityIds = PLATFORM_SERVICES.map(({ id }) => id);
-  const factIdsByEntity = PLATFORM_SERVICES.map((service) => [
+  const platformCatalogOrder = [
+    "platform-membership",
+    "platform-contest",
+    "platform-enterprise-training",
+    "platform-school-procurement",
+    "platform-basic-agent",
+    "platform-ai-web",
+    "platform-rag",
+  ];
+  const services = platformCatalogOrder.map(
+    (id) => PLATFORM_SERVICES.find((service) => service.id === id)!,
+  );
+  const entityIds = services.map(({ id }) => id);
+  const factIdsByEntity = services.map((service) => [
     `${service.id}.category`,
     `${service.id}.audience`,
     ...(service.pricingRule ? [`${service.id}.pricingRule`] : []),

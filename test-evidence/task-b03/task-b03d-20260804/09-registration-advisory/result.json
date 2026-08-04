@@ -1,0 +1,110 @@
+{
+  "scenarioId": "09-registration-advisory",
+  "category": "conversation",
+  "attemptNumber": 2,
+  "startedAt": "2026-08-04T04:50:05.983Z",
+  "finishedAt": "2026-08-04T04:50:43.705Z",
+  "elapsedMs": 37718,
+  "expected": "提供两项截止日期、中国标准时间基准和主办方通知边界，不作最终裁决。",
+  "httpStatus": 503,
+  "publicErrorCode": "grounding_rejected",
+  "finalPublicAnswer": "当前资料核对未通过，请重试。原有对话已保留。",
+  "entityIds": [],
+  "selectedEntityId": null,
+  "retrievedChunkIds": [
+    "student-camp-p1-bj-logistics",
+    "student-camp-p1-sh-logistics",
+    "student-camp-p1-online-logistics",
+    "student-camp-refund",
+    "student-camp-p1-bj-pricing",
+    "student-camp-p1-sh-pricing"
+  ],
+  "usedChunkIds": [],
+  "sources": [],
+  "modelCallCount": 2,
+  "messageSha256": [
+    "7ed9c3edf24080f624b2cdf31c07db6d80cab3686871e8a9a001acd353805c3f"
+  ],
+  "regenerationCount": 1,
+  "calculationMode": null,
+  "responseMode": null,
+  "groundingReasonCodes": [
+    {
+      "attempt": 2,
+      "reasonCode": "missing_required_fact",
+      "detailCode": "date_advisory_registration_deadline_missing"
+    }
+  ],
+  "expectedAmount": null,
+  "modelAmount": null,
+  "firstPassMatched": null,
+  "transientFailure": false,
+  "checks": [
+    {
+      "label": "日期咨询HTTP 200且无公开错误",
+      "pass": false
+    },
+    {
+      "label": "包含两项截止日期和时间基准",
+      "pass": false
+    },
+    {
+      "label": "同时使用报名截止和早鸟截止知识块",
+      "pass": false
+    },
+    {
+      "label": "保留主办方通知边界且不作报名裁决",
+      "pass": false
+    },
+    {
+      "label": "不推荐其他营期或课程",
+      "pass": true
+    },
+    {
+      "label": "来源只覆盖两个日期事实",
+      "pass": false
+    }
+  ],
+  "passed": false,
+  "conclusion": "功能检查未通过",
+  "flowResults": [
+    {
+      "httpStatus": 503,
+      "publicErrorCode": "grounding_rejected",
+      "status": "error",
+      "answer": "当前资料核对未通过，请重试。原有对话已保留。",
+      "entityIds": [],
+      "selectedEntityId": null,
+      "sources": [],
+      "retrievedChunkIds": [
+        "student-camp-p1-bj-logistics",
+        "student-camp-p1-sh-logistics",
+        "student-camp-p1-online-logistics",
+        "student-camp-refund",
+        "student-camp-p1-bj-pricing",
+        "student-camp-p1-sh-pricing"
+      ],
+      "usedChunkIds": [],
+      "modelCallCount": 2,
+      "regenerationCount": 1,
+      "calculationMode": null,
+      "responseMode": null,
+      "groundingReasonCodes": [
+        {
+          "attempt": 2,
+          "reasonCode": "missing_required_fact",
+          "detailCode": "date_advisory_registration_deadline_missing"
+        }
+      ],
+      "expectedAmount": null,
+      "modelAmount": null,
+      "firstPassMatched": null,
+      "routeLatencyMs": 37394,
+      "messageSha256": "7ed9c3edf24080f624b2cdf31c07db6d80cab3686871e8a9a001acd353805c3f",
+      "recommendationCount": 0,
+      "institutionServiceCount": 0
+    }
+  ],
+  "attemptCount": 2,
+  "transientErrorCount": 0
+}

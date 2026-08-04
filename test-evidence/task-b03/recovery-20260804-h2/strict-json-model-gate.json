@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "scenarioId": "h2-chinese-strict-json",
+  "startedAt": "2026-08-04T04:02:15.023Z",
+  "finishedAt": "2026-08-04T04:02:16.606Z",
+  "elapsedMs": 283,
+  "httpStatus": 200,
+  "publicErrorCode": null,
+  "providerCallCount": 1,
+  "automaticRetryCount": 0,
+  "directJsonParse": true,
+  "okIsTrue": true,
+  "messageExact": true,
+  "onlyExpectedFields": true,
+  "sentMessageSha256": "b0efc5dd91dd8ae29bf70f5e14abc5c1ec3d5a73c3b7f0adeea3fab7a3c71a98",
+  "receivedMessageSha256": "b0efc5dd91dd8ae29bf70f5e14abc5c1ec3d5a73c3b7f0adeea3fab7a3c71a98",
+  "exactRoundTrip": true,
+  "passed": true
+}

@@ -36,8 +36,10 @@ import {
 import type { ClassifierCandidate } from "@/lib/llm/classifier";
 import { applyClassifierCandidate } from "@/lib/llm/classifier";
 import { recommendationReasonRequirements } from "@/lib/llm/composer";
+import { resolveDateAdvisoryRequirements } from "./dateAdvisory";
 import type { ComposerOutput as LlmComposerOutput } from "@/lib/domain/conversation";
 import { isRetryableModelError } from "@/lib/llm/retry";
+import { LlmError } from "@/lib/llm/types";
 import {
   assertComposerDidNotWriteSources,
   assertComposerMentionedOnlyPlannedPeriods,
@@ -54,6 +56,7 @@ import {
   InputValidationError,
   validateUserMessage,
 } from "@/lib/validation/input";
+import { extractMoneyAmounts } from "@/lib/validation/money";
 
 export type ConversationDependencies = {
   currentDate: BusinessDate;
@@ -93,7 +96,7 @@ function scenarioBusinessDate(
 ): BusinessDate {
   const match = message.match(
     /(?:^|[，,。；;\s])(20\d{2})年(\d{1,2})月(\d{1,2})日/u,
-  );
+  ) ?? message.match(/(?:^|[，,。；;\s])(20\d{2})-(\d{1,2})-(\d{1,2})(?:$|[，,。；;\s])/u);
   if (!match) return fallback;
   const candidate =
     `${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}` as BusinessDate;
@@ -280,10 +283,12 @@ function prepareStateForPlan(
   const next = structuredClone(state);
   next.pendingQuestionKeys = [...plan.nextQuestionKeys];
   next.pendingQuestionOptions = [...plan.nextQuestionOptions];
-  if (plan.status === "recommended" || plan.status === "catalog") {
+  if (plan.status === "recommended") {
     next.lastRecommendationIds = [...plan.entityIds];
-    next.selectedEntityId =
-      plan.entityIds.length === 1 ? plan.entityIds[0] : undefined;
+    next.selectedEntityId = plan.entityIds[0];
+  } else if (plan.status === "catalog") {
+    next.lastRecommendationIds = [...plan.entityIds];
+    next.selectedEntityId = undefined;
   } else if (plan.entityIds.length === 1 && !next.selectedEntityId) {
     next.selectedEntityId = plan.entityIds[0];
   }
@@ -780,13 +785,46 @@ function weekdayForBusinessDate(value: unknown): string | undefined {
   ][new Date(`${value}T00:00:00Z`).getUTCDay()];
 }
 
+function isCurrentRegistrationAdvisory(plan: ComposerPlan): boolean {
+  return plan.boundaryCode === "registration_current_advisory";
+}
+
+const DATE_ADVISORY_VERDICT_PATTERN =
+  /(?:可以|仍可|仍然可以|还可以|还可|能|能够|不能|无法|不可以)(?:继续)?报名|报名(?:已经|已)(?:截止|结束)|(?:已经|已)(?:不能|无法)报(?:名)?/u;
+
+const DATE_ADVISORY_OTHER_OFFER_PATTERN =
+  /(?:推荐|建议|考虑|改报|转报|选择|咨询|了解|看看).{0,16}(?:第二期|第三期|其他营期|其他课程)|(?:第二期|第三期|其他营期|其他课程).{0,16}(?:推荐|建议|考虑|改报|转报|选择)/u;
+
+function hasValidDateAdvisoryUsedChunks(input: {
+  plan: ComposerPlan;
+  usedChunkIds: string[];
+  injectedChunks: KnowledgeChunk[];
+}): boolean {
+  const requirements = resolveDateAdvisoryRequirements(
+    input.plan,
+    input.injectedChunks,
+  );
+  if (!requirements) return false;
+  const used = new Set(input.usedChunkIds);
+  return requirements.requiredFacts.every(({ requiredChunkId }) =>
+    used.has(requiredChunkId),
+  );
+}
+
 function assertDirectFactAnswerCompleteness(input: {
   plan: ComposerPlan;
   output: LlmComposerOutput;
   userMessage: string;
   usedFactIds: string[];
+  usedChunkIds: string[];
+  injectedChunks: KnowledgeChunk[];
 }): void {
-  if (input.plan.status !== "fact_answer") return;
+  if (
+    input.plan.status !== "fact_answer" &&
+    input.plan.status !== "contextual_followup"
+  ) {
+    return;
+  }
   const used = new Set(input.usedFactIds);
   const factsBySuffix = (suffix: string) =>
     input.plan.facts.filter(({ id }) => id.endsWith(suffix));
@@ -795,30 +833,27 @@ function assertDirectFactAnswerCompleteness(input: {
 
   if (
     input.plan.entityIds.some((id) => id.startsWith("camp-")) &&
-    /什么时候上课/u.test(input.userMessage)
+    /(?:什么时候上课|开课时间|课程日期)/u.test(input.userMessage) &&
+    !/(?:报名|截止)/u.test(input.userMessage)
   ) {
     const startDate = factsBySuffix(".startDate")[0]?.value;
     const endDate = factsBySuffix(".endDate")[0]?.value;
-    const registrationDeadline =
-      factsBySuffix(".registrationDeadline")[0]?.value;
     const startWeekday = weekdayForBusinessDate(startDate);
     const endWeekday = weekdayForBusinessDate(endDate);
     if (
       !answerContainsBusinessDate(input.output.message, startDate) ||
       !answerContainsBusinessDate(input.output.message, endDate) ||
-      !answerContainsBusinessDate(input.output.message, registrationDeadline) ||
       !startWeekday ||
       !endWeekday ||
       !input.output.message.includes(startWeekday) ||
       !input.output.message.includes(endWeekday) ||
-      !/24[:：]00/u.test(input.output.message) ||
       !usesSuffix(".startDate") ||
       !usesSuffix(".endDate") ||
-      !usesSuffix(".registrationDeadline")
+      /(?:报名|截止|早鸟|还能报名)/u.test(input.output.message)
     ) {
       throw new GroundingError(
         "missing_required_fact",
-        "Camp schedule answer omitted a date, weekday, or registration cutoff",
+        "Camp schedule answer omitted a date or added registration commentary",
         "camp_schedule_incomplete",
       );
     }
@@ -826,19 +861,122 @@ function assertDirectFactAnswerCompleteness(input: {
 
   if (
     input.plan.entityIds.some((id) => id.startsWith("camp-")) &&
-    /(?:还能|可以|是否|是不是).{0,6}报名/u.test(input.userMessage)
+    /(?:报名截止|截止报名|报名的截止)/u.test(input.userMessage) &&
+    !/(?:(?:现在|当前|今天).{0,8})?(?:还能|能否|是否还可以|还可以|可以继续).{0,5}报名/u.test(
+      input.userMessage,
+    )
   ) {
     const registrationDeadline =
       factsBySuffix(".registrationDeadline")[0]?.value;
     if (
       !answerContainsBusinessDate(input.output.message, registrationDeadline) ||
       !/24[:：]00/u.test(input.output.message) ||
+      !usesSuffix(".registrationDeadline") ||
+      /(?:早鸟|现在|当前|能报名|不能报名|无法报名)/u.test(
+        input.output.message,
+      )
+    ) {
+      throw new GroundingError(
+        "missing_required_fact",
+        "Registration cutoff answer added an unsupported status judgment",
+        "registration_deadline_only_incomplete",
+      );
+    }
+  }
+
+  if (
+    input.plan.entityIds.some((id) => id.startsWith("camp-")) &&
+    isCurrentRegistrationAdvisory(input.plan)
+  ) {
+    const requirements = resolveDateAdvisoryRequirements(
+      input.plan,
+      input.injectedChunks,
+    );
+    if (!requirements) {
+      throw new GroundingError(
+        "missing_required_chunk",
+        "Current registration answer could not resolve its required facts and chunks",
+        "date_advisory_requirements_missing",
+      );
+    }
+    const [registrationRequirement, earlyBirdRequirement] =
+      requirements.requiredFacts;
+    if (
+      !input.output.message.includes(registrationRequirement.value) ||
       !usesSuffix(".registrationDeadline")
     ) {
       throw new GroundingError(
         "missing_required_fact",
-        "Registration answer omitted the 24:00 cutoff",
-        "registration_cutoff_incomplete",
+        "Current registration answer omitted the registration deadline",
+        "date_advisory_registration_deadline_missing",
+      );
+    }
+    if (
+      !input.usedChunkIds.includes(registrationRequirement.requiredChunkId)
+    ) {
+      throw new GroundingError(
+        "missing_required_chunk",
+        "Current registration answer omitted the registration deadline chunk",
+        "date_advisory_registration_chunk_missing",
+      );
+    }
+    if (
+      !input.output.message.includes(earlyBirdRequirement.value) ||
+      !usesSuffix(".earlyBirdDeadline")
+    ) {
+      throw new GroundingError(
+        "missing_required_fact",
+        "Current registration answer omitted the early-bird deadline",
+        "date_advisory_early_bird_deadline_missing",
+      );
+    }
+    if (
+      !input.usedChunkIds.includes(earlyBirdRequirement.requiredChunkId)
+    ) {
+      throw new GroundingError(
+        "missing_required_chunk",
+        "Current registration answer omitted the early-bird deadline chunk",
+        "date_advisory_early_bird_chunk_missing",
+      );
+    }
+    const allowedDateChunks = new Set(
+      requirements.requiredFacts.map(({ requiredChunkId }) => requiredChunkId),
+    );
+    if (
+      input.usedChunkIds.some((chunkId) => !allowedDateChunks.has(chunkId))
+    ) {
+      throw new GroundingError(
+        "missing_required_chunk",
+        "Current registration answer cited an unrelated knowledge chunk",
+        "date_advisory_unrelated_chunk_forbidden",
+      );
+    }
+    if (!/中国标准时间/u.test(input.output.message)) {
+      throw new GroundingError(
+        "missing_required_fact",
+        "Current registration answer omitted the China Standard Time basis",
+        "date_advisory_time_basis_missing",
+      );
+    }
+    if (!/请?以主办方最新通知为准/u.test(input.output.message)) {
+      throw new GroundingError(
+        "missing_required_fact",
+        "Current registration answer omitted the organizer notice boundary",
+        "date_advisory_latest_notice_missing",
+      );
+    }
+    if (DATE_ADVISORY_VERDICT_PATTERN.test(input.output.message)) {
+      throw new GroundingError(
+        "missing_required_fact",
+        "Current registration answer made a registration verdict",
+        "date_advisory_verdict_forbidden",
+      );
+    }
+    if (DATE_ADVISORY_OTHER_OFFER_PATTERN.test(input.output.message)) {
+      throw new GroundingError(
+        "period_mismatch",
+        "Current registration answer recommended another period or course",
+        "date_advisory_other_offer_forbidden",
       );
     }
   }
@@ -1024,6 +1162,8 @@ function validateComposerOutput(input: {
     output: input.output,
     userMessage: input.userMessage,
     usedFactIds,
+    usedChunkIds,
+    injectedChunks: input.injectedChunks,
   });
   assertHighRiskValuesGrounded({
     message: [
@@ -1065,6 +1205,202 @@ function validateComposerOutput(input: {
   };
 }
 
+function redactedComposerFailure(error: unknown): Pick<
+  TurnDiagnostics["composerAttemptResults"][number],
+  "category" | "publicErrorCode" | "httpStatus" | "groundingReasonCode"
+> {
+  if (error instanceof GroundingError) {
+    return {
+      category: "grounding_failure",
+      publicErrorCode: "grounding_rejected",
+      groundingReasonCode: error.reasonCode,
+    };
+  }
+  if (error instanceof LlmError) {
+    switch (error.code) {
+      case "http_error":
+        return {
+          category: "provider_http_error",
+          publicErrorCode: "model_unavailable",
+          ...(error.httpStatus === undefined ? {} : { httpStatus: error.httpStatus }),
+        };
+      case "timeout":
+        return {
+          category: "provider_timeout",
+          publicErrorCode: "model_unavailable",
+        };
+      case "network_error":
+        return {
+          category: "provider_network_error",
+          publicErrorCode: "model_unavailable",
+        };
+      case "invalid_response":
+        return {
+          category: "json_parse_or_schema_error",
+          publicErrorCode: "invalid_response",
+        };
+      case "configuration_error":
+        return {
+          category: "configuration_error",
+          publicErrorCode: "model_unavailable",
+        };
+    }
+  }
+  return {
+    category: "unknown_error",
+    publicErrorCode: "model_unavailable",
+  };
+}
+
+type FeeExpectation = {
+  expectedAmount: number;
+  calculation: ComposerPlan["calculations"][number];
+};
+
+function feeExpectationFor(
+  plan: ComposerPlan,
+  userMessage: string,
+): FeeExpectation | undefined {
+  if (!/(?:多少钱|费用|价格|总价|应付)/u.test(userMessage)) return undefined;
+  if (plan.entityIds.length !== 1) return undefined;
+  const calculation = plan.calculations.find((item) => {
+    const value = item.value;
+    return Boolean(
+      value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        typeof (value as Record<string, unknown>).total === "number",
+    );
+  });
+  if (!calculation) return undefined;
+  const value = calculation.value as Record<string, unknown>;
+  return {
+    expectedAmount: value.total as number,
+    calculation,
+  };
+}
+
+function modelFinalAmount(message: string): number | undefined {
+  const numeric = [
+    ...message.matchAll(/(\d[\d,]*(?:\.\d+)?)\s*元/gu),
+  ];
+  if (numeric.length) {
+    return Number(numeric.at(-1)?.[1].replaceAll(",", ""));
+  }
+  return extractMoneyAmounts(message).at(-1);
+}
+
+function assertFeeReasoningMatches(input: {
+  output: LlmComposerOutput;
+  plan: ComposerPlan;
+  expectation: FeeExpectation;
+  usedChunkIds?: string[];
+  injectedChunks?: KnowledgeChunk[];
+}): number | undefined {
+  const amount = modelFinalAmount(input.output.message);
+  if (amount !== input.expectation.expectedAmount) {
+    throw new GroundingError(
+      "fee_amount_mismatch",
+      "Model fee amount differs from deterministic calculation",
+      "fee_final_amount_mismatch",
+    );
+  }
+  const value = input.expectation.calculation.value as Record<string, unknown>;
+  const basePrice = value.basePrice;
+  const messageWithoutSeparators = input.output.message.replace(/,/gu, "");
+  const includesBase =
+    typeof basePrice === "number" &&
+    messageWithoutSeparators.includes(String(basePrice));
+  const includesRuleProcess =
+    includesBase &&
+    /早鸟/u.test(input.output.message) &&
+    /团报/u.test(input.output.message) &&
+    /(?:不叠加|不可叠加|不能叠加|取较高|优惠金额较高|更高的一项)/u.test(
+      input.output.message,
+    );
+  const lodgingPrice = value.lodgingPrice;
+  if (
+    !includesRuleProcess ||
+    (typeof lodgingPrice === "number" &&
+      lodgingPrice > 0 &&
+      !/食宿/u.test(input.output.message))
+  ) {
+    throw new GroundingError(
+      "missing_required_fact",
+      "Fee answer omitted the required calculation process",
+      "fee_process_incomplete",
+    );
+  }
+  if (input.usedChunkIds && input.injectedChunks) {
+    const used = new Set(input.usedChunkIds);
+    const entityId = input.plan.entityIds[0];
+    const requiredSuffixes = [
+      ".standardPrice",
+      ".earlyBirdDeadline",
+      ".groupMinimum",
+      ".groupDiscount",
+      ...(typeof lodgingPrice === "number" && lodgingPrice > 0
+        ? [".lodgingPrice"]
+        : []),
+    ];
+    const coveredFacts = new Set(
+      input.injectedChunks
+        .filter((chunk) => used.has(chunk.id))
+        .flatMap((chunk) => chunk.factIds),
+    );
+    if (
+      requiredSuffixes.some(
+        (suffix) =>
+          input.plan.facts.some(
+            ({ id }) => id === `${entityId}${suffix}`,
+          ) && !coveredFacts.has(`${entityId}${suffix}`),
+      )
+    ) {
+      throw new GroundingError(
+        "missing_required_chunk",
+        "Fee answer did not cite all required pricing rule knowledge",
+      );
+    }
+  }
+  return amount;
+}
+
+function greetingResponse(state: ConversationState): ChatResponse {
+  const hasContext = hasCurrentBusinessContext(state);
+  return {
+    status: hasContext ? "contextual_followup" : "needs_identity",
+    message: hasContext
+      ? "你好，我在。可以继续询问当前班型的时间、费用、地点或准备事项。"
+      : "你好，我是AI课程顾问。请选择学生或家长、教师、机构或企业人员，也可以直接描述学习需求。",
+    state: structuredClone(state),
+    sources: [],
+    entityIds: [],
+    actions: hasContext
+      ? ["继续当前咨询", "返回菜单"]
+      : ["咨询学生课程", "咨询教师培训", "咨询机构服务"],
+    presentation: EMPTY_PRESENTATION,
+    notices: [],
+  };
+}
+
+function specialSymbolsResponse(state: ConversationState): ChatResponse {
+  return {
+    status: hasCurrentBusinessContext(state)
+      ? "contextual_followup"
+      : "needs_identity",
+    message:
+      "我暂时无法从这些符号中识别咨询内容。可以询问学生课程、教师培训、费用、报名条件或机构服务。",
+    state: structuredClone(state),
+    sources: [],
+    entityIds: [],
+    actions: hasCurrentBusinessContext(state)
+      ? ["继续当前咨询", "返回菜单"]
+      : ["咨询学生课程", "咨询教师培训", "咨询机构服务"],
+    presentation: EMPTY_PRESENTATION,
+    notices: [],
+  };
+}
+
 function retryFeedbackFor(error: unknown): string | undefined {
   if (!(error instanceof GroundingError)) return undefined;
   const detailFeedback: Record<string, string> = {
@@ -1085,17 +1421,43 @@ function retryFeedbackFor(error: unknown): string | undefined {
     replay_fact_id_missing:
       "usedFactIds必须包含所推荐线上班的replayDays事实ID。",
     camp_schedule_incomplete:
-      "学生营期回答必须同时写明开课和结束日期、对应星期、报名截止日24:00，并在usedFactIds中使用startDate、endDate、registrationDeadline。",
+      "用户只问课程日期时，只写开课和结束日期及对应星期，并使用startDate、endDate；不要插入报名截止、早鸟或能否报名判断。",
     simulated_address_missing:
       "地点回答必须完整保留地址事实中的“模拟地址”标记，并在usedFactIds中使用addressOrPlatform。",
     teacher_schedule_incomplete:
       "教师集训安排必须写明日期、总课时和线下授课形式，并在usedFactIds中使用schedule、format、locationsOrPlatforms。",
     registration_cutoff_incomplete:
       "报名状态回答必须写明报名截止日24:00，并在usedFactIds中使用registrationDeadline。",
+    registration_deadline_only_incomplete:
+      "用户只问报名截止时，只写资料记载的报名截止日24:00并使用registrationDeadline；不要插入早鸟或当前能否报名判断。",
+    registration_current_advisory_incomplete:
+      "用户问现在能否报名时，必须同时写报名截止日、早鸟截止日、中国标准时间（Asia/Shanghai）核对基准和“请以主办方最新通知为准”，但不得裁决肯定能或肯定不能报名。",
+    date_advisory_registration_deadline_missing:
+      "补充资料记载的报名截止日期和24:00，不判断当前是否还能报名。",
+    date_advisory_registration_chunk_missing:
+      "usedChunkIds必须列出实际承载registrationDeadline的知识块。",
+    date_advisory_early_bird_deadline_missing:
+      "补充资料记载的早鸟缴费截止日期，不增加价格或优惠判断。",
+    date_advisory_early_bird_chunk_missing:
+      "usedChunkIds必须列出实际承载earlyBirdDeadline的知识块。",
+    date_advisory_unrelated_chunk_forbidden:
+      "usedChunkIds只保留实际承载registrationDeadline或earlyBirdDeadline的知识块。",
+    date_advisory_time_basis_missing:
+      "说明两个截止日期按中国标准时间理解，不比较当前系统日期。",
+    date_advisory_latest_notice_missing:
+      "加入“以主办方最新通知为准”的提示。",
+    date_advisory_verdict_forbidden:
+      "删除可以报名、仍可报名、不能报名、无法报名、报名已截止或已经不能报等裁决表述。",
+    date_advisory_other_offer_forbidden:
+      "删除第二期、第三期、其他营期或其他课程推荐，只回答所询问营期的两个截止日期。",
     teacher_price_incomplete:
       "教师价格回答必须明确写出早鸟优惠金额和团报优惠金额，并在usedFactIds中使用earlyBirdDiscount、groupDiscount。",
     teacher_early_bird_price_incomplete:
       "教师早鸟状态回答必须明确写出当前标准价格，并在usedFactIds中使用standardPrice。",
+    fee_process_incomplete:
+      "费用回答必须按标准价、早鸟判断、团报判断、优惠择优、最后加食宿的顺序说明计算过程，并把最终应付金额放在结尾。",
+    fee_final_amount_mismatch:
+      "重新依据knowledgeChunks和facts独立计算；早鸟与团报不叠加，只采用优惠金额较高的一项，最后再加用户明确选择的食宿。不要猜测最终金额。",
   };
   if (error.detailCode && detailFeedback[error.detailCode]) {
     return detailFeedback[error.detailCode];
@@ -1111,6 +1473,8 @@ function retryFeedbackFor(error: unknown): string | undefined {
       "补齐decisionTrace要求的事实，并在usedFactIds中列出实际使用的对应ID。",
     missing_required_chunk:
       "知识型回答必须使用至少一个已注入知识块，并在usedChunkIds中列出实际使用的ID。",
+    fee_amount_mismatch:
+      "重新按五步费用规则独立计算，早鸟与团报不叠加，最后再加可选食宿，并把最终应付金额放在计算过程之后。",
     ungrounded_amount:
       "删除或改正facts与calculations之外的金额，只使用已提供金额。",
     ungrounded_date:
@@ -1133,6 +1497,145 @@ function retryFeedbackFor(error: unknown): string | undefined {
       "actions只能从本次载荷允许的actions中选择。",
   };
   return feedback[error.reasonCode];
+}
+
+function systemFeeFallback(input: {
+  plan: ComposerPlan;
+  expectation: FeeExpectation;
+  retrievedChunks: KnowledgeChunk[];
+}): {
+  output: LlmComposerOutput;
+  usedFactIds: string[];
+  usedChunkIds: string[];
+} {
+  const entityId = input.plan.entityIds[0];
+  const value = input.expectation.calculation.value as Record<string, unknown>;
+  const factValue = (suffix: string): unknown =>
+    input.plan.facts.find(({ id }) => id === `${entityId}.${suffix}`)?.value;
+  const basePrice = Number(value.basePrice);
+  const currentDate = String(value.currentDate ?? "指定日期");
+  const earlyBirdDeadline = String(factValue("earlyBirdDeadline") ?? "资料日期");
+  const earlyBirdDiscount = Number(value.earlyBirdDiscount ?? 0);
+  const earlyBirdPrice = Number(factValue("earlyBirdPrice"));
+  const statedEarlyBirdDiscount = Number(factValue("earlyBirdDiscount"));
+  const nominalEarlyBirdDiscount = Number.isFinite(statedEarlyBirdDiscount)
+    ? statedEarlyBirdDiscount
+    : Number.isFinite(earlyBirdPrice)
+      ? basePrice - earlyBirdPrice
+      : earlyBirdDiscount;
+  const groupMinimum = Number(factValue("groupMinimum") ?? 3);
+  const nominalGroupDiscount = Number(factValue("groupDiscount") ?? 0);
+  const appliedGroupDiscount = Number(value.groupDiscount ?? 0);
+  const groupSize = Number(input.plan.confirmedConstraints.groupSize ?? 1);
+  const lodgingPrice = Number(value.lodgingPrice ?? 0);
+  const discountKind = String(value.discountKind ?? "none");
+  const appliedDiscount = Number(value.appliedDiscount ?? 0);
+  const discountDescription =
+    discountKind === "earlyBird"
+      ? `采用金额较高的早鸟优惠${appliedDiscount}元`
+      : discountKind === "group"
+        ? `采用金额较高的团报优惠${appliedDiscount}元`
+        : "两项优惠均不适用，按标准价计算";
+  const message =
+    "由系统依据资料规则计算：" +
+    `1. 对应班型标准价为${basePrice}元；` +
+    `2. 指定缴费日为${currentDate}，早鸟截止日为${earlyBirdDeadline}，` +
+    `${earlyBirdDiscount > 0 ? `满足早鸟条件，早鸟优惠${earlyBirdDiscount}元` : `不满足早鸟条件，${nominalEarlyBirdDiscount}元早鸟优惠不适用`}；` +
+    `3. 本次为${groupSize}人，团报门槛为${groupMinimum}人，` +
+    `${appliedGroupDiscount > 0 ? `满足团报条件，团报优惠${appliedGroupDiscount}元` : `不满足完整团报条件，${nominalGroupDiscount}元团报优惠不适用`}；` +
+    `4. 早鸟与团报不可叠加，${discountDescription}；` +
+    `5. ${lodgingPrice > 0 ? `最后加上已选择的食宿费${lodgingPrice}元` : "未选择可选食宿，不增加食宿费"}。` +
+    `最终每人应付${input.expectation.expectedAmount}元。`;
+  const suffixes = [
+    "standardPrice",
+    "earlyBirdDeadline",
+    "earlyBirdPrice",
+    "earlyBirdDiscount",
+    "groupMinimum",
+    "groupDiscount",
+    "groupScope",
+    ...(lodgingPrice > 0 ? ["lodgingPrice"] : []),
+  ];
+  const usedFactIds = input.plan.facts
+    .map(({ id }) => id)
+    .filter((id) =>
+      suffixes.some((suffix) => id === `${entityId}.${suffix}`),
+    );
+  const usedFactSet = new Set(usedFactIds);
+  const usedChunkIds = input.retrievedChunks
+    .filter(
+      (chunk) =>
+        chunk.entityIds.includes(entityId) &&
+        chunk.factIds.some((factId) => usedFactSet.has(factId)),
+    )
+    .map(({ id }) => id);
+  return {
+    output: {
+      message,
+      usedChunkIds,
+      usedFactIds,
+      actions: input.plan.actions.slice(0, 1),
+      recommendationReasons: [],
+    },
+    usedFactIds,
+    usedChunkIds,
+  };
+}
+
+function systemDateAdvisoryFallback(input: {
+  plan: ComposerPlan;
+  userMessage: string;
+  retrievedChunks: KnowledgeChunk[];
+}): {
+  output: LlmComposerOutput;
+  usedFactIds: string[];
+  usedChunkIds: string[];
+} {
+  const requirements = resolveDateAdvisoryRequirements(
+    input.plan,
+    input.retrievedChunks,
+  );
+  if (requirements) {
+    const [registrationRequirement, earlyBirdRequirement] =
+      requirements.requiredFacts;
+    const entityId = registrationRequirement.factId.split(".")[0];
+    const period = entityId.match(/^camp-p([123])-/u)?.[1];
+    const periodLabel =
+      period === "1"
+        ? "第一期"
+        : period === "2"
+          ? "第二期"
+          : period === "3"
+            ? "第三期"
+            : "所询问营期";
+    return validateComposerOutput({
+      output: {
+        message:
+          `资料记载的${periodLabel}报名截止时间为${registrationRequirement.value}，` +
+          `早鸟缴费截止日期为${earlyBirdRequirement.value}。` +
+          "以上日期按中国标准时间理解。当前是否存在补报或调整安排，请以主办方最新通知为准。",
+        usedChunkIds: [
+          registrationRequirement.requiredChunkId,
+          earlyBirdRequirement.requiredChunkId,
+        ],
+        usedFactIds: [
+          registrationRequirement.factId,
+          earlyBirdRequirement.factId,
+        ],
+        actions: input.plan.actions.slice(0, 1),
+        recommendationReasons: [],
+      },
+      plan: input.plan,
+      userMessage: input.userMessage,
+      injectedChunks: input.retrievedChunks,
+    });
+  }
+
+  throw new GroundingError(
+    "missing_required_chunk",
+    "Date advisory fallback could not resolve both deadline chunks",
+    "date_advisory_fallback_chunk_missing",
+  );
 }
 
 async function completeComposerPlan(input: {
@@ -1165,6 +1668,11 @@ async function completeComposerPlan(input: {
       ({ id }) => id,
     );
   }
+  const feeExpectation = feeExpectationFor(input.plan, input.userMessage);
+  if (feeExpectation && input.dependencies.diagnostics) {
+    input.dependencies.diagnostics.expectedAmount =
+      feeExpectation.expectedAmount;
+  }
   const initialGroundingStartedAt = performance.now();
   try {
     assertPlanMatchesConfirmedState(input.workingState, input.plan);
@@ -1188,9 +1696,43 @@ async function completeComposerPlan(input: {
     | undefined;
   let lastError: unknown;
   let retryFeedback: string | undefined;
+  let useFeeFallback = false;
+  let useDateAdvisoryFallback = false;
+  const dateAdvisory = isCurrentRegistrationAdvisory(input.plan);
   for (const attempt of [1, 2] as const) {
+    const dateAttemptStartedAt = performance.now();
+    const attemptDiagnostic: TurnDiagnostics["composerAttemptResults"][number] | undefined =
+      input.dependencies.diagnostics
+      ? {
+          attempt,
+          elapsedMs: 0,
+          category: "in_progress",
+          enteredGrounding: false,
+        }
+      : undefined;
+    const dateAttemptDiagnostic:
+      | TurnDiagnostics["dateAdvisoryAttemptResults"][number]
+      | undefined =
+      input.dependencies.diagnostics && dateAdvisory
+        ? {
+            attemptIndex: attempt,
+            stage: "composer",
+            publicReasonCode: null,
+            elapsedMs: 0,
+            groundingReasonCodes: [],
+            hasValidUsedChunkIds: false,
+          }
+        : undefined;
     if (input.dependencies.diagnostics) {
       input.dependencies.diagnostics.composerAttempts += 1;
+      input.dependencies.diagnostics.composerAttemptResults.push(
+        attemptDiagnostic!,
+      );
+      if (dateAttemptDiagnostic) {
+        input.dependencies.diagnostics.dateAdvisoryAttemptResults.push(
+          dateAttemptDiagnostic,
+        );
+      }
       if (attempt === 2) {
         input.dependencies.diagnostics.composerRetries += 1;
       }
@@ -1210,6 +1752,11 @@ async function completeComposerPlan(input: {
           },
         );
       } finally {
+        if (attemptDiagnostic) {
+          attemptDiagnostic.elapsedMs = Math.round(
+            performance.now() - composerStartedAt,
+          );
+        }
         addDiagnosticDuration(
           input.dependencies,
           "composerMs",
@@ -1220,6 +1767,31 @@ async function completeComposerPlan(input: {
         attempt === 2
           ? normalizeSecondAttemptOfflineFallback(input.plan, rawOutput)
           : rawOutput;
+      if (attemptDiagnostic) attemptDiagnostic.enteredGrounding = true;
+      if (dateAttemptDiagnostic) {
+        dateAttemptDiagnostic.stage = "grounding";
+        dateAttemptDiagnostic.hasValidUsedChunkIds =
+          hasValidDateAdvisoryUsedChunks({
+            plan: input.plan,
+            usedChunkIds: output.usedChunkIds ?? [],
+            injectedChunks: retrievedChunks,
+          });
+      }
+      if (feeExpectation) {
+        const amount = modelFinalAmount(output.message);
+        if (input.dependencies.diagnostics) {
+          input.dependencies.diagnostics.modelAmount = amount;
+          if (attempt === 1) {
+            input.dependencies.diagnostics.firstPassMatched =
+              amount === feeExpectation.expectedAmount;
+          }
+        }
+        assertFeeReasoningMatches({
+          output,
+          plan: input.plan,
+          expectation: feeExpectation,
+        });
+      }
       const groundingStartedAt = performance.now();
       try {
         try {
@@ -1229,6 +1801,15 @@ async function completeComposerPlan(input: {
             userMessage: input.userMessage,
             injectedChunks: retrievedChunks,
           });
+          if (feeExpectation) {
+            assertFeeReasoningMatches({
+              output: generated.output,
+              plan: input.plan,
+              expectation: feeExpectation,
+              usedChunkIds: generated.usedChunkIds,
+              injectedChunks: retrievedChunks,
+            });
+          }
         } catch (error) {
           const canNormalizeLocally =
             attempt === 1 &&
@@ -1270,9 +1851,37 @@ async function completeComposerPlan(input: {
           groundingStartedAt,
         );
       }
+      if (feeExpectation && input.dependencies.diagnostics) {
+        input.dependencies.diagnostics.calculationMode =
+          attempt === 1 ? "model" : "regenerated_model";
+      }
+      if (attemptDiagnostic) attemptDiagnostic.category = "success";
+      if (dateAttemptDiagnostic) {
+        dateAttemptDiagnostic.stage = "completed";
+        dateAttemptDiagnostic.elapsedMs = Math.round(
+          performance.now() - dateAttemptStartedAt,
+        );
+      }
       break;
     } catch (error) {
       lastError = error;
+      const redactedFailure = redactedComposerFailure(error);
+      if (attemptDiagnostic) {
+        Object.assign(attemptDiagnostic, redactedFailure);
+      }
+      if (dateAttemptDiagnostic) {
+        dateAttemptDiagnostic.publicReasonCode =
+          redactedFailure.publicErrorCode ?? "model_unavailable";
+        dateAttemptDiagnostic.elapsedMs = Math.round(
+          performance.now() - dateAttemptStartedAt,
+        );
+        if (error instanceof GroundingError) {
+          dateAttemptDiagnostic.groundingReasonCodes.push({
+            reasonCode: error.reasonCode,
+            ...(error.detailCode ? { detailCode: error.detailCode } : {}),
+          });
+        }
+      }
       if (error instanceof GroundingError && input.dependencies.diagnostics) {
         input.dependencies.diagnostics.groundingFailures.push({
           attempt,
@@ -1280,10 +1889,46 @@ async function completeComposerPlan(input: {
           ...(error.detailCode ? { detailCode: error.detailCode } : {}),
         });
       }
-      if (attempt === 2 || !isRetryableModelError(error)) {
+      if (
+        attempt === 2 &&
+        feeExpectation &&
+        error instanceof GroundingError &&
+        error.reasonCode === "fee_amount_mismatch"
+      ) {
+        useFeeFallback = true;
+        break;
+      }
+      if (
+        attempt === 2 &&
+        dateAdvisory
+      ) {
+        useDateAdvisoryFallback = true;
+        break;
+      }
+      if (attempt === 2 || (!dateAdvisory && !isRetryableModelError(error))) {
         throw error;
       }
       retryFeedback = retryFeedbackFor(error);
+    }
+  }
+  if (!generated && useFeeFallback && feeExpectation) {
+    generated = systemFeeFallback({
+      plan: input.plan,
+      expectation: feeExpectation,
+      retrievedChunks,
+    });
+    if (input.dependencies.diagnostics) {
+      input.dependencies.diagnostics.calculationMode = "system_fallback";
+    }
+  }
+  if (!generated && useDateAdvisoryFallback) {
+    generated = systemDateAdvisoryFallback({
+      plan: input.plan,
+      userMessage: input.userMessage,
+      retrievedChunks,
+    });
+    if (input.dependencies.diagnostics) {
+      input.dependencies.diagnostics.responseMode = "date_advisory_fallback";
     }
   }
   if (!generated) throw lastError;
@@ -1548,6 +2193,18 @@ export async function runConversationTurn(
       "constraintExtractionMs",
       constraintExtractionStartedAt,
     );
+    if (deterministic.boundaryCode === "greeting") {
+      if (dependencies.diagnostics) {
+        dependencies.diagnostics.effectiveIntent = "unclear";
+      }
+      return greetingResponse(originalState);
+    }
+    if (deterministic.boundaryCode === "special_symbols") {
+      if (dependencies.diagnostics) {
+        dependencies.diagnostics.effectiveIntent = "unclear";
+      }
+      return specialSymbolsResponse(originalState);
+    }
     if (deterministic.boundaryCode === "unsupported_external_claims") {
       if (dependencies.diagnostics) {
         dependencies.diagnostics.effectiveIntent = "unrelated";
@@ -1609,6 +2266,8 @@ export async function runConversationTurn(
       : originalState;
     if (
       deterministic.catalogRequested &&
+      deterministic.factTopics.length === 0 &&
+      !deterministic.referencedEntityIds?.length &&
       routingState.domain !== "unknown" &&
       collectedConstraintKeys(routingState).length === 0
     ) {
@@ -1650,6 +2309,7 @@ export async function runConversationTurn(
           intent: deterministicIntent,
           factTopics: deterministic.factTopics,
           currentDate: scenarioBusinessDate(message, dependencies.currentDate),
+          userMessage: message,
           crossDomainFrom: deterministicCrossDomainFrom,
         }),
       );
@@ -1804,6 +2464,7 @@ export async function runConversationTurn(
         intent,
         factTopics,
         currentDate: scenarioBusinessDate(message, dependencies.currentDate),
+        userMessage: message,
         crossDomainFrom,
       }),
     );
