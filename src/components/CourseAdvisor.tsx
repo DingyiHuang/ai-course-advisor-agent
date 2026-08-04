@@ -9,6 +9,7 @@ import {
   useReducer,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import type {
   ChatPresentation,
@@ -36,7 +37,23 @@ import {
   type ClientUiMessage,
   type IdentifiedClientUiMessage,
 } from "@/lib/conversation/clientChatState";
-import { restoreConversation } from "@/lib/conversation/historyRestore";
+import {
+  BrowserHistoryClientError,
+  initializeBrowserHistory,
+  saveHistorySessionId,
+  type BrowserHistory,
+} from "@/lib/conversation/browserHistory";
+import {
+  answerVerificationLabel,
+  currentEntityLabel,
+  friendlyRequestError,
+  QUICK_ENTRIES,
+  safeTurnEvidence,
+  shouldSubmitComposerKey,
+  userFacingStatus,
+  validateComposerDraft,
+  type QuickEntry,
+} from "@/lib/conversation/uiExperience";
 import { isConversationId } from "@/lib/history/conversationStore";
 import type { ChatMessage, ChatSession } from "@/lib/history/types";
 import styles from "./CourseAdvisor.module.css";
@@ -52,13 +69,6 @@ type RequestOptions = {
 };
 
 const EMPTY_PRESENTATION: ChatPresentation = { recommendations: [] };
-const HISTORY_SESSION_KEY = "ai-course-advisor.sessionId";
-
-type BrowserHistory = {
-  sessionId: string;
-  messages: IdentifiedClientUiMessage[];
-  state: ConversationState;
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -103,37 +113,13 @@ async function loadHistory(sessionId: string): Promise<ChatMessage[]> {
   );
   const payload: unknown = await response.json().catch(() => undefined);
   if (!response.ok || !hasMessagesPayload(payload)) {
-    throw new Error(
+    throw new BrowserHistoryClientError(
       response.status === 404
-        ? "history_session_not_found"
-        : "history_session_load_failed",
+        ? "session_not_found"
+        : "load_failed",
     );
   }
   return payload.messages;
-}
-
-async function initializeBrowserHistory(): Promise<BrowserHistory> {
-  const savedSessionId = localStorage.getItem(HISTORY_SESSION_KEY);
-  if (isConversationId(savedSessionId)) {
-    try {
-      const storedMessages = await loadHistory(savedSessionId);
-      return {
-        sessionId: savedSessionId,
-        ...restoreConversation(storedMessages),
-      };
-    } catch (error) {
-      if (
-        !(error instanceof Error) ||
-        error.message !== "history_session_not_found"
-      ) {
-        throw error;
-      }
-    }
-  }
-
-  const session = await createHistorySession();
-  localStorage.setItem(HISTORY_SESSION_KEY, session.id);
-  return { sessionId: session.id, ...restoreConversation([]) };
 }
 
 const ROLE_OPTIONS = [
@@ -247,9 +233,13 @@ function systemMessage(content: string): UiMessage {
 
 function initialMessages(): UiMessage[] {
   return [
-    systemMessage(
-      "欢迎使用 AI课程顾问。我会先确认身份和有效约束，再基于对应资料提供课程或机构服务建议。",
-    ),
+    {
+      ...systemMessage(
+        "欢迎使用 AI课程顾问。我会先确认身份和有效约束，再基于对应资料提供课程或机构服务建议。",
+      ),
+      id: "system-welcome",
+      createdAt: "1970-01-01T00:00:00.000Z",
+    },
   ];
 }
 
@@ -297,7 +287,69 @@ function hasChatResponseShape(value: unknown): value is ChatResponse {
   );
 }
 
-export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
+function subscribeMobileLayout(onChange: () => void): () => void {
+  const query = window.matchMedia("(max-width: 760px)");
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function mobileLayoutSnapshot(): boolean {
+  return window.matchMedia("(max-width: 760px)").matches;
+}
+
+function serverMobileLayoutSnapshot(): boolean {
+  return false;
+}
+
+export function LoadingStatus({ loading }: { loading: boolean }) {
+  if (!loading) return null;
+  return (
+    <div
+      className={styles.loadingMessage}
+      role="status"
+      aria-live="polite"
+      aria-label="正在检索资料并核对回答"
+    >
+      <span aria-hidden="true"><i /><i /><i /></span>
+      正在检索资料并核对回答…
+    </div>
+  );
+}
+
+function QuickEntryButtons({
+  className,
+  disabled,
+  onEntry,
+}: {
+  className: string;
+  disabled: boolean;
+  onEntry: (entry: QuickEntry) => void;
+}) {
+  return (
+    <div className={className} aria-label="快捷咨询入口">
+      {QUICK_ENTRIES.map((entry) => (
+        <button
+          type="button"
+          key={entry.id}
+          onClick={() => onEntry(entry)}
+          disabled={disabled}
+          aria-label={`${entry.label}：${entry.description}`}
+        >
+          <strong>{entry.label}</strong>
+          <span>{entry.description}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export default function CourseAdvisor({
+  testMode,
+  evidenceMode = false,
+}: {
+  testMode: boolean;
+  evidenceMode?: boolean;
+}) {
   const [state, setState] = useState<ConversationState>(initialState);
   const [chatUi, dispatchChatUi] = useReducer(
     clientChatReducer,
@@ -309,11 +361,24 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   const [inputError, setInputError] = useState("");
   const [loading, setLoading] = useState(false);
   const [historyReady, setHistoryReady] = useState(false);
+  const [historyNotice, setHistoryNotice] = useState("正在恢复会话…");
   const [historySessionId, setHistorySessionId] = useState("");
   const [sessionId, setSessionId] = useState("TASK05-001");
   const [exportNotice, setExportNotice] = useState("");
+  const [contextOpen, setContextOpen] = useState(false);
+  const isMobileLayout = useSyncExternalStore(
+    subscribeMobileLayout,
+    mobileLayoutSnapshot,
+    serverMobileLayoutSnapshot,
+  );
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [pendingErrorFocusId, setPendingErrorFocusId] = useState("");
+  const shellRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const chatBodyRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const isNearLatestRef = useRef(true);
+  const forceScrollToLatestRef = useRef(true);
   const requestInFlightRef = useRef<string | undefined>(undefined);
   const consumedRetryErrorIdsRef = useRef<ReadonlySet<string>>(new Set());
   const historyInitializationRef = useRef<Promise<BrowserHistory> | undefined>(
@@ -323,7 +388,12 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   useEffect(() => {
     let active = true;
     const initialization =
-      historyInitializationRef.current ?? initializeBrowserHistory();
+      historyInitializationRef.current ??
+      initializeBrowserHistory({
+        storage: localStorage,
+        loadMessages: loadHistory,
+        createSession: createHistorySession,
+      });
     historyInitializationRef.current = initialization;
 
     void initialization
@@ -331,6 +401,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
         if (!active) return;
         setHistorySessionId(restored.sessionId);
         setState(restored.state);
+        forceScrollToLatestRef.current = true;
         dispatchChatUi({
           type: "replace_all",
           messages: restored.messages.length
@@ -341,9 +412,15 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
               })),
         });
         setHistoryReady(true);
+        setHistoryNotice(
+          restored.outcome === "restored" && restored.messages.length
+            ? "会话已恢复，可继续上次咨询。"
+            : "已创建新会话，可以开始咨询。",
+        );
       })
       .catch(() => {
         if (!active) return;
+        setHistoryNotice("会话恢复暂时未完成，请刷新后重试。");
         setInputError("历史会话初始化失败，当前无法发送，请稍后刷新重试。");
       });
 
@@ -353,8 +430,59 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   }, []);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (!historyReady || historyNotice.startsWith("正在")) return;
+    const timer = window.setTimeout(() => setHistoryNotice(""), 3600);
+    return () => window.clearTimeout(timer);
+  }, [historyNotice, historyReady]);
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const viewport = window.visualViewport;
+    const updateHeight = () => {
+      const height = viewport?.height ?? window.innerHeight;
+      shell.style.setProperty("--app-viewport-height", `${Math.round(height)}px`);
+      shell.dataset.keyboardCompact = height < 620 ? "true" : "false";
+    };
+    updateHeight();
+    viewport?.addEventListener("resize", updateHeight);
+    window.addEventListener("orientationchange", updateHeight);
+    return () => {
+      viewport?.removeEventListener("resize", updateHeight);
+      window.removeEventListener("orientationchange", updateHeight);
+    };
+  }, []);
+
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    const maxHeight = 160;
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [draft]);
+
+  useEffect(() => {
+    const body = chatBodyRef.current;
+    if (!body) return;
+    if (forceScrollToLatestRef.current || isNearLatestRef.current) {
+      forceScrollToLatestRef.current = false;
+      requestAnimationFrame(() => {
+        body.scrollTo({ top: body.scrollHeight, behavior: "smooth" });
+      });
+      setShowJumpToLatest(false);
+    } else {
+      setShowJumpToLatest(true);
+    }
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (!pendingErrorFocusId) return;
+    requestAnimationFrame(() => {
+      document.getElementById(pendingErrorFocusId)?.focus();
+      setPendingErrorFocusId("");
+    });
+  }, [pendingErrorFocusId, messages]);
 
   const constraints = useMemo(() => {
     const source =
@@ -395,30 +523,34 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   }, [state]);
 
   const currentEntityName = useMemo(() => {
-    if (state.domain === "platform" && state.institutionNeed) {
-      return INSTITUTION_LABELS[state.institutionNeed] ?? state.institutionNeed;
-    }
-    if (!state.selectedEntityId) return "尚未选择";
-    for (const message of [...messages].reverse()) {
-      const card = message.presentation.recommendations.find(
-        ({ entityId }) => entityId === state.selectedEntityId,
-      );
-      if (card) return card.name;
-      if (message.presentation.institutionService?.entityId === state.selectedEntityId) {
-        return message.presentation.institutionService.name;
-      }
-      const service = message.presentation.institutionServices?.find(
-        ({ entityId }) => entityId === state.selectedEntityId,
-      );
-      if (service) return service.name;
-    }
-    return "已选择当前班型";
-  }, [messages, state.domain, state.institutionNeed, state.selectedEntityId]);
+    return currentEntityLabel({
+      state,
+      messages,
+      institutionLabels: INSTITUTION_LABELS,
+    });
+  }, [messages, state]);
 
   const latestResponseMessageId = useMemo(
     () => [...messages].reverse().find((message) => message.role !== "user")?.id,
     [messages],
   );
+
+  function handleChatScroll() {
+    const body = chatBodyRef.current;
+    if (!body) return;
+    const nearLatest =
+      body.scrollHeight - body.scrollTop - body.clientHeight <= 120;
+    isNearLatestRef.current = nearLatest;
+    setShowJumpToLatest(!nearLatest);
+  }
+
+  function jumpToLatest() {
+    const body = chatBodyRef.current;
+    if (!body) return;
+    isNearLatestRef.current = true;
+    setShowJumpToLatest(false);
+    body.scrollTo({ top: body.scrollHeight, behavior: "smooth" });
+  }
 
   async function requestChat(
     request: ChatRequest,
@@ -440,6 +572,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
     );
     requestInFlightRef.current = lease.activeClientRequestId;
     if (!lease.acquired) return undefined;
+    if (isMobileLayout) setContextOpen(false);
 
     if (options.retrySnapshot) {
       const consumption = consumeRetryRequest(
@@ -464,6 +597,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
     }
     const appendUser = options.appendUser !== false && options.userLabel;
     if (appendUser) {
+      forceScrollToLatestRef.current = true;
       dispatchChatUi({
         type: "request_started",
         userMessage: {
@@ -490,6 +624,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
         body: JSON.stringify({
           ...identifiedRequest,
           sessionId: activeHistorySessionId,
+          diagnostics: evidenceMode,
         }),
       });
       const payload: unknown = await httpResponse.json().catch(() => undefined);
@@ -510,6 +645,8 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
         presentation: payload.presentation,
         actions: payload.actions,
         options: payload.state.pendingQuestionOptions,
+        answerMode: payload.answerMode,
+        evidence: evidenceMode ? safeTurnEvidence(payload) : undefined,
         retrySnapshot: payload.error?.retryable
           ? createRetryRequestSnapshot({
               request: identifiedRequest,
@@ -524,11 +661,13 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
         }),
       );
       if (payload.error) {
+        nextMessage.content = friendlyRequestError();
         dispatchChatUi({
           type: "request_failed",
           message: nextMessage,
           error: payload.error,
         });
+        setPendingErrorFocusId(messageId);
       } else {
         const additions = [...noticeMessages, nextMessage];
         dispatchChatUi(
@@ -559,7 +698,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
           id: messageId,
           clientRequestId: identifiedRequest.clientRequestId,
           role: "error",
-          content: "暂时无法连接课程顾问服务。对话状态仍在本机保留，请重试或返回菜单。",
+          content: friendlyRequestError(),
           createdAt: new Date().toISOString(),
           status: "error",
           sources: [],
@@ -572,6 +711,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
           }),
         },
       });
+      setPendingErrorFocusId(messageId);
       return undefined;
     } finally {
       requestInFlightRef.current = releaseRequestLease(
@@ -588,13 +728,9 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
       return;
     }
     const normalized = message.trim();
-    if (!normalized) {
-      setInputError("请输入问题后再发送，不会发起空请求。");
-      inputRef.current?.focus();
-      return;
-    }
-    if (message.length > 500) {
-      setInputError(`当前${message.length}字，单次最多500字，请精简后再发送。`);
+    const validationError = validateComposerDraft(message);
+    if (validationError) {
+      setInputError(validationError);
       inputRef.current?.focus();
       return;
     }
@@ -611,9 +747,16 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (
+      shouldSubmitComposerKey({
+        key: event.key,
+        shiftKey: event.shiftKey,
+        isComposing: event.nativeEvent.isComposing,
+        disabled: loading || !historyReady,
+      })
+    ) {
       event.preventDefault();
-      if (!loading && historyReady) void sendMessage(draft);
+      void sendMessage(draft);
     }
   }
 
@@ -658,10 +801,12 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
       },
     );
     if (result) {
-      localStorage.setItem(HISTORY_SESSION_KEY, nextSession.id);
+      saveHistorySessionId(localStorage, nextSession.id);
       setHistorySessionId(nextSession.id);
       setDraft("");
       setSessionId(uid("TASK05"));
+      setHistoryNotice("已开始新会话，旧会话内容不会带入。");
+      forceScrollToLatestRef.current = true;
     }
   }
 
@@ -682,6 +827,14 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   function focusWithDraft(value = "") {
     if (value) setDraft(value);
     requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
+  function handleQuickEntry(entry: QuickEntry) {
+    if (entry.command.type === "select_domain") {
+      void selectDomain(entry.command.domain);
+      return;
+    }
+    void sendMessage(entry.command.message, entry.command.action);
   }
 
   function handleApiAction(action: string) {
@@ -780,11 +933,16 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
   const interactionDisabled = loading || !historyReady;
 
   return (
-    <main className={styles.pageShell}>
+    <main ref={shellRef} className={styles.pageShell}>
       {testMode && (
         <div className={styles.testBanner} role="status">
           <span>TEST MODE</span>
           仅用于故障恢复验证；测试控件只影响下一次模型请求
+        </div>
+      )}
+      {evidenceMode && (
+        <div className={styles.evidenceBanner} role="status">
+          验收证据模式 · 仅显示脱敏计数与校验状态
         </div>
       )}
 
@@ -810,12 +968,30 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
       </header>
 
       <div className={styles.workspace}>
-        <aside className={styles.contextPanel} aria-label="当前咨询状态">
+        <aside
+          className={`${styles.contextPanel} ${contextOpen ? styles.contextPanelOpen : ""}`}
+          aria-label="当前咨询状态"
+        >
           <div className={styles.contextHeader}>
-            <span>咨询状态</span>
+            <button
+              type="button"
+              className={styles.contextToggle}
+              aria-expanded={isMobileLayout ? contextOpen : true}
+              aria-controls="consulting-state-content"
+              onClick={() => {
+                if (isMobileLayout) setContextOpen((value) => !value);
+              }}
+            >
+              <span>咨询状态</span>
+              <span className={styles.contextSummary}>
+                {DOMAIN_LABELS[state.domain]} · {currentEntityName}
+              </span>
+              <b aria-hidden="true">{contextOpen ? "收起" : "展开"}</b>
+            </button>
             <span className={styles.liveBadge}><i /> 实时更新</span>
           </div>
 
+          <div id="consulting-state-content" className={styles.contextContent}>
           <section className={styles.contextSection}>
             <p className={styles.contextLabel}>当前身份</p>
             <strong className={styles.contextValue}>{DOMAIN_LABELS[state.domain]}</strong>
@@ -884,6 +1060,7 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
             )}
           </div>
           {exportNotice && <p className={styles.exportNotice}>{exportNotice}</p>}
+          </div>
         </aside>
 
         <section className={styles.chatPanel} aria-label="课程顾问对话">
@@ -892,10 +1069,32 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
               <strong>课程咨询</strong>
               <p>每条事实回答均由程序校验并追加资料来源</p>
             </div>
-            <span className={styles.privacyBadge}>不显示密钥与内部提示</span>
+            <div className={styles.chatHeaderStatus}>
+              {state.selectedEntityId && (
+                <span className={styles.currentEntityBadge}>当前：{currentEntityName}</span>
+              )}
+              <span className={styles.privacyBadge}>不显示密钥与内部提示</span>
+            </div>
           </div>
 
-          <div className={styles.chatBody} aria-live="polite">
+          <div className={styles.chatViewport}>
+          <div
+            ref={chatBodyRef}
+            className={styles.chatBody}
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions text"
+            aria-busy={loading || !historyReady}
+            onScroll={handleChatScroll}
+          >
+            {historyNotice && (
+              <div
+                className={historyReady ? styles.historyNotice : styles.historyRestoring}
+                role="status"
+              >
+                {historyNotice}
+              </div>
+            )}
             {state.domain === "unknown" && (
               <section className={styles.welcomeCard}>
                 <span className={styles.welcomeEyebrow}>先从身份开始</span>
@@ -915,6 +1114,11 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
                     </button>
                   ))}
                 </div>
+                <QuickEntryButtons
+                  className={styles.welcomeQuickEntries}
+                  disabled={interactionDisabled}
+                  onEntry={handleQuickEntry}
+                />
               </section>
             )}
 
@@ -926,12 +1130,44 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
                 message.retrying,
               );
               return (
-                <article className={`${styles.messageRow} ${styles[message.role]}`} key={message.id}>
+                <article
+                  id={message.id}
+                  className={`${styles.messageRow} ${styles[message.role]}`}
+                  key={message.id}
+                  tabIndex={message.role === "error" ? -1 : undefined}
+                  aria-label={message.role === "error" ? "请求未完成" : undefined}
+                >
                 <div className={styles.messageMeta}>
                   <span>{message.role === "user" ? "你" : message.role === "assistant" ? "AI课程顾问" : message.role === "error" ? "请求异常" : "系统状态"}</span>
-                  {message.status && <small>{message.status}</small>}
+                  {userFacingStatus(message.status) && <small>{userFacingStatus(message.status)}</small>}
                 </div>
                 <div className={styles.messageBubble}>{message.content}</div>
+
+                {message.role === "assistant" && message.sources.length > 0 && (
+                  <details className={styles.answerEvidence}>
+                    <summary>
+                      <span aria-hidden="true">✓</span>
+                      {answerVerificationLabel(message.answerMode)}
+                    </summary>
+                    <div className={styles.answerEvidenceBody}>
+                      <p>回答依据以下资料标题或章节整理，仍建议在报名等关键决定前核对主办方最新通知。</p>
+                      <ul>
+                        {[...new Set(message.sources.map(sourceLabel))].map((label) => (
+                          <li key={label}>{label}</li>
+                        ))}
+                      </ul>
+                      {evidenceMode && message.evidence && (
+                        <dl className={styles.evidenceDetails}>
+                          <div><dt>检索资料数量</dt><dd>{message.evidence.retrievedCount}</dd></div>
+                          <div><dt>使用资料数量</dt><dd>{message.evidence.usedCount}</dd></div>
+                          <div><dt>经过 grounding</dt><dd>{message.evidence.groundingChecked ? "是" : "否"}</dd></div>
+                          <div><dt>发生重生成</dt><dd>{message.evidence.regenerated ? "是" : "否"}</dd></div>
+                          <div><dt>responseMode</dt><dd>{message.evidence.responseMode}</dd></div>
+                        </dl>
+                      )}
+                    </div>
+                  </details>
+                )}
 
                 {message.presentation.recommendations.map((card, index, cards) => (
                   <Fragment key={`${message.clientRequestId ?? message.id}:${card.entityId}`}>
@@ -1057,16 +1293,29 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
               );
             })}
 
-            {loading && (
-              <div className={styles.loadingMessage} role="status">
-                <span><i /><i /><i /></span>
-                正在核对约束、课程事实与资料来源…
-              </div>
-            )}
+            <LoadingStatus loading={loading} />
             <div ref={chatEndRef} />
+          </div>
+          {showJumpToLatest && (
+            <button
+              type="button"
+              className={styles.jumpToLatest}
+              onClick={jumpToLatest}
+              aria-label="回到最新消息"
+            >
+              回到最新
+            </button>
+          )}
           </div>
 
           <div className={styles.composerArea}>
+            {state.domain !== "unknown" && (
+              <QuickEntryButtons
+                className={styles.quickEntryBar}
+                disabled={interactionDisabled}
+                onEntry={handleQuickEntry}
+              />
+            )}
             {starterPrompts.length > 0 && (
               <div className={styles.starterPrompts}>
                 {starterPrompts.map((prompt) => (
@@ -1075,7 +1324,11 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
               </div>
             )}
             <form className={styles.composer} onSubmit={handleSubmit}>
+              <label className={styles.srOnly} htmlFor="advisor-message">
+                输入课程咨询问题
+              </label>
               <textarea
+                id="advisor-message"
                 ref={inputRef}
                 value={draft}
                 rows={2}
@@ -1088,17 +1341,20 @@ export default function CourseAdvisor({ testMode }: { testMode: boolean }) {
                 onKeyDown={handleKeyDown}
                 disabled={interactionDisabled}
                 aria-invalid={Boolean(inputError)}
+                aria-label="输入课程咨询问题"
+                aria-describedby="composer-guidance composer-disclaimer"
+                aria-errormessage={inputError ? "composer-error" : undefined}
               />
               <div className={styles.composerFooter}>
                 <span className={draft.length > 500 ? styles.countError : undefined}>{draft.length}/500</span>
-                <span>Enter 发送 · Shift + Enter 换行</span>
+                <span id="composer-guidance">Enter 发送 · Shift + Enter 换行</span>
                 <button type="submit" disabled={interactionDisabled || draft.length > 500}>
                   {loading ? "发送中" : "发送"}
                 </button>
               </div>
             </form>
-            {inputError && <p className={styles.inputError} role="alert">{inputError}</p>}
-            <p className={styles.disclaimer}>课程规模与最低开班人数不代表实时余位；报名状态需以资料规则及模拟人工确认为准。</p>
+            {inputError && <p id="composer-error" className={styles.inputError} role="alert">{inputError}</p>}
+            <p id="composer-disclaimer" className={styles.disclaimer}>课程规模与最低开班人数不代表实时余位；报名状态需以资料规则及模拟人工确认为准。</p>
           </div>
         </section>
       </div>

@@ -1,13 +1,23 @@
-import type { ChatPresentation } from "@/lib/domain/conversation";
+import type { ChatPresentation, ChatResponse } from "@/lib/domain/conversation";
 import type { ExportMessage } from "@/lib/export/markdown";
 import type { RetryRequestSnapshot } from "./retryRequest";
 
 export type ClientUiMessage = ExportMessage & {
   actions: string[];
   options: string[];
+  answerMode?: ChatResponse["answerMode"];
+  evidence?: SafeTurnEvidence;
   clientError?: ClientVisibleError;
   retrySnapshot?: RetryRequestSnapshot;
   retrying?: boolean;
+};
+
+export type SafeTurnEvidence = {
+  retrievedCount: number;
+  usedCount: number;
+  groundingChecked: boolean;
+  regenerated: boolean;
+  responseMode: "normal" | "date_advisory_fallback" | "system_fee_fallback";
 };
 
 export type IdentifiedClientUiMessage = ClientUiMessage & {

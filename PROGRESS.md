@@ -139,3 +139,14 @@ H5检查：Supabase五项全部达成，决定继续使用Supabase。当前CONVE
 - TASK-B03D2自动测试在原382项基础上新增16项，最终28个测试文件、398项全部通过，0删除、0跳过、0弱化；TypeScript、ESLint、Next.js 16.2.11 Production Build和`git diff --check`均通过。Build仅保留既有Local JSON会话存储的Turbopack文件追踪警告。
 - 证据目录`test-evidence/task-b03/`共89个文件、52份JSON；全部JSON可解析，65个冻结证据文件SHA-256逐一未变，D2新增24个文件。敏感信息、原始Word、禁提交类型和长段知识原文复制扫描均为0命中；8条超过500字符的证据行均为结构化学生目录回答及其镜像字段，不是资料原文复制。
 - TASK-B03只创建本地提交，不推送、不部署Preview或Production、不合并`main`，并停止在TASK-B03，不进入TASK-B04。
+
+## TASK-B04A 页面体验、响应式布局与 Preview 真机验收准备
+
+- 开始时间：2026-08-04 14:11:20（Asia/Shanghai）。
+- 开始检查：当前分支 `feature/b-level-v2`，HEAD 为 `38079978a92883d24373b1908c635105735d45d0`，工作区干净；`origin/main` 仍为 `319d709dce71406cd87c0f9c60fa327b284334f5`；注释标签 `task-b02-complete-20260804` 剥离后仍指向 `50a1e49e3ec42af2a6b7e0ba9d7d5018ea6eb04a`。
+- TASK-B03 保护标签：本地注释标签 `task-b03-complete-20260804` 已创建并核验指向 `38079978a92883d24373b1908c635105735d45d0`，未覆盖任何已有标签。
+- TASK-B04A前端实现：保持现有视觉体系，新增桌面独立对话滚动、仅在接近底部时自动跟随和“回到最新”；移动端改为单列及可折叠咨询状态，使用`100dvh`、`visualViewport`和安全区处理软键盘，多行输入最大160px后内部滚动。五个快捷入口、友好加载/错误/原位重试、恢复提示、当前实体标识、AI资料校验提示和脱敏`evidence=1`展示已完成；课程知识、Prompt、检索/推荐/grounding、费用日期和存储规则未修改。
+- 本地浏览器模拟尺寸：1440×900、1280×720、390×844、360×800均无横向滚动，输入区完整可见，卡片/来源/快捷按钮无溢出；390×844状态面板展开与收起通过，360×500视觉视口压缩时输入区仍可见且多行输入到160px后内部滚动。以上只记为“模拟尺寸通过”，不记为真机通过。
+- 本地交互：模拟HTTP 503显示脱敏错误卡并聚焦，重试期间显示“正在检索资料并核对回答”，成功后原位替换且消息/推荐卡无重复；刷新保持同一sessionId并恢复身份、当前实体和成功消息，重新开始创建新sessionId且不读旧消息，localStorage只含`ai-course-advisor.sessionId`。`evidence=1`仅显示资料数量、grounding、重生成和responseMode，不显示Prompt、chunk ID或内部原因。
+- TASK-B04A本地自动门禁（2026-08-04）：原398项测试保留，新增27项；最终31个测试文件、425项全部通过。TypeScript、ESLint、Next.js 16.2.11 Production Build和`git diff --check`通过；Build只保留既有Local JSON会话存储的Turbopack文件追踪告警。四种尺寸和交互证据记录于`test-evidence/task-b04/`；Preview、推送与真机测试尚待后续步骤。
+- TASK-B04A提交前扫描：31个候选文件中禁提交类型0项、原始`.doc`/`.docx` 0项、高置信密钥/令牌/私钥0命中；新增内容与知识层80字符以上长字面量直接复制0命中，新增超过500字符的单行0项。扫描只核对配置变量名称，不读取或输出变量值。

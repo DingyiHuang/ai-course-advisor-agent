@@ -1963,6 +1963,10 @@ async function completeComposerPlan(input: {
     }),
     notices: [],
     boundaryCode: input.plan.boundaryCode,
+    answerMode:
+      useFeeFallback || useDateAdvisoryFallback
+        ? "system_grounded"
+        : "ai_grounded",
   };
 }
 

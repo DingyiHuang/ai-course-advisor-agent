@@ -301,6 +301,7 @@ export type ChatResponse = {
   presentation: ChatPresentation;
   notices: ChatNotice[];
   boundaryCode?: string;
+  answerMode?: "ai_grounded" | "system_grounded";
   error?: ChatError;
   diagnostics?: TurnDiagnostics;
 };

@@ -18,6 +18,7 @@
 html,
 body {
   min-height: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -32,6 +33,12 @@ button,
 input,
 textarea {
   font-family: inherit;
+}
+
+button:disabled,
+input:disabled,
+textarea:disabled {
+  cursor: not-allowed;
 }
 
 button:focus-visible,

@@ -151,6 +151,7 @@ export async function persistChatResponse(
       presentation: response.presentation,
       actions: response.actions,
       options: response.state.pendingQuestionOptions,
+      answerMode: response.answerMode,
     }),
   });
 }

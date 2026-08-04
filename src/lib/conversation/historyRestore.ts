@@ -56,6 +56,10 @@ export function restoreConversation(
       presentation: presentation(metadata.presentation),
       actions: stringArray(metadata.actions),
       options: stringArray(metadata.options),
+      ...(metadata.answerMode === "ai_grounded" ||
+      metadata.answerMode === "system_grounded"
+        ? { answerMode: metadata.answerMode }
+        : {}),
     } satisfies IdentifiedClientUiMessage;
   });
 
