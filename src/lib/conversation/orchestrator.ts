@@ -11,9 +11,12 @@ import type {
 import type { BusinessDate } from "@/lib/time/shanghai";
 import {
   collectChunkSources,
+  collectSources,
   formatChunkSourceFootnotes,
+  formatSourceFootnotes,
 } from "@/lib/citations";
 import type { KnowledgeChunk } from "@/lib/domain/knowledge";
+import { getPlatformService } from "@/lib/knowledge";
 import { retrieveKnowledgeChunks } from "@/lib/retrieval/knowledgeRetriever";
 import {
   appendHistory,
@@ -110,6 +113,16 @@ function scenarioBusinessDate(
 const EMPTY_PRESENTATION: ChatResponse["presentation"] = {
   recommendations: [],
 };
+
+const SCHOOL_PROCUREMENT_ENTITY_ID = "platform-school-procurement";
+const SCHOOL_PROCUREMENT_FACT_IDS = [
+  `${SCHOOL_PROCUREMENT_ENTITY_ID}.category`,
+  `${SCHOOL_PROCUREMENT_ENTITY_ID}.audience`,
+  `${SCHOOL_PROCUREMENT_ENTITY_ID}.pricingRule`,
+  `${SCHOOL_PROCUREMENT_ENTITY_ID}.minimumPeople`,
+  `${SCHOOL_PROCUREMENT_ENTITY_ID}.minimumTotalPrice`,
+  `${SCHOOL_PROCUREMENT_ENTITY_ID}.boundary`,
+] as const;
 
 function operationalResponse(input: {
   status: ChatResponse["status"];
@@ -1239,6 +1252,87 @@ function validateComposerOutput(input: {
     output: { ...input.output, usedChunkIds },
     usedFactIds,
     usedChunkIds,
+  };
+}
+
+function isSchoolProcurementPlan(input: {
+  state: ConversationState;
+  plan: ComposerPlan;
+}): boolean {
+  return (
+    input.state.domain === "platform" &&
+    input.state.institutionNeed === "school_procurement" &&
+    input.plan.entityIds.length === 1 &&
+    input.plan.entityIds[0] === SCHOOL_PROCUREMENT_ENTITY_ID &&
+    (input.plan.status === "institution_info" ||
+      input.plan.status === "contextual_followup" ||
+      input.plan.status === "fact_answer")
+  );
+}
+
+function schoolProcurementMessage(factTopics: FactTopic[]): string {
+  const service = getPlatformService(SCHOOL_PROCUREMENT_ENTITY_ID);
+  const minimumPeople =
+    typeof service.minimumPeople === "number" ? service.minimumPeople : 20;
+  const minimumTotalPrice =
+    typeof service.minimumTotalPrice === "number"
+      ? service.minimumTotalPrice
+      : 50_000;
+  const priceText =
+    minimumTotalPrice % 10_000 === 0
+      ? `${minimumTotalPrice / 10_000}万元起`
+      : `${minimumTotalPrice}元起`;
+  const asksPeople =
+    factTopics.includes("availability") && !factTopics.includes("price");
+  const asksPrice =
+    factTopics.includes("price") && !factTopics.includes("availability");
+
+  if (asksPeople) {
+    return `学校教师培训采购最低${minimumPeople}人起，项目总价${priceText}。${service.boundary}。`;
+  }
+  if (asksPrice) {
+    return `学校教师培训采购按${service.pricingRule}。${service.boundary}。`;
+  }
+  return `学校教师培训采购适用于${service.audience}，${service.pricingRule}。${service.boundary}。`;
+}
+
+function deterministicSchoolProcurementResponse(input: {
+  workingState: ConversationState;
+  plan: ComposerPlan;
+  factTopics: FactTopic[];
+  notices?: ChatNotice[];
+}): ChatResponse {
+  const usedFactIds = [...SCHOOL_PROCUREMENT_FACT_IDS];
+  const sources = collectSources(usedFactIds);
+  const body = schoolProcurementMessage(input.factTopics);
+  const output: LlmComposerOutput = {
+    message: body,
+    usedFactIds,
+    actions: input.plan.actions.length
+      ? input.plan.actions
+      : ["整理采购需求清单", "返回菜单"],
+    recommendationReasons: [],
+  };
+  let state = prepareStateForPlan(input.workingState, input.plan);
+  state.selectedEntityId = SCHOOL_PROCUREMENT_ENTITY_ID;
+  state = appendHistory(state, { role: "assistant", content: body });
+
+  return {
+    status: input.plan.status,
+    message: `${body}${formatSourceFootnotes(usedFactIds)}`,
+    state,
+    sources,
+    entityIds: [SCHOOL_PROCUREMENT_ENTITY_ID],
+    actions: output.actions,
+    presentation: buildChatPresentation({
+      plan: input.plan,
+      state,
+      output,
+      sources,
+    }),
+    notices: input.notices ?? [],
+    boundaryCode: input.plan.boundaryCode,
+    answerMode: "system_grounded",
   };
 }
 
@@ -2725,21 +2819,14 @@ export async function runConversationTurn(
         }),
       );
       recordPlanDiagnostics(dependencies, workingState, plan);
-      const response = await completeComposerPlan({
+      return deterministicSchoolProcurementResponse({
         workingState,
         plan,
-        userMessage: message,
-        dependencies,
+        factTopics: deterministic.factTopics,
+        notices: deterministicCrossDomainFrom
+          ? [identitySwitchNotice(deterministicCrossDomainFrom, "platform")]
+          : [],
       });
-      if (deterministicCrossDomainFrom) {
-        response.notices.push(
-          identitySwitchNotice(
-            deterministicCrossDomainFrom,
-            "platform",
-          ),
-        );
-      }
-      return response;
     }
     let candidate: ClassifierCandidate;
     const skipClassifier =
@@ -2880,6 +2967,17 @@ export async function runConversationTurn(
       }),
     );
     recordPlanDiagnostics(dependencies, workingState, plan);
+    if (isSchoolProcurementPlan({ state: workingState, plan })) {
+      return deterministicSchoolProcurementResponse({
+        workingState,
+        plan,
+        factTopics,
+        notices:
+          crossDomainFrom && workingState.domain !== "unknown"
+            ? [identitySwitchNotice(crossDomainFrom, workingState.domain)]
+            : [],
+      });
+    }
     const response = await completeComposerPlan({
       workingState,
       plan,

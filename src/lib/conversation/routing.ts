@@ -48,8 +48,18 @@ function institutionRouting(
 ): Pick<DeterministicTurnRouting, "domain" | "institutionNeed" | "intent"> | undefined {
   const text = normalized(message);
   const schoolProcurement =
-    /(?:学校|教育局).{0,12}(?:计划)?(?:统一)?采购/u.test(text) ||
-    /(?:学校|教育局).{0,12}\d+(?:人|名(?:教师)?).{0,8}(?:采购|培训)/u.test(text);
+    /(?:学校|教育局).{0,16}(?:计划|准备)?(?:统一|批量|项目)?采购/u.test(
+      text,
+    ) ||
+    /(?:学校|教育局).{0,16}教师培训.{0,16}(?:采购|项目|费用|价格|至少|最低|多少|几人)/u.test(
+      text,
+    ) ||
+    /(?:学校|教育局).{0,16}\d+(?:人|名(?:教师)?).{0,8}(?:参加|采购|培训|费用|价格)/u.test(
+      text,
+    ) ||
+    /(?:学校|教育局).{0,16}(?:采购|培训).{0,16}\d+(?:人|名(?:教师)?)/u.test(
+      text,
+    );
   if (schoolProcurement) {
     return {
       domain: "platform",

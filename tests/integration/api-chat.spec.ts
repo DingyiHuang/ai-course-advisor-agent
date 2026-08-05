@@ -910,6 +910,51 @@ beforeEach(() => {
   providerControl.composerPayloads = [];
 });
 
+const SCHOOL_PROCUREMENT_ENTITY_ID = "platform-school-procurement";
+const TEACHER_PERSONAL_PRICE_PATTERN =
+  /(?:2980|5980|7980|12800|L1(?:暑期|周末|教师)?|L2(?:暑期|教师)?|L3(?:教师)?)/u;
+
+function expectNoExternalModelUse(response: ChatResponse): void {
+  expect(response.diagnostics).toMatchObject({
+    externalModelCalls: 0,
+    modelCallCount: 0,
+    composerAttempts: 0,
+    composerRetries: 0,
+    regenerationCount: 0,
+    groundingFailures: [],
+  });
+  expect(response.diagnostics?.composerAttemptResults).toEqual([]);
+}
+
+function expectSchoolProcurementResponse(response: ChatResponse): void {
+  expect(response.error).toBeUndefined();
+  expect(response.state.domain).toBe("platform");
+  expect(response.state.institutionNeed).toBe("school_procurement");
+  expect(response.state.selectedEntityId).toBe(SCHOOL_PROCUREMENT_ENTITY_ID);
+  expect(response.entityIds).toEqual([SCHOOL_PROCUREMENT_ENTITY_ID]);
+  expect(response.message).toContain("20人起");
+  expect(response.message).toContain("项目总价5万元起");
+  expect(response.message).not.toMatch(TEACHER_PERSONAL_PRICE_PATTERN);
+  expect(response.sources.length).toBeGreaterThan(0);
+  expect(response.sources.every(({ document }) => document === "C")).toBe(
+    true,
+  );
+  expect(response.sources.flatMap(({ factIds }) => factIds)).toEqual(
+    expect.arrayContaining([
+      "platform-school-procurement.minimumPeople",
+      "platform-school-procurement.minimumTotalPrice",
+    ]),
+  );
+  expect(response.presentation.recommendations).toEqual([]);
+  if (response.status === "institution_info") {
+    expect(response.presentation.institutionService).toMatchObject({
+      entityId: SCHOOL_PROCUREMENT_ENTITY_ID,
+      pricingRule: "20人起，项目总价5万元起",
+    });
+  }
+  expect(response.answerMode).toBe("system_grounded");
+}
+
 describe("TASK-05 real Route Handler integration", () => {
   it("exports a Vercel duration that covers the verified model latency", () => {
     expect(maxDuration).toBe(300);
@@ -1424,23 +1469,363 @@ describe("TASK-05 real Route Handler integration", () => {
         testMode: false,
       })
     ).response;
+    const classifierCallsBefore = providerControl.classifierCalls;
+    const composerCallsBefore = providerControl.composerCalls;
     const platform = (
       await postChat({
         action: "message",
         message: "学校计划采购20人的教师培训",
         state: teacher.state,
         testMode: false,
+        diagnostics: true,
       })
     ).response;
-    expect(platform.status).toBe("institution_info");
-    expect(platform.state.domain).toBe("platform");
-    expect(platform.state.institutionNeed).toBe("school_procurement");
+    expectSchoolProcurementResponse(platform);
     expect(platform.state.teacherConstraints).toEqual({});
-    expect(platform.presentation.institutionService).toMatchObject({
-      entityId: "platform-school-procurement",
-      pricingRule: "20人起，项目总价5万元起",
+    expect(platform.notices).toEqual([
+      expect.objectContaining({
+        code: "identity_switched",
+        fromDomain: "teacher",
+        toDomain: "platform",
+        message: "已切换为机构/学校咨询。",
+      }),
+    ]);
+    expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
+    expect(providerControl.composerCalls).toBe(composerCallsBefore);
+    expectNoExternalModelUse(platform);
+  });
+
+  describe("TASK-B05R-FIX-01 school procurement deterministic route", () => {
+    it("keeps the exact failing school procurement input out of model generation", async () => {
+      providerControl.composerMode =
+        "first_missing_procurement_minimum_then_ok";
+      const { httpStatus, response } = await postChat({
+        action: "message",
+        message: "学校计划采购20人的教师培训",
+        state: createInitialConversationState(),
+        testMode: false,
+        diagnostics: true,
+      });
+
+      expect(httpStatus).toBe(200);
+      expect(response.status).toBe("institution_info");
+      expectSchoolProcurementResponse(response);
+      expect(providerControl.classifierCalls).toBe(0);
+      expect(providerControl.composerCalls).toBe(0);
+      expectNoExternalModelUse(response);
     });
-    expect(JSON.stringify(platform)).not.toContain("2980");
+
+    it.each([
+      "学校计划采购20人的教师培训",
+      "学校采购20人的教师培训",
+      "我们学校准备统一采购20人的教师培训",
+      "教育局计划采购一批教师培训",
+      "学校教师培训项目至少多少人",
+      "学校20人参加教师培训，费用是多少",
+    ])("recognizes institutional procurement signal: %s", async (message) => {
+      const { httpStatus, response } = await postChat({
+        action: "message",
+        message,
+        state: createInitialConversationState(),
+        testMode: false,
+        diagnostics: true,
+      });
+
+      expect(httpStatus).toBe(200);
+      expect(response.status).toBe("institution_info");
+      expectSchoolProcurementResponse(response);
+      expect(providerControl.classifierCalls).toBe(0);
+      expect(providerControl.composerCalls).toBe(0);
+      expectNoExternalModelUse(response);
+    });
+
+    it.each([
+      "我是教师，想参加培训",
+      "3名教师一起报名有什么优惠",
+      "我已经完成L1，适合参加什么教师课程",
+      "20个人想了解不同课程",
+      "教师培训需要带电脑吗",
+    ])("does not classify personal teacher text as procurement: %s", async (message) => {
+      const { response } = await postChat({
+        action: "message",
+        message,
+        state: createInitialConversationState(),
+        testMode: false,
+        diagnostics: true,
+      });
+
+      expect(response.state.institutionNeed).not.toBe("school_procurement");
+      expect(response.entityIds).not.toContain(SCHOOL_PROCUREMENT_ENTITY_ID);
+      expect(JSON.stringify(response.presentation)).not.toContain(
+        SCHOOL_PROCUREMENT_ENTITY_ID,
+      );
+    });
+
+    it("fills procurement minimums from material C when the request omits explicit headcount", async () => {
+      const { response } = await postChat({
+        action: "message",
+        message: "学校教师培训项目费用是多少？",
+        state: createInitialConversationState(),
+        testMode: false,
+        diagnostics: true,
+      });
+
+      expect(response.status).toBe("institution_info");
+      expectSchoolProcurementResponse(response);
+      expect(providerControl.classifierCalls).toBe(0);
+      expect(providerControl.composerCalls).toBe(0);
+      expectNoExternalModelUse(response);
+    });
+
+    it("survives an always-ungrounded composer mode because the route is model-free", async () => {
+      providerControl.composerMode = "always_ungrounded";
+      const { httpStatus, response } = await postChat({
+        action: "message",
+        message: "学校采购20人的教师培训",
+        state: createInitialConversationState(),
+        testMode: false,
+        diagnostics: true,
+      });
+
+      expect(httpStatus).toBe(200);
+      expect(response.error).toBeUndefined();
+      expectSchoolProcurementResponse(response);
+      expect(providerControl.composerCalls).toBe(0);
+      expectNoExternalModelUse(response);
+    });
+
+    it("switches from teacher recommendation to procurement and removes personal cards", async () => {
+      const teacher = (
+        await postChat({
+          action: "message",
+          message: "零基础教师，周末有空，工作日不能脱岗",
+          state: createInitialConversationState(),
+          testMode: false,
+        })
+      ).response;
+      const before = providerControl.composerCalls;
+      const procurement = (
+        await postChat({
+          action: "message",
+          message: "我们学校准备统一采购20人的教师培训",
+          state: teacher.state,
+          testMode: false,
+          diagnostics: true,
+        })
+      ).response;
+
+      expectSchoolProcurementResponse(procurement);
+      expect(procurement.state.teacherConstraints).toEqual({});
+      expect(procurement.state.lastRecommendationIds).toEqual([]);
+      expect(procurement.presentation.recommendations).toEqual([]);
+      expect(procurement.notices[0]).toMatchObject({
+        fromDomain: "teacher",
+        toDomain: "platform",
+      });
+      expect(providerControl.composerCalls).toBe(before);
+      expectNoExternalModelUse(procurement);
+    });
+
+    it("switches from student recommendation to procurement and removes student cards", async () => {
+      const student = (
+        await postChat({
+          action: "message",
+          message: "家长，北京，可参加第一期，希望线下",
+          state: createInitialConversationState(),
+          testMode: false,
+        })
+      ).response;
+      const before = providerControl.composerCalls;
+      const procurement = (
+        await postChat({
+          action: "message",
+          message: "学校20人参加教师培训，费用是多少",
+          state: student.state,
+          testMode: false,
+          diagnostics: true,
+        })
+      ).response;
+
+      expectSchoolProcurementResponse(procurement);
+      expect(procurement.state.studentConstraints).toEqual({});
+      expect(procurement.state.lastRecommendationIds).toEqual([]);
+      expect(procurement.presentation.recommendations).toEqual([]);
+      expect(procurement.notices[0]).toMatchObject({
+        fromDomain: "student",
+        toDomain: "platform",
+      });
+      expect(providerControl.composerCalls).toBe(before);
+      expectNoExternalModelUse(procurement);
+    });
+
+    it("keeps platform procurement deterministic when platform identity is already selected", async () => {
+      const state = createInitialConversationState();
+      state.domain = "platform";
+      const { response } = await postChat({
+        action: "message",
+        message: "教育局计划采购一批教师培训",
+        state,
+        testMode: false,
+        diagnostics: true,
+      });
+
+      expectSchoolProcurementResponse(response);
+      expect(response.notices).toEqual([]);
+      expect(providerControl.classifierCalls).toBe(0);
+      expect(providerControl.composerCalls).toBe(0);
+      expectNoExternalModelUse(response);
+    });
+
+    it("answers the current procurement minimum people follow-up without model generation", async () => {
+      const procurement = (
+        await postChat({
+          action: "message",
+          message: "学校计划采购20人的教师培训",
+          state: createInitialConversationState(),
+          testMode: false,
+        })
+      ).response;
+      const before = providerControl.composerCalls;
+      const followup = (
+        await postChat({
+          action: "message",
+          message: "这个方案至少多少人？",
+          state: procurement.state,
+          testMode: false,
+          diagnostics: true,
+        })
+      ).response;
+
+      expect(followup.status).toBe("contextual_followup");
+      expectSchoolProcurementResponse(followup);
+      expect(followup.message).toContain("20人起");
+      expect(providerControl.composerCalls).toBe(before);
+      expectNoExternalModelUse(followup);
+    });
+
+    it("answers the current procurement fee follow-up without model generation", async () => {
+      const procurement = (
+        await postChat({
+          action: "message",
+          message: "学校计划采购20人的教师培训",
+          state: createInitialConversationState(),
+          testMode: false,
+        })
+      ).response;
+      const before = providerControl.composerCalls;
+      const followup = (
+        await postChat({
+          action: "message",
+          message: "费用呢",
+          state: procurement.state,
+          testMode: false,
+          diagnostics: true,
+        })
+      ).response;
+
+      expect(followup.status).toBe("contextual_followup");
+      expectSchoolProcurementResponse(followup);
+      expect(followup.message).toContain("项目总价5万元起");
+      expect(providerControl.composerCalls).toBe(before);
+      expectNoExternalModelUse(followup);
+    });
+
+    it("keeps a weather turn scope-only after procurement", async () => {
+      const procurement = (
+        await postChat({
+          action: "message",
+          message: "学校计划采购20人的教师培训",
+          state: createInitialConversationState(),
+          testMode: false,
+        })
+      ).response;
+      const before = providerControl.composerCalls;
+      const unrelated = (
+        await postChat({
+          action: "message",
+          message: "今天天气怎么样？",
+          state: procurement.state,
+          testMode: false,
+          diagnostics: true,
+        })
+      ).response;
+
+      expect(unrelated.status).toBe("unrelated");
+      expect(unrelated.entityIds).toEqual([]);
+      expect(unrelated.presentation).toEqual({ recommendations: [] });
+      expect(unrelated.message).not.toMatch(/20人|5万元|2980/u);
+      expect(unrelated.state.selectedEntityId).toBe(SCHOOL_PROCUREMENT_ENTITY_ID);
+      expect(providerControl.composerCalls).toBe(before);
+      expectNoExternalModelUse(unrelated);
+    });
+
+    it("recovers the procurement minimum after an unrelated turn", async () => {
+      const procurement = (
+        await postChat({
+          action: "message",
+          message: "学校计划采购20人的教师培训",
+          state: createInitialConversationState(),
+          testMode: false,
+        })
+      ).response;
+      const unrelated = (
+        await postChat({
+          action: "message",
+          message: "今天天气怎么样？",
+          state: procurement.state,
+          testMode: false,
+        })
+      ).response;
+      const before = providerControl.composerCalls;
+      const followup = (
+        await postChat({
+          action: "message",
+          message: "这个方案至少多少人",
+          state: unrelated.state,
+          testMode: false,
+          diagnostics: true,
+        })
+      ).response;
+
+      expectSchoolProcurementResponse(followup);
+      expect(followup.message).toContain("20人起");
+      expect(providerControl.composerCalls).toBe(before);
+      expectNoExternalModelUse(followup);
+    });
+
+    it("recovers the procurement fee after an unrelated turn", async () => {
+      const procurement = (
+        await postChat({
+          action: "message",
+          message: "学校计划采购20人的教师培训",
+          state: createInitialConversationState(),
+          testMode: false,
+        })
+      ).response;
+      const unrelated = (
+        await postChat({
+          action: "message",
+          message: "今天天气怎么样？",
+          state: procurement.state,
+          testMode: false,
+        })
+      ).response;
+      const before = providerControl.composerCalls;
+      const followup = (
+        await postChat({
+          action: "message",
+          message: "费用呢",
+          state: unrelated.state,
+          testMode: false,
+          diagnostics: true,
+        })
+      ).response;
+
+      expectSchoolProcurementResponse(followup);
+      expect(followup.message).toContain("项目总价5万元起");
+      expect(providerControl.composerCalls).toBe(before);
+      expectNoExternalModelUse(followup);
+    });
   });
 
   it("switches platform to student and enters the Guangzhou boundary flow", async () => {
@@ -1943,7 +2328,8 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(unrelated.status).toBe("institution_info");
     expect(unrelated.entityIds).toEqual(["platform-school-procurement"]);
     expect(providerControl.classifierCalls).toBe(classifierCallsBefore);
-    expect(providerControl.composerCalls).toBe(callsBefore + 1);
+    expect(providerControl.composerCalls).toBe(callsBefore);
+    expectNoExternalModelUse(unrelated);
   });
 
   it("keeps an explicit non-course poetry request unrelated without classifier or business composer", async () => {
@@ -2457,18 +2843,19 @@ describe("TASK-05 real Route Handler integration", () => {
     ]);
   });
 
-  it("accepts grounded Chinese-unit school pricing from the composer", async () => {
+  it("answers school procurement with Chinese-unit pricing without composer", async () => {
     providerControl.composerMode = "valid_chinese_amount";
     const { response } = await postChat({
       action: "message",
       message: "学校计划采购20人的教师培训",
       state: createInitialConversationState(),
       testMode: false,
+      diagnostics: true,
     });
-    expect(response.error).toBeUndefined();
-    expect(response.message).toContain("五万元起");
+    expectSchoolProcurementResponse(response);
     expect(providerControl.classifierCalls).toBe(0);
-    expect(providerControl.composerCalls).toBe(1);
+    expect(providerControl.composerCalls).toBe(0);
+    expectNoExternalModelUse(response);
   });
 
   it("injects retrieved chunks into the real composer and accepts legal usedChunkIds", async () => {
@@ -2575,7 +2962,7 @@ describe("TASK-05 real Route Handler integration", () => {
     expect(response.sources.length).toBeGreaterThan(0);
   });
 
-  it("answers school procurement without classifier but with a real composer call", async () => {
+  it("answers school procurement without classifier or composer", async () => {
     const { response } = await postChat({
       action: "message",
       message: "学校计划采购20人的教师培训",
@@ -2583,29 +2970,13 @@ describe("TASK-05 real Route Handler integration", () => {
       testMode: false,
       diagnostics: true,
     });
-    expect(response.error).toBeUndefined();
-    expect(response.message).toContain("20人起");
-    expect(response.message).toContain("5万元起");
-    expect(response.message).not.toContain("2980");
+    expectSchoolProcurementResponse(response);
     expect(providerControl.classifierCalls).toBe(0);
-    expect(providerControl.composerCalls).toBe(1);
-    expect(response.diagnostics).toMatchObject({
-      composerAttempts: 1,
-      groundingFailures: [],
-      externalModelCalls: 1,
-    });
-    expect(
-      response.sources.flatMap(({ factIds }) => factIds),
-    ).toEqual(
-      expect.arrayContaining([
-        "platform-school-procurement.pricingRule",
-        "platform-school-procurement.minimumPeople",
-        "platform-school-procurement.minimumTotalPrice",
-      ]),
-    );
+    expect(providerControl.composerCalls).toBe(0);
+    expectNoExternalModelUse(response);
   });
 
-  it("retries once when the composer omits school procurement minimums", async () => {
+  it("does not retry when the composer would omit school procurement minimums", async () => {
     providerControl.composerMode =
       "first_missing_procurement_minimum_then_ok";
     const { httpStatus, response } = await postChat({
@@ -2616,12 +2987,10 @@ describe("TASK-05 real Route Handler integration", () => {
       diagnostics: true,
     });
     expect(httpStatus).toBe(200);
-    expect(response.message).toContain("20人起");
-    expect(response.message).toContain("5万元起");
-    expect(response.diagnostics?.groundingFailures).toEqual([
-      { attempt: 1, reasonCode: "missing_required_fact" },
-    ]);
-    expect(providerControl.composerCalls).toBe(2);
+    expectSchoolProcurementResponse(response);
+    expect(response.diagnostics?.groundingFailures).toEqual([]);
+    expect(providerControl.composerCalls).toBe(0);
+    expectNoExternalModelUse(response);
   });
 
   it("silently retries an attempted human-advisor impersonation", async () => {
