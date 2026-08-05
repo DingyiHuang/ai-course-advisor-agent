@@ -4,10 +4,13 @@ AI课程顾问 Agent 是面向 OPC“首届软件与智能体开发大赛”的 
 
 ## 访问与交付
 
-- Production 正式地址：发布完成后在 `docs/00_B级交付物索引.md` 中填写。
+- Production 正式地址：https://ai-course-advisor-agent.vercel.app
 - Public GitHub：[DingyiHuang/ai-course-advisor-agent](https://github.com/DingyiHuang/ai-course-advisor-agent)
 - 测试记录表：`E:/桌面/【比赛资料】/【B级测试】/交付物/03_AI课程顾问测试记录表.xlsx`
-- 证据目录：`test-evidence/`
+- 仓库内证据目录：`test-evidence/`
+- 发布回归证据目录：`E:/桌面/【比赛资料】/【B级测试】/发布证据/`
+
+发布状态：2026-08-05 已完成 Preview 回归、B05R 全量验证、`main` 合并和 Production 发布。应用功能基线为 `a7106c36f45ac03b8bedfa42283cd3388991e8b1`；后续文档收口提交不修改应用逻辑。Preview 环境仅用于回归验证，因 Vercel 访问保护会跳转登录页，不作为评委提交演示链接。
 
 普通 Production 页面不显示内部诊断、Prompt、知识块 ID 或 Viewport Debug。测试模式和脱敏证据模式只用于本地或 Preview 验证，不作为普通 Production 页面能力展示。
 
