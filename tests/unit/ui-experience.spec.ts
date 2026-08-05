@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  appViewportHeight,
   answerVerificationLabel,
   currentEntityLabel,
   friendlyRequestError,
@@ -93,6 +94,16 @@ describe("TASK-B04 UI experience helpers", () => {
     expect(nextMobileQuickPanelOpen(true, "request_started")).toBe(false);
     expect(nextMobileQuickPanelOpen(true, "quick_entry_selected")).toBe(false);
     expect(nextMobileQuickPanelOpen(true, "keyboard_closed")).toBe(false);
+  });
+
+  it("tracks a keyboard-compressed visual viewport without adding a second height", () => {
+    expect(appViewportHeight(500, 844)).toBe("500px");
+    expect(appViewportHeight(undefined, 844)).toBe("844px");
+  });
+
+  it("restores the exact available height after the software keyboard closes", () => {
+    expect(appViewportHeight(360.4, 844)).toBe("360px");
+    expect(appViewportHeight(843.6, 844)).toBe("844px");
   });
 
   it("toggles the mobile quick panel without changing the default collapsed state", () => {

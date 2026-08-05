@@ -44,6 +44,7 @@ import {
   type BrowserHistory,
 } from "@/lib/conversation/browserHistory";
 import {
+  appViewportHeight,
   answerVerificationLabel,
   currentEntityLabel,
   friendlyRequestError,
@@ -381,7 +382,6 @@ export default function CourseAdvisor({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const lastVisualViewportHeightRef = useRef<number | undefined>(undefined);
   const isNearLatestRef = useRef(true);
   const forceScrollToLatestRef = useRef(true);
   const requestInFlightRef = useRef<string | undefined>(undefined);
@@ -446,14 +446,10 @@ export default function CourseAdvisor({
     const viewport = window.visualViewport;
     const updateHeight = () => {
       const height = viewport?.height ?? window.innerHeight;
-      const previousHeight = lastVisualViewportHeightRef.current;
-      if (previousHeight !== undefined && height - previousHeight >= 80) {
-        setQuickPanelOpen((current) =>
-          nextMobileQuickPanelOpen(current, "keyboard_closed"),
-        );
-      }
-      lastVisualViewportHeightRef.current = height;
-      shell.style.setProperty("--app-viewport-height", `${Math.round(height)}px`);
+      shell.style.setProperty(
+        "--app-viewport-height",
+        appViewportHeight(viewport?.height, window.innerHeight),
+      );
       shell.dataset.keyboardCompact = height < 620 ? "true" : "false";
     };
     updateHeight();
@@ -756,7 +752,7 @@ export default function CourseAdvisor({
     const validationError = validateComposerDraft(message);
     if (validationError) {
       setInputError(validationError);
-      inputRef.current?.focus();
+      inputRef.current?.focus({ preventScroll: true });
       return;
     }
     setDraft("");
@@ -791,7 +787,7 @@ export default function CourseAdvisor({
       { action: "select_domain", domain, state },
       { userLabel: `选择身份：${title}` },
     );
-    inputRef.current?.focus();
+    if (!isMobileLayout) inputRef.current?.focus({ preventScroll: true });
   }
 
   async function selectEntity(entityId: string, name: string) {
@@ -799,7 +795,7 @@ export default function CourseAdvisor({
       { action: "select_entity", entityId, state },
       { userLabel: `继续咨询：${name}` },
     );
-    inputRef.current?.focus();
+    if (!isMobileLayout) inputRef.current?.focus({ preventScroll: true });
   }
 
   async function returnMenu() {
@@ -851,7 +847,11 @@ export default function CourseAdvisor({
 
   function focusWithDraft(value = "") {
     if (value) setDraft(value);
-    requestAnimationFrame(() => inputRef.current?.focus());
+    requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
+  }
+
+  function handleComposerFocus() {
+    if (isMobileLayout) setQuickPanelOpen(false);
   }
 
   function handleQuickEntry(entry: QuickEntry) {
@@ -1410,6 +1410,7 @@ export default function CourseAdvisor({
                   setDraft(event.target.value);
                   if (inputError) setInputError("");
                 }}
+                onFocus={handleComposerFocus}
                 onKeyDown={handleKeyDown}
                 disabled={interactionDisabled}
                 aria-invalid={Boolean(inputError)}

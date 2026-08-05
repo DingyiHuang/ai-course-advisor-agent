@@ -533,6 +533,12 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
     if (Array.isArray(teacherSchedule)) {
       message = `${teacherSchedule.join("；")}，采用线下集训形式。`;
     }
+    const replayDays = facts.find(({ id }) =>
+      id.endsWith(".replayDays")
+    )?.value;
+    if (typeof replayDays === "number") {
+      message = `提供${replayDays}天回放。`;
+    }
     const minimumPeople = facts.find(({ id }) =>
       id.endsWith(".minimumPeople")
     )?.value;
@@ -826,6 +832,36 @@ async function selectDomain(
       testMode: false,
     })
   ).response;
+}
+
+async function selectCatalogEntity(
+  domain: "student" | "teacher",
+  entityId: string,
+): Promise<{ catalog: ChatResponse; selected: ChatResponse }> {
+  const state = createInitialConversationState();
+  state.domain = domain;
+  const catalog = (
+    await postChat({
+      action: "catalog",
+      message: "查看所有班型",
+      state,
+      testMode: false,
+    })
+  ).response;
+  const clickedCard = catalog.presentation.recommendations.find(
+    (card) => card.entityId === entityId,
+  );
+  expect(clickedCard?.entityId).toBe(entityId);
+
+  const selected = (
+    await postChat({
+      action: "select_entity",
+      entityId: clickedCard?.entityId,
+      state: catalog.state,
+      testMode: false,
+    })
+  ).response;
+  return { catalog, selected };
 }
 
 beforeEach(() => {
@@ -4186,6 +4222,182 @@ describe("TASK-05 real Route Handler integration", () => {
       expect(JSON.stringify(response.diagnostics)).not.toMatch(
         /systemPrompt|prompt全文|api[_-]?key|内部错误原因/iu,
       );
+    });
+
+    it("inherits the period-3 Beijing catalog selection for a location follow-up", async () => {
+      const { catalog, selected } = await selectCatalogEntity(
+        "student",
+        "camp-p3-bj",
+      );
+      expect(catalog.presentation.recommendations).toHaveLength(9);
+      expect(selected.state.selectedEntityId).toBe("camp-p3-bj");
+      expect(selected.state.lastRecommendationIds).toEqual(["camp-p3-bj"]);
+
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "上课地点在哪里",
+          state: selected.state,
+          testMode: false,
+          diagnostics: true,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.entityIds).toEqual(["camp-p3-bj"]);
+      expect(follow.state.selectedEntityId).toBe("camp-p3-bj");
+      expect(follow.state.studentConstraints).not.toHaveProperty(
+        "regionDisplayName",
+      );
+      expect(follow.message).toContain("北京市海淀区中关村南大街5号");
+      expect(follow.message).not.toMatch(/上海市|腾讯会议|选择班型|补充.*班型/u);
+      expect(follow.presentation.recommendations).toEqual([]);
+      expect(follow.sources.every(({ document }) => document === "A")).toBe(
+        true,
+      );
+    });
+
+    it("inherits the period-3 Shanghai catalog selection for a date follow-up", async () => {
+      const { selected } = await selectCatalogEntity(
+        "student",
+        "camp-p3-sh",
+      );
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "什么时候上课",
+          state: selected.state,
+          testMode: false,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.entityIds).toEqual(["camp-p3-sh"]);
+      expect(follow.state.selectedEntityId).toBe("camp-p3-sh");
+      expect(follow.message).toMatch(/2026-08-20[\s\S]*2026-08-26/u);
+      expect(follow.presentation.recommendations).toEqual([]);
+    });
+
+    it("inherits the period-3 online catalog selection for a replay follow-up", async () => {
+      const { selected } = await selectCatalogEntity(
+        "student",
+        "camp-p3-online",
+      );
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "可以回放吗",
+          state: selected.state,
+          testMode: false,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.entityIds).toEqual(["camp-p3-online"]);
+      expect(follow.state.selectedEntityId).toBe("camp-p3-online");
+      expect(follow.message).toContain("30天回放");
+      expect(follow.message).not.toMatch(/北京.*地址|上海.*地址|中关村|张江路/u);
+      expect(follow.presentation.recommendations).toEqual([]);
+    });
+
+    it("inherits the L2 weekend teacher catalog selection for its split dates", async () => {
+      const { catalog, selected } = await selectCatalogEntity(
+        "teacher",
+        "teacher-l2-weekend",
+      );
+      expect(catalog.presentation.recommendations).toHaveLength(6);
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "哪几天上课",
+          state: selected.state,
+          testMode: false,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.entityIds).toEqual(["teacher-l2-weekend"]);
+      expect(follow.state.selectedEntityId).toBe("teacher-l2-weekend");
+      expect(follow.message).toMatch(/8月8日[\s\S]*8月9日[\s\S]*8月15日/u);
+      expect(follow.presentation.recommendations).toEqual([]);
+      expect(follow.sources.every(({ document }) => document === "B")).toBe(
+        true,
+      );
+    });
+
+    it("keeps the clicked card canonical ID identical to the service state", async () => {
+      const { selected } = await selectCatalogEntity(
+        "student",
+        "camp-p3-sh",
+      );
+
+      expect(selected.status).toBe("selection");
+      expect(selected.state.selectedEntityId).toBe("camp-p3-sh");
+      expect(selected.state.lastRecommendationIds).toEqual(["camp-p3-sh"]);
+    });
+
+    it("continues the selected course after a serialized refresh state", async () => {
+      const { selected } = await selectCatalogEntity(
+        "student",
+        "camp-p3-online",
+      );
+      const refreshedState = JSON.parse(
+        JSON.stringify(selected.state),
+      ) as ConversationState;
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "需要准备什么",
+          state: refreshedState,
+          testMode: false,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.state.selectedEntityId).toBe("camp-p3-online");
+      expect(follow.entityIds).toEqual(["camp-p3-online"]);
+      expect(follow.presentation.recommendations).toEqual([]);
+    });
+
+    it("clears a selected student course when the identity changes to teacher", async () => {
+      const { selected } = await selectCatalogEntity(
+        "student",
+        "camp-p3-bj",
+      );
+      const switched = (
+        await postChat({
+          action: "select_domain",
+          domain: "teacher",
+          state: selected.state,
+          testMode: false,
+        })
+      ).response;
+
+      expect(switched.state.domain).toBe("teacher");
+      expect(switched.state.selectedEntityId).toBeUndefined();
+      expect(switched.state.lastRecommendationIds).toEqual([]);
+      expect(switched.state.studentConstraints).toEqual({});
+    });
+
+    it("does not reuse full-catalog cards or request another selection on a short follow-up", async () => {
+      const { selected } = await selectCatalogEntity(
+        "student",
+        "camp-p3-bj",
+      );
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "需要准备什么",
+          state: selected.state,
+          testMode: false,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.state.pendingQuestionKeys).not.toContain("selectedCourse");
+      expect(follow.entityIds).toEqual(["camp-p3-bj"]);
+      expect(follow.presentation.recommendations).toEqual([]);
+      expect(follow.message).not.toMatch(/选择.*班型|哪个班型/u);
     });
 
     it.each(["你好", "在吗", "谢谢"])(

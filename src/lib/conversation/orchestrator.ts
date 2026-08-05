@@ -1647,17 +1647,17 @@ async function completeComposerPlan(input: {
   const recentHistory = (
     input.dependencies.recentHistory ?? input.workingState.shortHistory
   ).slice(-8);
+  const scopedEntityIds = input.workingState.selectedEntityId
+    ? [input.workingState.selectedEntityId]
+    : [
+        ...input.plan.entityIds,
+        ...input.workingState.lastRecommendationIds,
+      ];
   const retrievedChunks = retrieveKnowledgeChunks({
     message: input.userMessage,
     domain: input.workingState.domain,
     entityIds: [
-      ...new Set([
-        ...(input.workingState.selectedEntityId
-          ? [input.workingState.selectedEntityId]
-          : []),
-        ...input.plan.entityIds,
-        ...input.workingState.lastRecommendationIds,
-      ]),
+      ...new Set(scopedEntityIds),
     ],
     confirmedConstraints: input.plan.confirmedConstraints,
     pendingQuestionKeys: input.plan.nextQuestionKeys,
@@ -2106,6 +2106,7 @@ export async function runConversationTurn(
     }
     const state = structuredClone(originalState);
     state.selectedEntityId = request.entityId;
+    state.lastRecommendationIds = [request.entityId];
     state.pendingQuestionKeys = [];
     state.pendingQuestionOptions = [];
     return operationalResponse({

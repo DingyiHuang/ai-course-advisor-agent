@@ -89,4 +89,37 @@ describe("browser conversation history restoration", () => {
     expect(restored.messages[0].presentation).toEqual({ recommendations: [] });
     expect(restored.state.domain).toBe("unknown");
   });
+
+  it("restores the selected course after refresh without reviving catalog cards", () => {
+    const restored = restoreConversation([
+      message(
+        "55555555-5555-4555-8555-555555555555",
+        "system",
+        "已将该班型设为当前咨询对象。",
+        {
+          clientRequestId: "request-selection-1",
+          status: "selection",
+          state: {
+            version: 1,
+            domain: "student",
+            studentConstraints: {},
+            teacherConstraints: {},
+            selectedEntityId: "camp-p3-online",
+            lastRecommendationIds: ["camp-p3-online"],
+            pendingQuestionKeys: [],
+            pendingQuestionOptions: [],
+            shortHistory: [],
+            test: { failNextModelCall: false },
+          },
+          presentation: { recommendations: [] },
+          actions: [],
+          options: [],
+        },
+      ),
+    ]);
+
+    expect(restored.state.selectedEntityId).toBe("camp-p3-online");
+    expect(restored.state.lastRecommendationIds).toEqual(["camp-p3-online"]);
+    expect(restored.messages[0].presentation.recommendations).toEqual([]);
+  });
 });

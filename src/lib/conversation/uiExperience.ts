@@ -71,6 +71,14 @@ export function nextMobileQuickPanelOpen(
   return event === "toggle" ? !current : false;
 }
 
+export function appViewportHeight(
+  visualViewportHeight: number | undefined,
+  innerHeight: number,
+): string {
+  const height = visualViewportHeight ?? innerHeight;
+  return `${Math.max(1, Math.round(height))}px`;
+}
+
 export function isNearLatestScroll(input: {
   scrollHeight: number;
   scrollTop: number;

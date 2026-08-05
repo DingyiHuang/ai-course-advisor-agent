@@ -62,6 +62,44 @@ describe("CourseAdvisor accessible shell", () => {
     expect(block).not.toMatch(/position:\s*(?:fixed|absolute|sticky)/u);
   });
 
+  it("keeps the document root fixed while only the message body scrolls", () => {
+    const globalCss = readFileSync(
+      new URL("../../src/app/globals.css", import.meta.url),
+      "utf8",
+    );
+    const shellCss = readFileSync(
+      new URL("../../src/components/CourseAdvisor.module.css", import.meta.url),
+      "utf8",
+    );
+    const documentRoot = globalCss.match(/html,\s*body\s*\{([^}]*)\}/u)?.[1];
+    const pageShell = shellCss.match(/\.pageShell\s*\{([^}]*)\}/u)?.[1];
+    const chatBody = shellCss.match(/\.chatBody\s*\{([^}]*)\}/u)?.[1];
+
+    expect(documentRoot).toMatch(/height:\s*100%/u);
+    expect(documentRoot).toMatch(/min-height:\s*0/u);
+    expect(documentRoot).toMatch(/overflow:\s*hidden/u);
+    expect(documentRoot).not.toMatch(/min-height:\s*100%/u);
+    expect(pageShell).toMatch(/height:\s*var\(--app-viewport-height\)/u);
+    expect(pageShell).toMatch(/overflow:\s*hidden/u);
+    expect(chatBody).toMatch(/overflow-y:\s*auto/u);
+  });
+
+  it("updates visual viewport height without scrolling the page or the messages", () => {
+    const source = readFileSync(
+      new URL("../../src/components/CourseAdvisor.tsx", import.meta.url),
+      "utf8",
+    );
+    const viewportEffect = source.slice(
+      source.indexOf("const viewport = window.visualViewport"),
+      source.indexOf("}, []);", source.indexOf("const viewport = window.visualViewport")),
+    );
+
+    expect(viewportEffect).toContain("appViewportHeight(viewport?.height, window.innerHeight)");
+    expect(viewportEffect).not.toMatch(/scrollIntoView|scrollTo|setQuickPanelOpen/u);
+    expect(source).not.toContain("scrollIntoView");
+    expect(source).toContain("onFocus={handleComposerFocus}");
+  });
+
   it("preserves the 44px mobile touch target for quick questions and sending", () => {
     const css = readFileSync(
       new URL("../../src/components/CourseAdvisor.module.css", import.meta.url),

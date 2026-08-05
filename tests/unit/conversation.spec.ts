@@ -365,6 +365,36 @@ describe("TASK-04 session orchestration", () => {
     expect(rejected.error?.code).toBe("invalid_input");
   });
 
+  it("uses the clicked canonical ID as the sole current entity after a full catalog", async () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    state.studentConstraints.availablePeriods = [1];
+    state.lastRecommendationIds = [
+      "camp-p1-bj",
+      "camp-p1-sh",
+      "camp-p1-online",
+      "camp-p2-bj",
+      "camp-p2-sh",
+      "camp-p2-online",
+      "camp-p3-bj",
+      "camp-p3-sh",
+      "camp-p3-online",
+    ];
+
+    const response = await runConversationTurn(
+      {
+        action: "select_entity",
+        entityId: "camp-p3-bj",
+        state,
+      },
+      dependencies({ candidates: [], outputs: [] }),
+    );
+
+    expect(response.status).toBe("selection");
+    expect(response.state.selectedEntityId).toBe("camp-p3-bj");
+    expect(response.state.lastRecommendationIds).toEqual(["camp-p3-bj"]);
+  });
+
   it("uses a structured catalog action without classifier keyword routing", async () => {
     const state = createInitialConversationState();
     state.domain = "student";

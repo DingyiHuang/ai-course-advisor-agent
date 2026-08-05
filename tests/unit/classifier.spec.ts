@@ -491,6 +491,43 @@ describe("classifier candidates are evidence-gated", () => {
     },
   );
 
+  it.each([
+    ["上课地点在哪里", "location"],
+    ["什么时候上课", "schedule"],
+    ["需要准备什么", "required_items"],
+    ["可以回放吗", "replay"],
+    ["哪几天上课", "schedule"],
+  ] as const)(
+    "routes selected-course short follow-up %s to %s",
+    (message, factTopic) => {
+      const state = createInitialConversationState();
+      state.domain = "student";
+      state.selectedEntityId = "camp-p3-bj";
+      state.lastRecommendationIds = ["camp-p3-bj"];
+
+      const routing = resolveDeterministicTurnRouting({ message, state });
+
+      expect(routing.intent).toBe("contextual_followup");
+      expect(routing.factTopics).toContain(factTopic);
+      expect(routing.studentConstraints).toEqual({});
+    },
+  );
+
+  it("does not save the location question word as a student region", () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    state.selectedEntityId = "camp-p3-bj";
+    state.lastRecommendationIds = ["camp-p3-bj"];
+
+    const routing = resolveDeterministicTurnRouting({
+      message: "上课地点在哪里",
+      state,
+    });
+
+    expect(routing.studentConstraints).not.toHaveProperty("region");
+    expect(JSON.stringify(routing)).not.toContain('"regionDisplayName":"哪里"');
+  });
+
   it("normalizes a Beijing district and explicit mode change over adversarial classifier values", () => {
     const state = createInitialConversationState();
     state.domain = "student";

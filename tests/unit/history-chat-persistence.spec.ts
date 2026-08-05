@@ -89,6 +89,38 @@ describe("chat route conversation persistence", () => {
     });
   });
 
+  it("persists the selected canonical course in the server-side session state", async () => {
+    const { store, messages } = inMemoryStore();
+    const turn = await preparePersistedTurn({
+      store,
+      body: {
+        sessionId: SESSION_ID,
+        clientRequestId: "request-selection-1",
+        action: "select_entity",
+        entityId: "camp-p3-online",
+      },
+    });
+    const selected = response();
+    selected.status = "selection";
+    selected.message = "已将该班型设为当前咨询对象。";
+    selected.state.domain = "student";
+    selected.state.selectedEntityId = "camp-p3-online";
+    selected.state.lastRecommendationIds = ["camp-p3-online"];
+
+    await persistChatResponse(turn, selected);
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0].role).toBe("system");
+    expect(messages[0].metadata).toMatchObject({
+      status: "selection",
+      state: {
+        domain: "student",
+        selectedEntityId: "camp-p3-online",
+        lastRecommendationIds: ["camp-p3-online"],
+      },
+    });
+  });
+
   it("does not initialize storage for legacy requests without a session id", async () => {
     const { store, messages } = inMemoryStore();
     const turn = await preparePersistedTurn({

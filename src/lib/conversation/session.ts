@@ -27,23 +27,6 @@ const KNOWN_ENTITY_IDS = new Set([
   ...PLATFORM_SERVICES.map(({ id }) => id),
 ]);
 
-function entityMatchesConfirmedState(
-  entityId: string,
-  state: ConversationState,
-): boolean {
-  if (
-    state.domain !== "student" ||
-    !state.studentConstraints.availablePeriods?.length
-  ) {
-    return true;
-  }
-  const camp = CAMPS.find(({ id }) => id === entityId);
-  return Boolean(
-    camp &&
-      state.studentConstraints.availablePeriods.includes(camp.period),
-  );
-}
-
 const PENDING_QUESTION_KEYS: Record<ConversationDomain, ReadonlySet<string>> = {
   unknown: new Set(["identity"]),
   student: new Set([
@@ -261,8 +244,7 @@ export function sanitizeConversationState(value: unknown): ConversationState {
     domainPrefix &&
     typeof input.selectedEntityId === "string" &&
     input.selectedEntityId.startsWith(domainPrefix) &&
-    KNOWN_ENTITY_IDS.has(input.selectedEntityId) &&
-    entityMatchesConfirmedState(input.selectedEntityId, state)
+    KNOWN_ENTITY_IDS.has(input.selectedEntityId)
   ) {
     state.selectedEntityId = input.selectedEntityId;
   }
@@ -271,8 +253,7 @@ export function sanitizeConversationState(value: unknown): ConversationState {
       (item): item is string =>
             typeof item === "string" &&
             (domainPrefix ? item.startsWith(domainPrefix) : false) &&
-            KNOWN_ENTITY_IDS.has(item) &&
-            entityMatchesConfirmedState(item, state),
+            KNOWN_ENTITY_IDS.has(item),
     ))].slice(0, 9);
   }
   if (Array.isArray(input.pendingQuestionKeys)) {
