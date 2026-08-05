@@ -160,3 +160,14 @@ H5检查：Supabase五项全部达成，决定继续使用Supabase。当前CONVE
 - 修复后五种模拟尺寸均无横向滚动；390×844快捷区展开为210px且与消息区零重叠，360×500输入框和44px发送按钮完整可见。长对话中上滑后AI到达不强制回底，“回到最新”准确恢复到底部。以上均只标记为模拟尺寸通过，不声称iPhone真机通过。
 - 原425项测试全部保留，新增18项，最终31个测试文件、443项通过；TypeScript、ESLint、Production Build、`git diff --check`及四类提交扫描通过。Build仅保留既有Local JSON会话存储的Turbopack文件追踪告警。
 - 本地修复与门禁于2026-08-05 09:42:07（Asia/Shanghai）完成。待创建独立提交并推送功能分支，由Git集成生成新Preview；不合并`main`、不修改Production、不进入TASK-B05。
+
+## TASK-B04B iPhone真机复验记录与TASK-B04封闭
+
+- 封闭基线：当前分支为`feature/b-level-v2`，本地HEAD与远端功能分支均为`87bbd936132bf29c3763d9c4f988c28b7d22f762`，工作区在记录前干净。当前Preview `dpl_vmLMi2GaJXfjrHNRnxrZ8VvyTr14`为READY，URL为`https://ai-course-advisor-agent-tx9784jke-projectmanagement1.vercel.app`，Vercel元数据对应同一Git SHA。保护标签`task-b04r2-before-ios-followup-fix-20260805`保留。
+- TASK-B04A首次iPhone人工验收保留为失败：移动端快捷问题和场景提示长期占用底部空间，影响对话查看和历史滚动；本地模拟尺寸不替代真机。TASK-B04R首次修复后，本地模拟尺寸和完整目录范围通过，但iPhone仍暴露输入聚焦空白、关闭键盘后根滚动残留及选班后组合追问继承不稳，不能封闭。
+- TASK-B04R2/R3当前班型与iPhone聚焦问题已修复：选择第2期线上直播班后输入“多少钱，在哪里上课?”能够继承当前班型；回答同时包含腾讯会议直播和3980元，不再询问城市、月份或授课形式；当前实体保持`camp-p2-online`，不生成新的目录卡或推荐卡。
+- 参赛人使用一台iPhone Safari真机完成12项复验并全部通过：普通页面不显示Viewport Debug，输入聚焦不再滑到空白区域，输入框和发送按钮保持在软键盘上方，关闭键盘无底部空白，消息区滚动正常，移动端输入字号符合要求，页面根滚动恢复不影响消息区滚动。设备型号、iOS版本、网络环境和具体测试时间均为参赛人未填写。
+- Android真机未测试，仅完成Chrome模拟移动尺寸检查。自动测试通过（31个测试文件、486项通过）、桌面Preview冒烟通过、Chrome模拟移动尺寸通过、iPhone Safari真机通过、当前班型组合追问通过、iPhone聚焦空白问题已修复，仍存在第三方模型瞬时503风险；既有Turbopack本地JSON追踪警告仍为非阻断项。
+- Viewport Debug仅用于Preview诊断；普通模式和Production不得显示诊断信息。`tests/unit/course-advisor-ui.spec.ts`保留普通模式、显式调试和Production保护相关自动测试。项目未修改业务代码、课程事实、Prompt、知识块、价格、日期、推荐规则或Supabase结构。
+- 人工证据记录于`test-evidence/task-b04/mobile-manual.md`。TASK-B05A测试记录表仅更新F04、UI02、UI03、UI04四个有新证据支持的测试项，未改动待执行Production部署测试。
+- TASK-B04B最终门禁通过：TypeScript、ESLint、Next.js Production Build、`git diff --check`均通过；Build仅保留既有Local JSON ConversationStore的Turbopack文件追踪警告。敏感信息扫描、禁提交类型扫描、原始Word扫描和长段资料原文扫描均0命中。Production `https://ai-course-advisor-agent.vercel.app/?viewportDebug=1` 返回HTTP 200且不包含Viewport Debug、`viewportDebug diagnostics`、Prompt全文、知识块ID或内部错误原因。
