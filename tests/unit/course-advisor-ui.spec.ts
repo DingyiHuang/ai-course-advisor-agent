@@ -49,6 +49,48 @@ describe("CourseAdvisor accessible shell", () => {
     expect(evidence).not.toMatch(/知识块ID|内部错误原因|Prompt全文/u);
   });
 
+  it("shows viewport diagnostics only when the explicit debug flag is enabled", () => {
+    const normal = renderToStaticMarkup(
+      createElement(CourseAdvisor, { testMode: false }),
+    );
+    const debug = renderToStaticMarkup(
+      createElement(CourseAdvisor, { testMode: false, viewportDebug: true }),
+    );
+
+    expect(normal).not.toContain("Viewport Debug");
+    expect(normal).not.toContain("viewportDebug diagnostics");
+    expect(debug).toContain("Viewport Debug");
+    expect(debug).toContain("viewportDebug diagnostics");
+    expect(debug).not.toMatch(/Prompt|knowledgeChunks|URL|api[_-]?key/iu);
+  });
+
+  it("keeps production guarded from viewport diagnostics even if a query param exists", () => {
+    const pageSource = readFileSync(
+      new URL("../../src/app/page.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(pageSource).toContain('process.env.VERCEL_ENV === "preview"');
+    expect(pageSource).toContain('params.viewportDebug === "1"');
+    expect(pageSource).toContain("viewportDebugAllowed &&");
+  });
+
+  it("keeps iOS native focused controls at 16px or larger", () => {
+    const globalCss = readFileSync(
+      new URL("../../src/app/globals.css", import.meta.url),
+      "utf8",
+    );
+    const componentCss = readFileSync(
+      new URL("../../src/components/CourseAdvisor.module.css", import.meta.url),
+      "utf8",
+    );
+
+    expect(globalCss).toMatch(/-webkit-text-size-adjust:\s*100%/u);
+    expect(globalCss).toMatch(/input,\s*\n\s*textarea,\s*\n\s*select\s*\{[^}]*font-size:\s*16px/u);
+    expect(componentCss).toMatch(/@media \(max-width: 760px\)[\s\S]*\.composer textarea\s*\{[^}]*font-size:\s*16px/u);
+    expect(componentCss).toMatch(/@media \(max-width: 760px\)[\s\S]*\.sessionSection input\s*\{[^}]*font-size:\s*16px/u);
+  });
+
   it("keeps expanded mobile quick questions in bounded normal flow", () => {
     const css = readFileSync(
       new URL("../../src/components/CourseAdvisor.module.css", import.meta.url),
@@ -84,7 +126,7 @@ describe("CourseAdvisor accessible shell", () => {
     expect(chatBody).toMatch(/overflow-y:\s*auto/u);
   });
 
-  it("updates visual viewport height without scrolling the page or the messages", () => {
+  it("updates visual viewport height and listens for native viewport scroll", () => {
     const source = readFileSync(
       new URL("../../src/components/CourseAdvisor.tsx", import.meta.url),
       "utf8",
@@ -95,9 +137,42 @@ describe("CourseAdvisor accessible shell", () => {
     );
 
     expect(viewportEffect).toContain("appViewportHeight(viewport?.height, window.innerHeight)");
-    expect(viewportEffect).not.toMatch(/scrollIntoView|scrollTo|setQuickPanelOpen/u);
+    expect(viewportEffect).toContain('viewport?.addEventListener("scroll"');
+    expect(viewportEffect).toContain("shouldRestoreDocumentRootScroll");
+    expect(viewportEffect).not.toMatch(/scrollIntoView|setQuickPanelOpen/u);
     expect(source).not.toContain("scrollIntoView");
     expect(source).toContain("onFocus={handleComposerFocus}");
+  });
+
+  it("restores document root scroll without changing the message scroll container", () => {
+    const source = readFileSync(
+      new URL("../../src/components/CourseAdvisor.tsx", import.meta.url),
+      "utf8",
+    );
+    const restoreBlock = source.slice(
+      source.indexOf("const restoreRootScrollForFocusedInput"),
+      source.indexOf("const updateHeight = () =>"),
+    );
+
+    expect(restoreBlock).toContain("document.scrollingElement");
+    expect(restoreBlock).toContain("window.scrollTo");
+    expect(restoreBlock).not.toContain("chatBodyRef");
+    expect(restoreBlock).not.toContain("body.scrollTo({ top: body.scrollHeight");
+  });
+
+  it("does not add visualViewport offsetTop to the app height", () => {
+    const source = readFileSync(
+      new URL("../../src/components/CourseAdvisor.tsx", import.meta.url),
+      "utf8",
+    );
+    const updateHeightBlock = source.slice(
+      source.indexOf("const updateHeight = () =>"),
+      source.indexOf("updateHeight();", source.indexOf("const updateHeight = () =>")),
+    );
+
+    expect(updateHeightBlock).toContain("appViewportHeight(viewport?.height, window.innerHeight)");
+    expect(updateHeightBlock).not.toContain("offsetTop");
+    expect(updateHeightBlock).not.toContain("+");
   });
 
   it("preserves the 44px mobile touch target for quick questions and sending", () => {

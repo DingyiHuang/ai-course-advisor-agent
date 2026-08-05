@@ -8,6 +8,7 @@ import {
   nextMobileQuickPanelOpen,
   QUICK_ENTRIES,
   safeTurnEvidence,
+  shouldRestoreDocumentRootScroll,
   shouldAutoFollowLatest,
   shouldSubmitComposerKey,
   userFacingStatus,
@@ -106,6 +107,45 @@ describe("TASK-B04 UI experience helpers", () => {
     expect(appViewportHeight(843.6, 844)).toBe("844px");
   });
 
+  it("keeps visual viewport offset out of the height calculation", () => {
+    expect(appViewportHeight(500, 844)).toBe("500px");
+    expect(appViewportHeight(500, 500)).not.toBe("620px");
+  });
+
+  it("restores document root scroll only while a native text control is focused", () => {
+    expect(
+      shouldRestoreDocumentRootScroll({
+        activeElementTagName: "textarea",
+        scrollY: 180,
+        rootScrollTop: 180,
+      }),
+    ).toBe(true);
+    expect(
+      shouldRestoreDocumentRootScroll({
+        activeElementTagName: "input",
+        scrollY: 0,
+        rootScrollTop: 40,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not restore root scroll for message-area scrolling or already-stable roots", () => {
+    expect(
+      shouldRestoreDocumentRootScroll({
+        activeElementTagName: "div",
+        scrollY: 180,
+        rootScrollTop: 180,
+      }),
+    ).toBe(false);
+    expect(
+      shouldRestoreDocumentRootScroll({
+        activeElementTagName: "textarea",
+        scrollY: 0,
+        rootScrollTop: 0,
+      }),
+    ).toBe(false);
+  });
+
   it("toggles the mobile quick panel without changing the default collapsed state", () => {
     expect(nextMobileQuickPanelOpen(false, "toggle")).toBe(true);
     expect(nextMobileQuickPanelOpen(true, "toggle")).toBe(false);
@@ -121,6 +161,23 @@ describe("TASK-B04 UI experience helpers", () => {
     ).toBe(false);
     expect(
       shouldAutoFollowLatest({ force: false, nearLatest: false }),
+    ).toBe(false);
+  });
+
+  it("keeps a manual message scroll independent from document root restoration", () => {
+    expect(
+      isNearLatestScroll({
+        scrollHeight: 1600,
+        scrollTop: 180,
+        clientHeight: 500,
+      }),
+    ).toBe(false);
+    expect(
+      shouldRestoreDocumentRootScroll({
+        activeElementTagName: "section",
+        scrollY: 0,
+        rootScrollTop: 0,
+      }),
     ).toBe(false);
   });
 

@@ -1200,6 +1200,62 @@ button:disabled {
   text-align: center;
 }
 
+.viewportDebugPanel {
+  position: fixed;
+  z-index: 50;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: 46vh;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  overflow: auto;
+  color: #12213a;
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid #cbd8e8;
+  box-shadow: 0 -8px 24px rgba(20, 36, 62, 0.14);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.viewportDebugPanel h2 {
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.viewportDebugPanel dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 4px 10px;
+}
+
+.viewportDebugPanel div {
+  min-width: 0;
+}
+
+.viewportDebugPanel dt {
+  color: #5f6d82;
+}
+
+.viewportDebugPanel dd {
+  overflow-wrap: anywhere;
+  color: #15233a;
+  font-weight: 700;
+}
+
+.viewportDebugPanel ol {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  overflow-x: auto;
+  list-style: none;
+}
+
+.viewportDebugPanel li {
+  flex: 0 0 auto;
+  color: #365179;
+}
+
 @media (max-width: 1050px) {
   .header {
     grid-template-columns: 1fr auto;
@@ -1351,6 +1407,10 @@ button:disabled {
   .sessionSection input {
     min-height: 44px;
     font-size: 13px;
+  }
+
+  .sessionSection input {
+    font-size: 16px;
   }
 
   .exportNotice {

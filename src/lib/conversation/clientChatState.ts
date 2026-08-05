@@ -17,7 +17,11 @@ export type SafeTurnEvidence = {
   usedCount: number;
   groundingChecked: boolean;
   regenerated: boolean;
-  responseMode: "normal" | "date_advisory_fallback" | "system_fee_fallback";
+  responseMode:
+    | "normal"
+    | "date_advisory_fallback"
+    | "system_fee_fallback"
+    | "current_fact_fallback";
 };
 
 export type IdentifiedClientUiMessage = ClientUiMessage & {

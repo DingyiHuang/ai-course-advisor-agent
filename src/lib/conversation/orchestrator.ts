@@ -997,6 +997,43 @@ function assertDirectFactAnswerCompleteness(input: {
   }
 
   if (
+    /(?:在哪里|在哪儿|哪里|地点|地址|在线平台|授课平台|直播平台|腾讯会议)/u.test(
+      input.userMessage,
+    )
+  ) {
+    const addressFacts = factsBySuffix(".addressOrPlatform").filter(
+      ({ value }) => typeof value === "string",
+    );
+    const platformFacts = factsBySuffix(".locationsOrPlatforms").filter(
+      ({ value }) => Array.isArray(value),
+    );
+    const answerContainsLocation = (value: string) => {
+      const compact = value.split(/[（(、]/u)[0] ?? value;
+      return (
+        input.output.message.includes(value) ||
+        (compact.length >= 2 && input.output.message.includes(compact))
+      );
+    };
+    const usedAddress =
+      addressFacts.length === 0 ||
+      (usesSuffix(".addressOrPlatform") &&
+        addressFacts.some(({ value }) => answerContainsLocation(String(value))));
+    const usedPlatform =
+      platformFacts.length === 0 ||
+      (usesSuffix(".locationsOrPlatforms") &&
+        platformFacts.some(({ value }) =>
+          (value as string[]).some((item) => answerContainsLocation(item)),
+        ));
+    if (!usedAddress || !usedPlatform) {
+      throw new GroundingError(
+        "missing_required_fact",
+        "Location answer omitted the selected entity location or platform",
+        "current_location_incomplete",
+      );
+    }
+  }
+
+  if (
     input.plan.entityIds.some((id) => id.startsWith("teacher-")) &&
     /怎么安排/u.test(input.userMessage)
   ) {
@@ -1257,6 +1294,12 @@ type FeeExpectation = {
   calculation: ComposerPlan["calculations"][number];
 };
 
+type GroundedComposerResult = {
+  output: LlmComposerOutput;
+  usedFactIds: string[];
+  usedChunkIds: string[];
+};
+
 function feeExpectationFor(
   plan: ComposerPlan,
   userMessage: string,
@@ -1424,6 +1467,8 @@ function retryFeedbackFor(error: unknown): string | undefined {
       "用户只问课程日期时，只写开课和结束日期及对应星期，并使用startDate、endDate；不要插入报名截止、早鸟或能否报名判断。",
     simulated_address_missing:
       "地点回答必须完整保留地址事实中的“模拟地址”标记，并在usedFactIds中使用addressOrPlatform。",
+    current_location_incomplete:
+      "地点或平台回答必须写明当前实体的地址或授课平台，并在usedFactIds中使用对应地点事实。",
     teacher_schedule_incomplete:
       "教师集训安排必须写明日期、总课时和线下授课形式，并在usedFactIds中使用schedule、format、locationsOrPlatforms。",
     registration_cutoff_incomplete:
@@ -1499,15 +1544,320 @@ function retryFeedbackFor(error: unknown): string | undefined {
   return feedback[error.reasonCode];
 }
 
+function factValueByField(
+  plan: ComposerPlan,
+  entityId: string,
+  field: string,
+): unknown {
+  return plan.facts.find(({ id }) => id === `${entityId}.${field}`)?.value;
+}
+
+function factIdByField(
+  plan: ComposerPlan,
+  entityId: string,
+  field: string,
+): string | undefined {
+  return plan.facts.some(({ id }) => id === `${entityId}.${field}`)
+    ? `${entityId}.${field}`
+    : undefined;
+}
+
+function chunkIdsForFactIds(
+  retrievedChunks: KnowledgeChunk[],
+  usedFactIds: string[],
+): string[] {
+  const used = new Set(usedFactIds);
+  return retrievedChunks
+    .filter((chunk) => chunk.factIds.some((factId) => used.has(factId)))
+    .map(({ id }) => id);
+}
+
+function formatBusinessDate(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const weekday = weekdayForBusinessDate(value);
+  return weekday ? `${value}（${weekday}）` : value;
+}
+
+function currentFactQuestionFlags(message: string): {
+  location: boolean;
+  schedule: boolean;
+  replay: boolean;
+  requiredItems: boolean;
+  refund: boolean;
+  availability: boolean;
+  curriculum: boolean;
+  prerequisite: boolean;
+} {
+  return {
+    location:
+      /(?:在哪里|在哪儿|哪里|地点|地址|在线平台|授课平台|直播平台|腾讯会议)/u.test(
+        message,
+      ),
+    schedule:
+      /(?:什么时候|开课时间|时间安排|课程安排|上课安排|哪几天|哪天|日期|怎么安排)/u.test(
+        message,
+      ),
+    replay: /(?:回放|录播)/u.test(message),
+    requiredItems:
+      /(?:需要带什么|带什么|准备什么|准备事项|准备工作|准备材料|携带|电脑|设备)/u.test(
+        message,
+      ),
+    refund: /(?:退款|退费|取消报名)/u.test(message),
+    availability: /(?:名额|余位|剩余|开班人数|班型规模)/u.test(message),
+    curriculum: /(?:课程内容|学什么|大纲|模块|学习产出)/u.test(message),
+    prerequisite: /(?:基础|前置条件|先修|要求)/u.test(message),
+  };
+}
+
+function hasCurrentFactFallbackSections(message: string): boolean {
+  const flags = currentFactQuestionFlags(message);
+  return Object.values(flags).some(Boolean);
+}
+
+function systemCurrentFactFallback(input: {
+  plan: ComposerPlan;
+  workingState: ConversationState;
+  userMessage: string;
+  retrievedChunks: KnowledgeChunk[];
+  feeExpectation?: FeeExpectation;
+}): GroundedComposerResult | undefined {
+  const entityId = input.plan.entityIds[0];
+  if (
+    !entityId ||
+    input.plan.entityIds.length !== 1 ||
+    input.workingState.selectedEntityId !== entityId ||
+    (input.plan.status !== "contextual_followup" &&
+      input.plan.status !== "fact_answer")
+  ) {
+    return undefined;
+  }
+
+  const flags = currentFactQuestionFlags(input.userMessage);
+  const sections: string[] = [];
+  const usedFactIds: string[] = [];
+  const addFact = (field: string) => {
+    const factId = factIdByField(input.plan, entityId, field);
+    if (factId) usedFactIds.push(factId);
+  };
+  const value = (field: string) =>
+    factValueByField(input.plan, entityId, field);
+
+  if (flags.location) {
+    const addressOrPlatform = value("addressOrPlatform");
+    const locationName = value("locationName");
+    const locationsOrPlatforms = value("locationsOrPlatforms");
+    if (typeof addressOrPlatform === "string") {
+      addFact("locationName");
+      addFact("addressOrPlatform");
+      const isOnline =
+        entityId.includes("online") || /线上|腾讯会议|直播/u.test(addressOrPlatform);
+      sections.push(
+        isOnline
+          ? `上课地点/平台：该班型为线上授课，无需前往线下地址；授课平台为${addressOrPlatform}。`
+          : `上课地点/平台：${typeof locationName === "string" ? `${locationName}，` : ""}${addressOrPlatform}。`,
+      );
+    } else if (Array.isArray(locationsOrPlatforms)) {
+      addFact("cities");
+      addFact("locationsOrPlatforms");
+      sections.push(
+        `上课地点/平台：${locationsOrPlatforms.map(String).join("、")}。`,
+      );
+    } else {
+      sections.push("上课地点/平台：现有资料未提供当前班型的地点或平台。");
+    }
+  }
+
+  if (flags.schedule) {
+    const startDate = formatBusinessDate(value("startDate"));
+    const endDate = formatBusinessDate(value("endDate"));
+    const schedule = value("schedule");
+    const format = value("format");
+    if (Array.isArray(schedule)) {
+      addFact("schedule");
+      addFact("format");
+      addFact("locationsOrPlatforms");
+      sections.push(
+        `课程安排：${schedule.map(String).join("；")}。${
+          typeof format === "string" ? `班型形式为${format}。` : ""
+        }`,
+      );
+    } else if (startDate && endDate) {
+      addFact("startDate");
+      addFact("endDate");
+      sections.push(`课程安排：${startDate}开课，${endDate}结营。`);
+    } else {
+      sections.push("课程安排：现有资料未提供当前班型的上课日期。");
+    }
+  }
+
+  if (flags.replay) {
+    const replayDays = value("replayDays");
+    const replayPolicy = value("replayPolicy");
+    if (typeof replayDays === "number") {
+      addFact("replayDays");
+      sections.push(`回放：该班型提供${replayDays}天回放。`);
+    } else if (typeof replayPolicy === "string") {
+      addFact("replayPolicy");
+      sections.push(`回放：${replayPolicy}。`);
+    } else {
+      addFact("replayDays");
+      sections.push("回放：现有资料未提供当前班型的回放服务。");
+    }
+  }
+
+  if (flags.requiredItems) {
+    const requiredItems = value("requiredItems");
+    const equipmentRequirements = value("equipmentRequirements");
+    const deviceRequirements = value("deviceRequirements");
+    const requiredParts: string[] = [];
+    if (Array.isArray(requiredItems)) {
+      addFact("requiredItems");
+      requiredParts.push(`需携带：${requiredItems.map(String).join("、")}`);
+    }
+    if (Array.isArray(equipmentRequirements)) {
+      addFact("equipmentRequirements");
+      requiredParts.push(
+        `设备要求：${equipmentRequirements.map(String).join("、")}`,
+      );
+    }
+    if (Array.isArray(deviceRequirements)) {
+      addFact("deviceRequirements");
+      requiredParts.push(
+        `设备要求：${deviceRequirements.map(String).join("、")}`,
+      );
+    }
+    sections.push(
+      requiredParts.length
+        ? `${requiredParts.join("；")}。`
+        : "准备事项：现有资料未提供当前班型的准备事项。",
+    );
+  }
+
+  if (flags.refund) {
+    const refundRules = value("refundRules");
+    const refundPolicyProvided = value("refundPolicyProvided");
+    if (Array.isArray(refundRules)) {
+      addFact("refundRules");
+      sections.push(
+        `退款：${refundRules
+          .map((rule) => {
+            const item = rule as Record<string, unknown>;
+            const rate =
+              typeof item.refundRate === "number"
+                ? `${Math.round(item.refundRate * 100)}%`
+                : "资料未列明比例";
+            return `${String(item.condition)}退${rate}`;
+          })
+          .join("；")}。`,
+      );
+    } else if (refundPolicyProvided === false) {
+      addFact("refundPolicyProvided");
+      sections.push("退款：现有资料未提供当前班型的退款规则。");
+    } else {
+      sections.push("退款：现有资料未提供当前班型的退款规则。");
+    }
+  }
+
+  if (flags.availability) {
+    const availabilityKnown = value("availabilityKnown");
+    if (availabilityKnown === false) {
+      addFact("availabilityKnown");
+      sections.push("名额：现有资料未提供当前班型的实时余位。");
+    } else {
+      sections.push("名额：现有资料未提供当前班型的实时余位。");
+    }
+  }
+
+  if (flags.curriculum) {
+    const modules = value("curriculumModules");
+    const outcome = value("outcome");
+    const dailyOutline = value("dailyOutline");
+    if (Array.isArray(modules)) {
+      addFact("curriculumModules");
+      sections.push(`课程内容：${modules.map(String).join("、")}。`);
+    } else if (Array.isArray(dailyOutline)) {
+      addFact("dailyOutline");
+      sections.push(
+        `课程内容：现有资料列出七天学习安排，主题包括${dailyOutline
+          .map((day) => String((day as Record<string, unknown>).theme))
+          .filter(Boolean)
+          .join("、")}。`,
+      );
+    } else if (typeof outcome === "string") {
+      addFact("outcome");
+      sections.push(`课程内容：${outcome}。`);
+    } else {
+      sections.push("课程内容：现有资料未提供当前班型的课程内容。");
+    }
+  }
+
+  if (flags.prerequisite) {
+    const prerequisite = value("prerequisite");
+    if (typeof prerequisite === "string" && prerequisite.trim()) {
+      addFact("prerequisite");
+      sections.push(`前置条件：${prerequisite}。`);
+    } else if (prerequisite === null) {
+      addFact("prerequisite");
+      sections.push("前置条件：现有资料未要求额外前置条件。");
+    } else {
+      sections.push("前置条件：现有资料未提供当前班型的前置条件。");
+    }
+  }
+
+  let feeSection: GroundedComposerResult | undefined;
+  if (input.feeExpectation) {
+    feeSection = systemFeeFallback({
+      plan: input.plan,
+      expectation: input.feeExpectation,
+      retrievedChunks: input.retrievedChunks,
+    });
+  }
+
+  if (!sections.length && !feeSection) return undefined;
+
+  const messageSections = [
+    ...sections,
+    ...(feeSection ? [feeSection.output.message] : []),
+  ];
+  const fallbackUsedFactIds = [
+    ...usedFactIds,
+    ...(feeSection?.usedFactIds ?? []),
+  ];
+  const output: LlmComposerOutput = {
+    message: messageSections.join("\n"),
+    usedChunkIds: [
+      ...new Set([
+        ...chunkIdsForFactIds(input.retrievedChunks, fallbackUsedFactIds),
+        ...(feeSection?.usedChunkIds ?? []),
+      ]),
+    ],
+    usedFactIds: [...new Set(fallbackUsedFactIds)],
+    actions: input.plan.actions.slice(0, 1),
+    recommendationReasons: [],
+  };
+  const validated = validateComposerOutput({
+    output,
+    plan: input.plan,
+    userMessage: input.userMessage,
+    injectedChunks: input.retrievedChunks,
+  });
+  if (input.feeExpectation) {
+    assertFeeReasoningMatches({
+      output: validated.output,
+      plan: input.plan,
+      expectation: input.feeExpectation,
+      usedChunkIds: validated.usedChunkIds,
+      injectedChunks: input.retrievedChunks,
+    });
+  }
+  return validated;
+}
+
 function systemFeeFallback(input: {
   plan: ComposerPlan;
   expectation: FeeExpectation;
   retrievedChunks: KnowledgeChunk[];
-}): {
-  output: LlmComposerOutput;
-  usedFactIds: string[];
-  usedChunkIds: string[];
-} {
+}): GroundedComposerResult {
   const entityId = input.plan.entityIds[0];
   const value = input.expectation.calculation.value as Record<string, unknown>;
   const factValue = (suffix: string): unknown =>
@@ -1698,7 +2048,17 @@ async function completeComposerPlan(input: {
   let retryFeedback: string | undefined;
   let useFeeFallback = false;
   let useDateAdvisoryFallback = false;
+  let useCurrentFactFallback = false;
   const dateAdvisory = isCurrentRegistrationAdvisory(input.plan);
+  const currentFactFallbackEligible =
+    Boolean(input.workingState.selectedEntityId) &&
+    input.plan.entityIds.length === 1 &&
+    input.plan.entityIds[0] === input.workingState.selectedEntityId &&
+    (input.plan.status === "contextual_followup" ||
+      input.plan.status === "fact_answer");
+  const currentFactFallbackHasSections = hasCurrentFactFallbackSections(
+    input.userMessage,
+  );
   for (const attempt of [1, 2] as const) {
     const dateAttemptStartedAt = performance.now();
     const attemptDiagnostic: TurnDiagnostics["composerAttemptResults"][number] | undefined =
@@ -1895,7 +2255,11 @@ async function completeComposerPlan(input: {
         error instanceof GroundingError &&
         error.reasonCode === "fee_amount_mismatch"
       ) {
-        useFeeFallback = true;
+        if (currentFactFallbackEligible && currentFactFallbackHasSections) {
+          useCurrentFactFallback = true;
+        } else {
+          useFeeFallback = true;
+        }
         break;
       }
       if (
@@ -1905,10 +2269,36 @@ async function completeComposerPlan(input: {
         useDateAdvisoryFallback = true;
         break;
       }
+      if (
+        attempt === 2 &&
+        currentFactFallbackEligible
+      ) {
+        useCurrentFactFallback = true;
+        break;
+      }
       if (attempt === 2 || (!dateAdvisory && !isRetryableModelError(error))) {
         throw error;
       }
       retryFeedback = retryFeedbackFor(error);
+    }
+  }
+  if (
+    !generated &&
+    useCurrentFactFallback &&
+    currentFactFallbackHasSections
+  ) {
+    generated = systemCurrentFactFallback({
+      plan: input.plan,
+      workingState: input.workingState,
+      userMessage: input.userMessage,
+      retrievedChunks,
+      feeExpectation,
+    });
+    if (generated && input.dependencies.diagnostics) {
+      input.dependencies.diagnostics.responseMode = "current_fact_fallback";
+      if (feeExpectation) {
+        input.dependencies.diagnostics.calculationMode = "system_fallback";
+      }
     }
   }
   if (!generated && useFeeFallback && feeExpectation) {
@@ -1929,6 +2319,21 @@ async function completeComposerPlan(input: {
     });
     if (input.dependencies.diagnostics) {
       input.dependencies.diagnostics.responseMode = "date_advisory_fallback";
+    }
+  }
+  if (!generated && useCurrentFactFallback) {
+    generated = systemCurrentFactFallback({
+      plan: input.plan,
+      workingState: input.workingState,
+      userMessage: input.userMessage,
+      retrievedChunks,
+      feeExpectation,
+    });
+    if (generated && input.dependencies.diagnostics) {
+      input.dependencies.diagnostics.responseMode = "current_fact_fallback";
+      if (feeExpectation) {
+        input.dependencies.diagnostics.calculationMode = "system_fallback";
+      }
     }
   }
   if (!generated) throw lastError;
@@ -1964,7 +2369,7 @@ async function completeComposerPlan(input: {
     notices: [],
     boundaryCode: input.plan.boundaryCode,
     answerMode:
-      useFeeFallback || useDateAdvisoryFallback
+      useFeeFallback || useDateAdvisoryFallback || useCurrentFactFallback
         ? "system_grounded"
         : "ai_grounded",
   };

@@ -230,7 +230,7 @@ export type TurnDiagnostics = {
   regenerationCount: number;
   promptVersion: string;
   calculationMode?: "model" | "regenerated_model" | "system_fallback";
-  responseMode?: "date_advisory_fallback";
+  responseMode?: "date_advisory_fallback" | "current_fact_fallback";
   expectedAmount?: number;
   modelAmount?: number;
   firstPassMatched?: boolean;

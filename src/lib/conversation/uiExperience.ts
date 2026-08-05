@@ -79,6 +79,25 @@ export function appViewportHeight(
   return `${Math.max(1, Math.round(height))}px`;
 }
 
+export function isTextInputElementType(
+  tagName: string | undefined,
+): boolean {
+  return ["input", "textarea", "select"].includes(
+    tagName?.toLocaleLowerCase() ?? "",
+  );
+}
+
+export function shouldRestoreDocumentRootScroll(input: {
+  activeElementTagName: string | undefined;
+  scrollY: number;
+  rootScrollTop: number;
+}): boolean {
+  return (
+    isTextInputElementType(input.activeElementTagName) &&
+    (Math.round(input.scrollY) !== 0 || Math.round(input.rootScrollTop) !== 0)
+  );
+}
+
 export function isNearLatestScroll(input: {
   scrollHeight: number;
   scrollTop: number;
@@ -177,7 +196,9 @@ export function safeTurnEvidence(
     responseMode:
       diagnostics.responseMode === "date_advisory_fallback"
         ? "date_advisory_fallback"
-        : diagnostics.calculationMode === "system_fallback"
+        : diagnostics.responseMode === "current_fact_fallback"
+          ? "current_fact_fallback"
+          : diagnostics.calculationMode === "system_fallback"
           ? "system_fee_fallback"
           : "normal",
   };

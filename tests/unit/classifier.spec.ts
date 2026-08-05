@@ -513,6 +513,56 @@ describe("classifier candidates are evidence-gated", () => {
     },
   );
 
+  it("routes the real selected-online screenshot combo question to current facts", () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    state.selectedEntityId = "camp-p2-online";
+    state.lastRecommendationIds = ["camp-p2-online"];
+
+    const routing = resolveDeterministicTurnRouting({
+      message: "多少钱，在哪里上课?",
+      state,
+    });
+
+    expect(routing.intent).toBe("contextual_followup");
+    expect(routing.factTopics).toEqual(["location", "price"]);
+    expect(routing.studentConstraints).toEqual({});
+    expect(routing.catalogRequested).toBe(false);
+  });
+
+  it("keeps selected-course location and fee wording out of region capture", () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    state.selectedEntityId = "camp-p2-online";
+    state.lastRecommendationIds = ["camp-p2-online"];
+
+    const routing = resolveDeterministicTurnRouting({
+      message: "地点和费用是多少",
+      state,
+    });
+
+    expect(routing.intent).toBe("contextual_followup");
+    expect(routing.factTopics).toEqual(["location", "price"]);
+    expect(routing.studentConstraints).not.toHaveProperty("region");
+    expect(routing.fullCatalogRequested).toBe(false);
+  });
+
+  it("supports selected-course schedule and preparation combination questions", () => {
+    const state = createInitialConversationState();
+    state.domain = "student";
+    state.selectedEntityId = "camp-p3-bj";
+    state.lastRecommendationIds = ["camp-p3-bj"];
+
+    const routing = resolveDeterministicTurnRouting({
+      message: "课程安排和准备事项",
+      state,
+    });
+
+    expect(routing.intent).toBe("contextual_followup");
+    expect(routing.factTopics).toEqual(["schedule", "required_items"]);
+    expect(routing.studentConstraints).toEqual({});
+  });
+
   it("does not save the location question word as a student region", () => {
     const state = createInitialConversationState();
     state.domain = "student";

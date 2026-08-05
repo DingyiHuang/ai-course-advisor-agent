@@ -52,6 +52,7 @@ import {
   nextMobileQuickPanelOpen,
   QUICK_ENTRIES,
   safeTurnEvidence,
+  shouldRestoreDocumentRootScroll,
   shouldAutoFollowLatest,
   shouldSubmitComposerKey,
   userFacingStatus,
@@ -73,6 +74,21 @@ type RequestOptions = {
 };
 
 const EMPTY_PRESENTATION: ChatPresentation = { recommendations: [] };
+
+type ViewportDebugMetric = {
+  label: string;
+  value: string;
+};
+
+type ViewportDebugEvent = {
+  name: "focus" | "resize" | "scroll";
+  atMs: number;
+};
+
+type ViewportDebugSnapshot = {
+  metrics: ViewportDebugMetric[];
+  events: ViewportDebugEvent[];
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -320,6 +336,36 @@ export function LoadingStatus({ loading }: { loading: boolean }) {
   );
 }
 
+function ViewportDebugPanel({
+  snapshot,
+}: {
+  snapshot: ViewportDebugSnapshot | undefined;
+}) {
+  return (
+    <section
+      className={styles.viewportDebugPanel}
+      aria-label="viewportDebug diagnostics"
+    >
+      <h2>Viewport Debug</h2>
+      <dl>
+        {(snapshot?.metrics ?? []).map(({ label, value }) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <ol aria-label="focus resize scroll event order">
+        {(snapshot?.events ?? []).map((event, index) => (
+          <li key={`${event.name}-${event.atMs}-${index}`}>
+            {index + 1}. {event.name} @{event.atMs}ms
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 function QuickEntryButtons({
   className,
   disabled,
@@ -350,9 +396,11 @@ function QuickEntryButtons({
 export default function CourseAdvisor({
   testMode,
   evidenceMode = false,
+  viewportDebug = false,
 }: {
   testMode: boolean;
   evidenceMode?: boolean;
+  viewportDebug?: boolean;
 }) {
   const [state, setState] = useState<ConversationState>(initialState);
   const [chatUi, dispatchChatUi] = useReducer(
@@ -378,10 +426,13 @@ export default function CourseAdvisor({
   );
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [pendingErrorFocusId, setPendingErrorFocusId] = useState("");
+  const [viewportDebugSnapshot, setViewportDebugSnapshot] =
+    useState<ViewportDebugSnapshot>();
   const shellRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const composerAreaRef = useRef<HTMLDivElement>(null);
   const isNearLatestRef = useRef(true);
   const forceScrollToLatestRef = useRef(true);
   const requestInFlightRef = useRef<string | undefined>(undefined);
@@ -444,6 +495,31 @@ export default function CourseAdvisor({
     const shell = shellRef.current;
     if (!shell) return;
     const viewport = window.visualViewport;
+    const restoreRootScrollForFocusedInput = () => {
+      const active = document.activeElement;
+      const activeElementTagName =
+        active instanceof HTMLElement ? active.tagName : undefined;
+      const scrollingElement = document.scrollingElement;
+      const rootScrollTop =
+        scrollingElement?.scrollTop ??
+        document.documentElement.scrollTop ??
+        document.body.scrollTop;
+      if (
+        !shouldRestoreDocumentRootScroll({
+          activeElementTagName,
+          scrollY: window.scrollY,
+          rootScrollTop,
+        })
+      ) {
+        return;
+      }
+      scrollingElement?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      if (window.scrollY !== 0) {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      }
+    };
     const updateHeight = () => {
       const height = viewport?.height ?? window.innerHeight;
       shell.style.setProperty(
@@ -451,15 +527,124 @@ export default function CourseAdvisor({
         appViewportHeight(viewport?.height, window.innerHeight),
       );
       shell.dataset.keyboardCompact = height < 620 ? "true" : "false";
+      restoreRootScrollForFocusedInput();
     };
     updateHeight();
     viewport?.addEventListener("resize", updateHeight);
+    viewport?.addEventListener("scroll", restoreRootScrollForFocusedInput);
     window.addEventListener("orientationchange", updateHeight);
+    window.addEventListener("scroll", restoreRootScrollForFocusedInput, {
+      passive: true,
+    });
+    document.addEventListener("focusin", restoreRootScrollForFocusedInput);
     return () => {
       viewport?.removeEventListener("resize", updateHeight);
+      viewport?.removeEventListener("scroll", restoreRootScrollForFocusedInput);
       window.removeEventListener("orientationchange", updateHeight);
+      window.removeEventListener("scroll", restoreRootScrollForFocusedInput);
+      document.removeEventListener("focusin", restoreRootScrollForFocusedInput);
     };
   }, []);
+
+  useEffect(() => {
+    if (!viewportDebug) return;
+    const events: ViewportDebugEvent[] = [];
+    const viewport = window.visualViewport;
+    const rectMetric = (element: Element | null) => {
+      if (!element) return "n/a";
+      const rect = element.getBoundingClientRect();
+      return `top=${Math.round(rect.top)}, bottom=${Math.round(rect.bottom)}, height=${Math.round(rect.height)}`;
+    };
+    const readSnapshot = (): ViewportDebugSnapshot => {
+      const documentElement = document.documentElement;
+      const body = document.body;
+      const active =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : undefined;
+      return {
+        metrics: [
+          { label: "window.innerHeight", value: String(window.innerHeight) },
+          { label: "window.scrollY", value: String(Math.round(window.scrollY)) },
+          {
+            label: "documentElement.scrollTop",
+            value: String(Math.round(documentElement.scrollTop)),
+          },
+          {
+            label: "documentElement.scrollHeight/clientHeight",
+            value: `${documentElement.scrollHeight}/${documentElement.clientHeight}`,
+          },
+          {
+            label: "body.scrollTop",
+            value: String(Math.round(body.scrollTop)),
+          },
+          {
+            label: "body.scrollHeight/clientHeight",
+            value: `${body.scrollHeight}/${body.clientHeight}`,
+          },
+          {
+            label: "visualViewport.height",
+            value:
+              viewport?.height === undefined
+                ? "n/a"
+                : String(Math.round(viewport.height)),
+          },
+          {
+            label: "visualViewport.offsetTop",
+            value:
+              viewport?.offsetTop === undefined
+                ? "n/a"
+                : String(Math.round(viewport.offsetTop)),
+          },
+          {
+            label: "visualViewport.pageTop",
+            value:
+              viewport?.pageTop === undefined
+                ? "n/a"
+                : String(Math.round(viewport.pageTop)),
+          },
+          {
+            label: "appRoot rect",
+            value: rectMetric(shellRef.current),
+          },
+          {
+            label: "composerArea rect",
+            value: rectMetric(composerAreaRef.current),
+          },
+          {
+            label: "activeElement.type",
+            value: active?.tagName.toLocaleLowerCase() ?? "none",
+          },
+          {
+            label: "activeElement.fontSize",
+            value: active ? getComputedStyle(active).fontSize : "n/a",
+          },
+        ],
+        events: [...events],
+      };
+    };
+    const recordEvent = (name: ViewportDebugEvent["name"]) => {
+      events.push({ name, atMs: Math.round(performance.now()) });
+      while (events.length > 18) events.shift();
+      setViewportDebugSnapshot(readSnapshot());
+    };
+    setViewportDebugSnapshot(readSnapshot());
+    const recordFocus = () => recordEvent("focus");
+    const recordResize = () => recordEvent("resize");
+    const recordScroll = () => recordEvent("scroll");
+    document.addEventListener("focusin", recordFocus);
+    viewport?.addEventListener("resize", recordResize);
+    viewport?.addEventListener("scroll", recordScroll);
+    window.addEventListener("resize", recordResize);
+    window.addEventListener("scroll", recordScroll, { passive: true });
+    return () => {
+      document.removeEventListener("focusin", recordFocus);
+      viewport?.removeEventListener("resize", recordResize);
+      viewport?.removeEventListener("scroll", recordScroll);
+      window.removeEventListener("resize", recordResize);
+      window.removeEventListener("scroll", recordScroll);
+    };
+  }, [viewportDebug]);
 
   useEffect(() => {
     const textarea = inputRef.current;
@@ -1354,7 +1539,7 @@ export default function CourseAdvisor({
           )}
           </div>
 
-          <div className={styles.composerArea}>
+          <div ref={composerAreaRef} className={styles.composerArea}>
             {isMobileLayout ? (
               state.domain !== "unknown" && (
                 <div
@@ -1443,6 +1628,9 @@ export default function CourseAdvisor({
           </div>
         </section>
       </div>
+      {viewportDebug && (
+        <ViewportDebugPanel snapshot={viewportDebugSnapshot} />
+      )}
     </main>
   );
 }

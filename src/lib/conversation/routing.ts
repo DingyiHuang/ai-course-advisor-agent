@@ -574,13 +574,13 @@ function explicitTeacherConstraints(
 function factTopicsFromText(message: string): FactTopic[] {
   const text = normalized(message);
   const topics: FactTopic[] = [];
-  if (/(?:什么时候|开课时间|开课和结束日期|时间安排|哪几天|哪天|日期|怎么安排)/u.test(text)) {
+  if (/(?:什么时候|开课时间|开课和结束日期|时间安排|课程安排|上课安排|哪几天|哪天|日期|怎么安排)/u.test(text)) {
     topics.push("schedule");
   }
-  if (/(?:需要带什么|带什么|准备什么|携带|电脑|设备)/u.test(text)) {
+  if (/(?:需要带什么|带什么|准备什么|准备事项|准备工作|准备材料|携带|电脑|设备)/u.test(text)) {
     topics.push("required_items");
   }
-  if (/(?:在哪里|在哪儿|哪里上课|上课地点|地点)/u.test(text)) {
+  if (/(?:在哪里|在哪儿|哪里上课|上课地点|地点|地址|在线平台|授课平台|直播平台|腾讯会议)/u.test(text)) {
     topics.push("location");
   }
   if (/(?:多少钱|费用|价格|总价|早鸟|团报)/u.test(text)) {
@@ -632,6 +632,7 @@ function currentEntityFactTopics(
     return [];
   }
   const text = normalized(message);
+  const topics = factTopicsFromText(message);
   const hasCurrentReference =
     /(?:这个|该|当前|刚才|之前推荐的).{0,4}(?:班|班型|课程|培训|方案|服务|项目)|学校采购|当前产品|^(?:它|其)(?:的)?(?:价格|费用|时间|地点|报名|回放|退款|名额|课程内容|前置条件)/u.test(
       text,
@@ -640,10 +641,19 @@ function currentEntityFactTopics(
     /^(?:多少钱|费用(?:多少|是多少|呢)?|价格(?:多少|是多少|呢)?|总价(?:多少|是多少|呢)?|什么时候(?:报名|上课)?|哪(?:几)?天(?:报名|上课)?|在哪里(?:上课)?|在哪儿(?:上课)?|哪里上课|(?:上课)?地点(?:在)?(?:哪里|哪儿)|需要带(?:什么|电脑|笔记本电脑|设备)(?:吗)?|需要准备什么|准备什么|怎么报名|如何报名|有回放吗|可以回放吗|能回放吗|可以退款吗|能退款吗|还有名额吗|有名额吗|(?:当前)?(?:实时)?余位(?:还有)?(?:多少|吗)?|还有多少余位|课程内容是什么|第\s*[一二三四五六七1234567]\s*天学什么|学什么|需要什么基础|有什么前置条件|如果.{0,16}(?:加|含|选择)食宿.{0,12}(?:总价(?:多少|是多少)?|多少钱))[?？]?$/u.test(
       text,
     );
-  if (!hasCurrentReference && !isEllipticalCurrentQuestion) {
+  const asksSelectedEntityFacts =
+    Boolean(state.selectedEntityId) &&
+    topics.length > 0 &&
+    /[?？]|(?:多少|费用|价格|总价|哪里|哪儿|在哪|地点|地址|平台|腾讯会议|时间|日期|哪(?:几)?天|课程安排|上课安排|怎么安排|回放|录播|设备|准备|退款|退费|报名|余位|名额|课程内容|学什么|前置条件)/u.test(
+      text,
+    ) &&
+    !/(?:推荐|选择|适合|查看(?:全部|所有)|(?:全部|所有)(?:班型|课程)|目录|有哪些(?:班型|课程))/u.test(
+      text,
+    );
+  if (!hasCurrentReference && !isEllipticalCurrentQuestion && !asksSelectedEntityFacts) {
     return [];
   }
-  return factTopicsFromText(message);
+  return topics;
 }
 
 function explicitFactReference(message: string): {

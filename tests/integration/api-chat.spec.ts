@@ -412,6 +412,10 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
     plan.status === "fact_answer" ||
     plan.status === "contextual_followup"
   ) {
+    const asksPrice = /(?:多少钱|费用|价格|总价|应付)/u.test(
+      currentUserMessage,
+    );
+    let feeAnswer: string | undefined;
     const calculations = payload.calculations as Array<{
       value?: {
         total?: number;
@@ -478,6 +482,7 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
         `早鸟与团报不可叠加，只采用优惠金额较高的一项${appliedDiscount}元；` +
         `${lodgingPrice > 0 ? `最后加食宿${lodgingPrice}元；` : "未选择食宿；"}` +
         `最终每人应付${calculatedTotal}元。`;
+      feeAnswer = message;
     } else if (typeof total === "number") {
       const feeCalculation = calculations.find(
         ({ value }) => typeof value?.total === "number",
@@ -505,6 +510,7 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
       if (registrationCutoff) {
         message += `报名截止为${registrationCutoff}。`;
       }
+      feeAnswer = message;
     }
     const schedule = calculations.find(
       ({ value }) =>
@@ -517,27 +523,58 @@ function compose(payload: Record<string, unknown>): Record<string, unknown> {
       schedule.endDate &&
       schedule.endWeekday
     ) {
-      message =
+      const scheduleAnswer =
         `课程从${schedule.startDate}（${schedule.startWeekday}）至` +
         `${schedule.endDate}（${schedule.endWeekday}）。`;
+      message = asksPrice && feeAnswer
+        ? `${scheduleAnswer}${feeAnswer}`
+        : scheduleAnswer;
     }
     const address = facts.find(({ id }) =>
       id.endsWith(".addressOrPlatform")
     )?.value;
     if (typeof address === "string") {
-      message = `上课地点为${address}。`;
+      const locationAnswer = `上课地点为${address}。`;
+      message = asksPrice && feeAnswer
+        ? `${locationAnswer}${feeAnswer}`
+        : locationAnswer;
+    }
+    const locationsOrPlatforms = facts.find(({ id }) =>
+      id.endsWith(".locationsOrPlatforms")
+    )?.value;
+    if (
+      Array.isArray(locationsOrPlatforms) &&
+      /(?:在哪里|在哪儿|哪里|地点|地址|平台|腾讯会议)/u.test(
+        currentUserMessage,
+      )
+    ) {
+      const locationAnswer =
+        `上课地点或平台为${locationsOrPlatforms.join("、")}。`;
+      message = asksPrice && feeAnswer
+        ? `${locationAnswer}${feeAnswer}`
+        : locationAnswer;
     }
     const teacherSchedule = facts.find(({ id }) =>
       id.startsWith("teacher-") && id.endsWith(".schedule")
     )?.value;
     if (Array.isArray(teacherSchedule)) {
-      message = `${teacherSchedule.join("；")}，采用线下集训形式。`;
+      const teacherScheduleAnswer =
+        `${teacherSchedule.join("；")}，采用线下集训形式。`;
+      message = asksPrice && feeAnswer
+        ? `${teacherScheduleAnswer}${feeAnswer}`
+        : teacherScheduleAnswer;
     }
     const replayDays = facts.find(({ id }) =>
       id.endsWith(".replayDays")
     )?.value;
     if (typeof replayDays === "number") {
       message = `提供${replayDays}天回放。`;
+    }
+    const refundPolicyProvided = facts.find(({ id }) =>
+      id.endsWith(".refundPolicyProvided")
+    )?.value;
+    if (refundPolicyProvided === false) {
+      message = "现有资料未提供退款规则。";
     }
     const minimumPeople = facts.find(({ id }) =>
       id.endsWith(".minimumPeople")
@@ -4398,6 +4435,242 @@ describe("TASK-05 real Route Handler integration", () => {
       expect(follow.entityIds).toEqual(["camp-p3-bj"]);
       expect(follow.presentation.recommendations).toEqual([]);
       expect(follow.message).not.toMatch(/选择.*班型|哪个班型/u);
+    });
+
+    it("inherits the selected period-2 online course for a location follow-up", async () => {
+      const { selected } = await selectCatalogEntity(
+        "student",
+        "camp-p2-online",
+      );
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "上课地点在哪里",
+          state: selected.state,
+          testMode: false,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.entityIds).toEqual(["camp-p2-online"]);
+      expect(follow.state.selectedEntityId).toBe("camp-p2-online");
+      expect(follow.message).toContain("腾讯会议直播");
+      expect(follow.message).not.toMatch(/选择.*班型|哪个班型|北京市|上海市/u);
+      expect(follow.presentation.recommendations).toEqual([]);
+    });
+
+    it("answers selected online course location and fee in one combined follow-up", async () => {
+      const { selected } = await selectCatalogEntity(
+        "student",
+        "camp-p2-online",
+      );
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "地点和费用是多少",
+          state: selected.state,
+          testMode: false,
+          diagnostics: true,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.entityIds).toEqual(["camp-p2-online"]);
+      expect(follow.state.lastRecommendationIds).toEqual(["camp-p2-online"]);
+      expect(follow.message).toContain("腾讯会议直播");
+      expect(follow.message).toContain("最终每人应付3980元");
+      expect(follow.presentation.recommendations).toEqual([]);
+      expect(follow.state.pendingQuestionKeys).not.toContain("selectedCourse");
+      expect(follow.state.studentConstraints).not.toHaveProperty("region");
+      expect(follow.diagnostics?.effectiveIntent).toBe("contextual_followup");
+      expect(follow.diagnostics?.entityIds).toEqual(["camp-p2-online"]);
+    });
+
+    it("does not ask for a course again for the real online combo wording", async () => {
+      const { selected } = await selectCatalogEntity(
+        "student",
+        "camp-p2-online",
+      );
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "在哪里上课，多少钱",
+          state: selected.state,
+          testMode: false,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.entityIds).toEqual(["camp-p2-online"]);
+      expect(follow.message).toContain("腾讯会议直播");
+      expect(follow.message).toContain("最终每人应付3980元");
+      expect(follow.message).not.toMatch(/城市|第几期|线上还是线下|选择.*班型/u);
+      expect(follow.presentation.recommendations).toEqual([]);
+    });
+
+    it("answers Beijing offline course location and fee for a combined follow-up", async () => {
+      const { selected } = await selectCatalogEntity("student", "camp-p3-bj");
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "地点和费用",
+          state: selected.state,
+          testMode: false,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.entityIds).toEqual(["camp-p3-bj"]);
+      expect(follow.message).toContain("北京市海淀区中关村南大街5号");
+      expect(follow.message).toContain("最终每人应付5980元");
+      expect(follow.message).not.toContain("上海市浦东新区张江路1000号");
+      expect(follow.presentation.recommendations).toEqual([]);
+    });
+
+    it("uses a grounded current fact fallback when model output cannot pass location checks", async () => {
+      const { selected } = await selectCatalogEntity("student", "camp-p3-bj");
+      providerControl.composerCalls = 0;
+      providerControl.composerMode = "always_invalid_chunk";
+      const { httpStatus, response } = await postChat({
+        action: "message",
+        message: "地点和费用",
+        state: selected.state,
+        testMode: false,
+        diagnostics: true,
+      });
+
+      expect(httpStatus).toBe(200);
+      expect(providerControl.composerCalls).toBe(2);
+      expect(response.status).toBe("contextual_followup");
+      expect(response.answerMode).toBe("system_grounded");
+      expect(response.entityIds).toEqual(["camp-p3-bj"]);
+      expect(response.state.selectedEntityId).toBe("camp-p3-bj");
+      expect(response.message).toContain("北京市海淀区中关村南大街5号");
+      expect(response.message).toContain("最终每人应付");
+      expect(response.message).toContain("元");
+      expect(response.presentation.recommendations).toEqual([]);
+      expect(response.diagnostics).toMatchObject({
+        responseMode: "current_fact_fallback",
+        calculationMode: "system_fallback",
+        groundingFailures: [
+          { attempt: 1, reasonCode: "invalid_chunk_id" },
+          { attempt: 2, reasonCode: "invalid_chunk_id" },
+        ],
+      });
+    });
+
+    it("keeps Shanghai offline combined follow-up scoped away from Beijing", async () => {
+      const { selected } = await selectCatalogEntity("student", "camp-p3-sh");
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "地点和费用是多少",
+          state: selected.state,
+          testMode: false,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.entityIds).toEqual(["camp-p3-sh"]);
+      expect(follow.message).toContain("上海市浦东新区张江路1000号");
+      expect(follow.message).toContain("最终每人应付5980元");
+      expect(follow.message).not.toContain("北京市海淀区中关村南大街5号");
+      expect(follow.presentation.recommendations).toEqual([]);
+    });
+
+    it("inherits the L2 weekend teacher course for date and fee combined follow-up", async () => {
+      const { selected } = await selectCatalogEntity(
+        "teacher",
+        "teacher-l2-weekend",
+      );
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "哪几天上课，多少钱",
+          state: selected.state,
+          testMode: false,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.entityIds).toEqual(["teacher-l2-weekend"]);
+      expect(follow.message).toMatch(/8月8日[\s\S]*8月9日[\s\S]*8月15日/u);
+      expect(follow.message).toContain("最终每人应付5980元");
+      expect(follow.presentation.recommendations).toEqual([]);
+      expect(follow.sources.every(({ document }) => document === "B")).toBe(true);
+    });
+
+    it("keeps the current teacher product when a requested field is missing", async () => {
+      const { selected } = await selectCatalogEntity(
+        "teacher",
+        "teacher-l2-weekend",
+      );
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "可以退款吗",
+          state: selected.state,
+          testMode: false,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.entityIds).toEqual(["teacher-l2-weekend"]);
+      expect(follow.state.selectedEntityId).toBe("teacher-l2-weekend");
+      expect(follow.message).toContain("现有资料未提供退款规则");
+      expect(follow.presentation.recommendations).toEqual([]);
+    });
+
+    it("inherits selected online combo follow-up after serialized refresh state", async () => {
+      const { selected } = await selectCatalogEntity(
+        "student",
+        "camp-p2-online",
+      );
+      const refreshedState = JSON.parse(
+        JSON.stringify(selected.state),
+      ) as ConversationState;
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "地点和费用是多少",
+          state: refreshedState,
+          testMode: false,
+        })
+      ).response;
+
+      expect(follow.status).toBe("contextual_followup");
+      expect(follow.entityIds).toEqual(["camp-p2-online"]);
+      expect(follow.message).toContain("腾讯会议直播");
+      expect(follow.message).toContain("最终每人应付3980元");
+      expect(follow.presentation.recommendations).toEqual([]);
+    });
+
+    it("does not answer with an old student course after identity switch", async () => {
+      const { selected } = await selectCatalogEntity(
+        "student",
+        "camp-p2-online",
+      );
+      const switched = (
+        await postChat({
+          action: "select_domain",
+          domain: "teacher",
+          state: selected.state,
+          testMode: false,
+        })
+      ).response;
+      const follow = (
+        await postChat({
+          action: "message",
+          message: "地点和费用是多少",
+          state: switched.state,
+          testMode: false,
+        })
+      ).response;
+
+      expect(switched.state.selectedEntityId).toBeUndefined();
+      expect(switched.state.lastRecommendationIds).toEqual([]);
+      expect(follow.entityIds).not.toContain("camp-p2-online");
+      expect(follow.message).not.toContain("腾讯会议直播（会议号缴费确认后发送）");
     });
 
     it.each(["你好", "在吗", "谢谢"])(
