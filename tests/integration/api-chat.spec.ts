@@ -3989,6 +3989,205 @@ describe("TASK-05 real Route Handler integration", () => {
       expect(response.diagnostics?.responseMode).toBeUndefined();
     });
 
+    it("returns all six teacher products after L1 completion when the user explicitly browses the full catalog", async () => {
+      const state = createInitialConversationState();
+      state.domain = "teacher";
+      state.teacherConstraints = {
+        startingLevel: "L1",
+        prerequisiteStatus: "met",
+        canTakeContinuousLeave: false,
+        city: "成都",
+      };
+
+      for (const message of ["查看全部班型", "查看所有课程", "有哪些班型"]) {
+        const { httpStatus, response } = await postChat({
+          action: "message",
+          message,
+          state: structuredClone(state),
+          testMode: false,
+        });
+        expect(httpStatus).toBe(200);
+        expect(response.status).toBe("catalog");
+        expect(response.entityIds).toHaveLength(6);
+        expect(response.presentation.recommendations).toHaveLength(6);
+        expect(response.entityIds).toEqual(
+          expect.arrayContaining(["teacher-l1-intensive", "teacher-l1-weekend"]),
+        );
+        expect(response.state.teacherConstraints).toMatchObject({
+          startingLevel: "L1",
+          prerequisiteStatus: "met",
+          canTakeContinuousLeave: false,
+          city: "成都",
+        });
+      }
+    });
+
+    it("keeps completed-L1 personalized guidance filtered instead of returning the full teacher catalog", async () => {
+      const state = createInitialConversationState();
+      state.domain = "teacher";
+      state.teacherConstraints = {
+        startingLevel: "L1",
+        prerequisiteStatus: "met",
+        canTakeContinuousLeave: false,
+      };
+
+      const { response } = await postChat({
+        action: "message",
+        message: "我完成L1后适合学什么",
+        state,
+        testMode: false,
+      });
+
+      expect(response.status).not.toBe("catalog");
+      expect(response.entityIds.length).toBeGreaterThan(0);
+      expect(response.entityIds.length).toBeLessThan(6);
+      expect(response.entityIds).not.toContain("teacher-l1-intensive");
+      expect(response.entityIds).not.toContain("teacher-l1-weekend");
+    });
+
+    it("returns all nine student entities despite stored period, region, and delivery constraints", async () => {
+      const state = createInitialConversationState();
+      state.domain = "student";
+      state.studentConstraints = {
+        availablePeriods: [1],
+        region: "beijing",
+        regionDisplayName: "北京",
+        modePreference: "offline",
+      };
+
+      const { response } = await postChat({
+        action: "message",
+        message: "查看全部班型",
+        state,
+        testMode: false,
+      });
+
+      expect(response.status).toBe("catalog");
+      expect(response.entityIds).toHaveLength(9);
+      expect(response.presentation.recommendations).toHaveLength(9);
+      expect(response.state.studentConstraints).toMatchObject({
+        availablePeriods: [1],
+        region: "beijing",
+        modePreference: "offline",
+      });
+    });
+
+    it("returns the same complete catalog in a long and clean teacher conversation", async () => {
+      const cleanState = createInitialConversationState();
+      cleanState.domain = "teacher";
+      const longState = structuredClone(cleanState);
+      longState.teacherConstraints = {
+        startingLevel: "L1",
+        prerequisiteStatus: "met",
+        canTakeContinuousLeave: true,
+      };
+      longState.shortHistory = Array.from({ length: 12 }, (_, index) => ({
+        role: index % 2 === 0 ? ("user" as const) : ("assistant" as const),
+        content: `历史消息${index + 1}`,
+      }));
+
+      const clean = (
+        await postChat({
+          action: "message",
+          message: "查看所有课程",
+          state: cleanState,
+          testMode: false,
+        })
+      ).response;
+      const long = (
+        await postChat({
+          action: "message",
+          message: "查看所有课程",
+          state: longState,
+          testMode: false,
+        })
+      ).response;
+
+      expect(clean.entityIds).toHaveLength(6);
+      expect(long.entityIds).toEqual(clean.entityIds);
+    });
+
+    it("keeps the quick catalog action and free-text full-catalog request consistent", async () => {
+      const state = createInitialConversationState();
+      state.domain = "teacher";
+      state.teacherConstraints = {
+        startingLevel: "L1",
+        prerequisiteStatus: "met",
+      };
+      const quick = (
+        await postChat({
+          action: "catalog",
+          message: "查看所有班型",
+          state: structuredClone(state),
+          testMode: false,
+        })
+      ).response;
+      const typed = (
+        await postChat({
+          action: "message",
+          message: "查看所有班型",
+          state: structuredClone(state),
+          testMode: false,
+        })
+      ).response;
+
+      expect(quick.entityIds).toHaveLength(6);
+      expect(typed.entityIds).toEqual(quick.entityIds);
+    });
+
+    it("does not copy previous catalog cards into a failed catalog request", async () => {
+      const state = createInitialConversationState();
+      state.domain = "teacher";
+      const previous = (
+        await postChat({
+          action: "catalog",
+          message: "查看所有班型",
+          state,
+          testMode: false,
+        })
+      ).response;
+      const armed = (
+        await postChat({
+          action: "inject_next_failure",
+          state: previous.state,
+          testMode: true,
+        })
+      ).response;
+      const failed = await postChat({
+        action: "catalog",
+        message: "查看所有班型",
+        state: armed.state,
+        testMode: true,
+      });
+
+      expect(previous.presentation.recommendations).toHaveLength(6);
+      expect(failed.httpStatus).toBe(503);
+      expect(failed.response.presentation.recommendations).toEqual([]);
+      expect(failed.response.entityIds).toEqual([]);
+    });
+
+    it("retains normal sources while exposing only aggregate evidence diagnostics", async () => {
+      const state = createInitialConversationState();
+      state.domain = "teacher";
+      const { response } = await postChat({
+        action: "message",
+        message: "查看所有课程",
+        state,
+        testMode: false,
+        diagnostics: true,
+      });
+
+      expect(response.sources.length).toBeGreaterThan(0);
+      expect(response.sources.every(({ document }) => document === "B")).toBe(true);
+      expect(response.diagnostics).toMatchObject({
+        groundingFailures: [],
+        regenerationCount: 0,
+      });
+      expect(JSON.stringify(response.diagnostics)).not.toMatch(
+        /systemPrompt|prompt全文|api[_-]?key|内部错误原因/iu,
+      );
+    });
+
     it.each(["你好", "在吗", "谢谢"])(
       "returns a short HTTP 200 greeting for %s",
       async (message) => {

@@ -47,8 +47,11 @@ import {
   answerVerificationLabel,
   currentEntityLabel,
   friendlyRequestError,
+  isNearLatestScroll,
+  nextMobileQuickPanelOpen,
   QUICK_ENTRIES,
   safeTurnEvidence,
+  shouldAutoFollowLatest,
   shouldSubmitComposerKey,
   userFacingStatus,
   validateComposerDraft,
@@ -366,6 +369,7 @@ export default function CourseAdvisor({
   const [sessionId, setSessionId] = useState("TASK05-001");
   const [exportNotice, setExportNotice] = useState("");
   const [contextOpen, setContextOpen] = useState(false);
+  const [quickPanelOpen, setQuickPanelOpen] = useState(false);
   const isMobileLayout = useSyncExternalStore(
     subscribeMobileLayout,
     mobileLayoutSnapshot,
@@ -377,6 +381,7 @@ export default function CourseAdvisor({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const lastVisualViewportHeightRef = useRef<number | undefined>(undefined);
   const isNearLatestRef = useRef(true);
   const forceScrollToLatestRef = useRef(true);
   const requestInFlightRef = useRef<string | undefined>(undefined);
@@ -441,6 +446,13 @@ export default function CourseAdvisor({
     const viewport = window.visualViewport;
     const updateHeight = () => {
       const height = viewport?.height ?? window.innerHeight;
+      const previousHeight = lastVisualViewportHeightRef.current;
+      if (previousHeight !== undefined && height - previousHeight >= 80) {
+        setQuickPanelOpen((current) =>
+          nextMobileQuickPanelOpen(current, "keyboard_closed"),
+        );
+      }
+      lastVisualViewportHeightRef.current = height;
       shell.style.setProperty("--app-viewport-height", `${Math.round(height)}px`);
       shell.dataset.keyboardCompact = height < 620 ? "true" : "false";
     };
@@ -465,7 +477,12 @@ export default function CourseAdvisor({
   useEffect(() => {
     const body = chatBodyRef.current;
     if (!body) return;
-    if (forceScrollToLatestRef.current || isNearLatestRef.current) {
+    if (
+      shouldAutoFollowLatest({
+        force: forceScrollToLatestRef.current,
+        nearLatest: isNearLatestRef.current,
+      })
+    ) {
       forceScrollToLatestRef.current = false;
       requestAnimationFrame(() => {
         body.scrollTo({ top: body.scrollHeight, behavior: "smooth" });
@@ -538,8 +555,11 @@ export default function CourseAdvisor({
   function handleChatScroll() {
     const body = chatBodyRef.current;
     if (!body) return;
-    const nearLatest =
-      body.scrollHeight - body.scrollTop - body.clientHeight <= 120;
+    const nearLatest = isNearLatestScroll({
+      scrollHeight: body.scrollHeight,
+      scrollTop: body.scrollTop,
+      clientHeight: body.clientHeight,
+    });
     isNearLatestRef.current = nearLatest;
     setShowJumpToLatest(!nearLatest);
   }
@@ -597,6 +617,11 @@ export default function CourseAdvisor({
     }
     const appendUser = options.appendUser !== false && options.userLabel;
     if (appendUser) {
+      if (isMobileLayout) {
+        setQuickPanelOpen((current) =>
+          nextMobileQuickPanelOpen(current, "request_started"),
+        );
+      }
       forceScrollToLatestRef.current = true;
       dispatchChatUi({
         type: "request_started",
@@ -830,11 +855,32 @@ export default function CourseAdvisor({
   }
 
   function handleQuickEntry(entry: QuickEntry) {
+    if (isMobileLayout) {
+      setQuickPanelOpen((current) =>
+        nextMobileQuickPanelOpen(current, "quick_entry_selected"),
+      );
+    }
     if (entry.command.type === "select_domain") {
       void selectDomain(entry.command.domain);
       return;
     }
     void sendMessage(entry.command.message, entry.command.action);
+  }
+
+  function handleStarterPrompt(prompt: string) {
+    if (isMobileLayout) {
+      setQuickPanelOpen((current) =>
+        nextMobileQuickPanelOpen(current, "quick_entry_selected"),
+      );
+    }
+    void sendMessage(prompt);
+  }
+
+  function toggleQuickPanel() {
+    if (!quickPanelOpen) inputRef.current?.blur();
+    setQuickPanelOpen((current) =>
+      nextMobileQuickPanelOpen(current, "toggle"),
+    );
   }
 
   function handleApiAction(action: string) {
@@ -1309,19 +1355,45 @@ export default function CourseAdvisor({
           </div>
 
           <div className={styles.composerArea}>
-            {state.domain !== "unknown" && (
-              <QuickEntryButtons
-                className={styles.quickEntryBar}
-                disabled={interactionDisabled}
-                onEntry={handleQuickEntry}
-              />
-            )}
-            {starterPrompts.length > 0 && (
-              <div className={styles.starterPrompts}>
-                {starterPrompts.map((prompt) => (
-                  <button type="button" key={prompt} onClick={() => void sendMessage(prompt)} disabled={interactionDisabled}>{prompt}</button>
-                ))}
-              </div>
+            {isMobileLayout ? (
+              state.domain !== "unknown" && (
+                <div
+                  id="mobile-quick-question-content"
+                  className={styles.mobileQuickPanelContent}
+                  aria-label="快捷问题列表"
+                  hidden={!quickPanelOpen}
+                >
+                  <QuickEntryButtons
+                    className={styles.quickEntryBar}
+                    disabled={interactionDisabled}
+                    onEntry={handleQuickEntry}
+                  />
+                  {starterPrompts.length > 0 && (
+                    <div className={styles.starterPrompts}>
+                      {starterPrompts.map((prompt) => (
+                        <button type="button" key={prompt} onClick={() => handleStarterPrompt(prompt)} disabled={interactionDisabled}>{prompt}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            ) : (
+              <>
+                {state.domain !== "unknown" && (
+                  <QuickEntryButtons
+                    className={styles.quickEntryBar}
+                    disabled={interactionDisabled}
+                    onEntry={handleQuickEntry}
+                  />
+                )}
+                {starterPrompts.length > 0 && (
+                  <div className={styles.starterPrompts}>
+                    {starterPrompts.map((prompt) => (
+                      <button type="button" key={prompt} onClick={() => handleStarterPrompt(prompt)} disabled={interactionDisabled}>{prompt}</button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
             <form className={styles.composer} onSubmit={handleSubmit}>
               <label className={styles.srOnly} htmlFor="advisor-message">
@@ -1346,8 +1418,20 @@ export default function CourseAdvisor({
                 aria-errormessage={inputError ? "composer-error" : undefined}
               />
               <div className={styles.composerFooter}>
+                {isMobileLayout && state.domain !== "unknown" && (
+                  <button
+                    type="button"
+                    className={styles.quickQuestionButton}
+                    aria-controls="mobile-quick-question-content"
+                    aria-expanded={quickPanelOpen}
+                    onClick={toggleQuickPanel}
+                    disabled={!historyReady}
+                  >
+                    {quickPanelOpen ? "收起快捷问题" : "快捷问题"}
+                  </button>
+                )}
                 <span className={draft.length > 500 ? styles.countError : undefined}>{draft.length}/500</span>
-                <span id="composer-guidance">Enter 发送 · Shift + Enter 换行</span>
+                <span id="composer-guidance" className={styles.composerGuidance}>Enter 发送 · Shift + Enter 换行</span>
                 <button type="submit" disabled={interactionDisabled || draft.length > 500}>
                   {loading ? "发送中" : "发送"}
                 </button>

@@ -1,5 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import CourseAdvisor, {
   LoadingStatus,
@@ -43,6 +44,31 @@ describe("CourseAdvisor accessible shell", () => {
     );
     expect(normal).not.toContain("验收证据模式");
     expect(evidence).toContain("验收证据模式");
+    expect(evidence).not.toContain("TEST MODE");
+    expect(evidence).not.toContain("模拟模型失败");
+    expect(evidence).not.toMatch(/知识块ID|内部错误原因|Prompt全文/u);
+  });
+
+  it("keeps expanded mobile quick questions in bounded normal flow", () => {
+    const css = readFileSync(
+      new URL("../../src/components/CourseAdvisor.module.css", import.meta.url),
+      "utf8",
+    );
+    const block = css.match(/\.mobileQuickPanelContent\s*\{([^}]*)\}/u)?.[1];
+
+    expect(block).toContain("position: static");
+    expect(block).toContain("max-height: min(28dvh, 210px)");
+    expect(block).toContain("overflow-y: auto");
+    expect(block).not.toMatch(/position:\s*(?:fixed|absolute|sticky)/u);
+  });
+
+  it("preserves the 44px mobile touch target for quick questions and sending", () => {
+    const css = readFileSync(
+      new URL("../../src/components/CourseAdvisor.module.css", import.meta.url),
+      "utf8",
+    );
+    expect(css).toMatch(/\.composerFooter button\s*\{[^}]*min-height:\s*44px/u);
+    expect(css).toMatch(/\.quickQuestionButton\s*\{[^}]*min-width:\s*104px/u);
   });
 
   it("renders the restoring state before interaction becomes available", () => {

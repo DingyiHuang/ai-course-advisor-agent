@@ -2273,7 +2273,8 @@ export async function runConversationTurn(
       deterministic.factTopics.length === 0 &&
       !deterministic.referencedEntityIds?.length &&
       routingState.domain !== "unknown" &&
-      collectedConstraintKeys(routingState).length === 0
+      (deterministic.fullCatalogRequested ||
+        collectedConstraintKeys(routingState).length === 0)
     ) {
       const workingState = appendHistory(routingState, {
         role: "user",

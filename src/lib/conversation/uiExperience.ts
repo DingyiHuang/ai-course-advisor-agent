@@ -58,6 +58,38 @@ export const QUICK_ENTRIES: readonly QuickEntry[] = [
   },
 ] as const;
 
+export type MobileQuickPanelEvent =
+  | "toggle"
+  | "request_started"
+  | "quick_entry_selected"
+  | "keyboard_closed";
+
+export function nextMobileQuickPanelOpen(
+  current: boolean,
+  event: MobileQuickPanelEvent,
+): boolean {
+  return event === "toggle" ? !current : false;
+}
+
+export function isNearLatestScroll(input: {
+  scrollHeight: number;
+  scrollTop: number;
+  clientHeight: number;
+  threshold?: number;
+}): boolean {
+  return (
+    input.scrollHeight - input.scrollTop - input.clientHeight <=
+    (input.threshold ?? 120)
+  );
+}
+
+export function shouldAutoFollowLatest(input: {
+  force: boolean;
+  nearLatest: boolean;
+}): boolean {
+  return input.force || input.nearLatest;
+}
+
 export function validateComposerDraft(value: string): string | undefined {
   if (!value.trim()) return "请输入问题后再发送，不会发起空请求。";
   if (value.length > 500) {

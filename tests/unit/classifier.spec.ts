@@ -458,6 +458,39 @@ describe("classifier candidates are evidence-gated", () => {
     },
   );
 
+  it.each(["查看全部班型", "查看所有课程", "有哪些班型"])(
+    "marks explicit full-catalog wording independently of stored constraints: %s",
+    (message) => {
+      const state = createInitialConversationState();
+      state.domain = "teacher";
+      state.teacherConstraints = {
+        startingLevel: "L1",
+        prerequisiteStatus: "met",
+        canTakeContinuousLeave: false,
+      };
+      const routing = resolveDeterministicTurnRouting({ message, state });
+
+      expect(routing.catalogRequested).toBe(true);
+      expect(routing.fullCatalogRequested).toBe(true);
+    },
+  );
+
+  it.each(["根据我的情况推荐", "我完成L1后适合学什么"])(
+    "keeps personalized recommendation wording out of full-catalog routing: %s",
+    (message) => {
+      const state = createInitialConversationState();
+      state.domain = "teacher";
+      state.teacherConstraints = {
+        startingLevel: "L1",
+        prerequisiteStatus: "met",
+      };
+      const routing = resolveDeterministicTurnRouting({ message, state });
+
+      expect(routing.catalogRequested).toBe(false);
+      expect(routing.fullCatalogRequested).toBe(false);
+    },
+  );
+
   it("normalizes a Beijing district and explicit mode change over adversarial classifier values", () => {
     const state = createInitialConversationState();
     state.domain = "student";

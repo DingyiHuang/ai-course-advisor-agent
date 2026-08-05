@@ -3,8 +3,11 @@ import {
   answerVerificationLabel,
   currentEntityLabel,
   friendlyRequestError,
+  isNearLatestScroll,
+  nextMobileQuickPanelOpen,
   QUICK_ENTRIES,
   safeTurnEvidence,
+  shouldAutoFollowLatest,
   shouldSubmitComposerKey,
   userFacingStatus,
   validateComposerDraft,
@@ -84,6 +87,46 @@ describe("TASK-B04 UI experience helpers", () => {
   it("keeps the complete student and teacher catalog entity counts", () => {
     expect(CAMPS).toHaveLength(9);
     expect(TEACHER_PRODUCTS).toHaveLength(6);
+  });
+
+  it("collapses mobile quick questions as soon as a request starts or an option is selected", () => {
+    expect(nextMobileQuickPanelOpen(true, "request_started")).toBe(false);
+    expect(nextMobileQuickPanelOpen(true, "quick_entry_selected")).toBe(false);
+    expect(nextMobileQuickPanelOpen(true, "keyboard_closed")).toBe(false);
+  });
+
+  it("toggles the mobile quick panel without changing the default collapsed state", () => {
+    expect(nextMobileQuickPanelOpen(false, "toggle")).toBe(true);
+    expect(nextMobileQuickPanelOpen(true, "toggle")).toBe(false);
+  });
+
+  it("does not auto-follow a new AI message after the user scrolls away from latest", () => {
+    expect(
+      isNearLatestScroll({
+        scrollHeight: 1200,
+        scrollTop: 500,
+        clientHeight: 500,
+      }),
+    ).toBe(false);
+    expect(
+      shouldAutoFollowLatest({ force: false, nearLatest: false }),
+    ).toBe(false);
+  });
+
+  it("follows new messages near the bottom and permits an explicit jump to latest", () => {
+    expect(
+      isNearLatestScroll({
+        scrollHeight: 1200,
+        scrollTop: 580,
+        clientHeight: 500,
+      }),
+    ).toBe(true);
+    expect(
+      shouldAutoFollowLatest({ force: false, nearLatest: true }),
+    ).toBe(true);
+    expect(
+      shouldAutoFollowLatest({ force: true, nearLatest: false }),
+    ).toBe(true);
   });
 
   it("rejects blank and over-500-character input but accepts exactly 500", () => {

@@ -1155,7 +1155,7 @@
   font-size: 9px;
 }
 
-.composerFooter span:nth-child(2) {
+.composerGuidance {
   margin-right: auto;
 }
 
@@ -1443,7 +1443,7 @@ button:disabled {
     gap: 5px;
   }
 
-  .composerFooter span:nth-child(2) {
+  .composerGuidance {
     display: none;
   }
 
@@ -1469,6 +1469,49 @@ button:disabled {
     min-width: 72px;
     min-height: 44px;
     font-size: 14px;
+  }
+
+  .composerFooter > span:first-of-type {
+    margin-right: auto;
+  }
+
+  .composerFooter .quickQuestionButton {
+    min-width: 104px;
+    padding-inline: 12px;
+    color: #244f96;
+    background: #f6f9ff;
+    border: 1px solid #bdcce4;
+  }
+
+  .composerFooter .quickQuestionButton:hover {
+    color: #174db8;
+    background: #edf3ff;
+    border-color: #8ca9d8;
+  }
+
+  .mobileQuickPanelContent {
+    position: static;
+    max-width: 920px;
+    max-height: min(28dvh, 210px);
+    margin: 0 auto 10px;
+    padding: 8px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #f8faff;
+    border: 1px solid #dbe4f0;
+    border-radius: 12px;
+  }
+
+  .mobileQuickPanelContent .quickEntryBar {
+    margin: 0 0 8px;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .mobileQuickPanelContent .starterPrompts {
+    margin: 0;
+    padding-bottom: 0;
   }
 
   .quickEntryBar,
@@ -1569,7 +1612,8 @@ button:disabled {
 }
 
 .pageShell[data-keyboard-compact="true"] .quickEntryBar,
-.pageShell[data-keyboard-compact="true"] .starterPrompts {
+.pageShell[data-keyboard-compact="true"] .starterPrompts,
+.pageShell[data-keyboard-compact="true"] .mobileQuickPanelContent {
   display: none;
 }
 

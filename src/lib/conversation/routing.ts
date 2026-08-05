@@ -34,6 +34,7 @@ export type DeterministicTurnRouting = {
     | "greeting"
     | "special_symbols";
   catalogRequested?: boolean;
+  fullCatalogRequested?: boolean;
 };
 
 function normalized(message: string): string {
@@ -266,13 +267,37 @@ function explicitUnrelatedIntent(message: string): boolean {
   );
 }
 
-function generalCourseIntent(message: string): boolean {
+function fullCatalogIntent(message: string): boolean {
   const text = normalized(message);
   return (
-    /(?:有什么课程推荐|有什么课程|有哪些班|有什么适合我的|我该选哪个|推荐一个课程|我想学习ai|怎么报名学习|有什么可以学的|我想看看你们有什么课程|查看所有班型)/iu.test(
+    /(?:查看|浏览|展示|列出)(?:一下)?(?:全部|所有)(?:班型|课程)|(?:全部|所有)(?:班型|课程)(?:目录|列表)|(?:都)?有哪些(?:班型|课程)|(?:班型|课程)(?:都)?有哪些/iu.test(
+      text,
+    )
+  );
+}
+
+function personalizedRecommendationIntent(message: string): boolean {
+  const text = normalized(message);
+  return (
+    /(?:根据|结合).{0,8}(?:我的|本人|当前).{0,8}(?:情况|条件|需求|约束).{0,8}(?:推荐|选择)/u.test(
       text,
     ) ||
-    /(?:课程|班型).{0,6}(?:推荐|适合|选择|有哪些|有什么)/u.test(text)
+    /(?:推荐|选择).{0,8}(?:适合我的|符合我的)/u.test(text) ||
+    /我.{0,12}(?:完成|学完|具备).{0,4}l[123].{0,8}(?:适合|推荐|该学|学什么)/iu.test(
+      text,
+    )
+  );
+}
+
+function generalCourseIntent(message: string): boolean {
+  const text = normalized(message);
+  if (personalizedRecommendationIntent(message)) return false;
+  return (
+    fullCatalogIntent(message) ||
+    /(?:有什么课程推荐|有什么课程|有哪些班|我想学习ai|怎么报名学习|有什么可以学的|我想看看你们有什么课程)/iu.test(
+      text,
+    ) ||
+    /(?:课程|班型).{0,6}(?:有哪些|有什么)/u.test(text)
   );
 }
 
@@ -790,6 +815,7 @@ export function resolveDeterministicTurnRouting(input: {
   const explicitPersonal = personalDomain(input.message);
   const identity = pendingIdentity(input.message, input.state);
   const institutionNeed = pendingInstitutionNeed(input.message, input.state);
+  const fullCatalogRequested = fullCatalogIntent(input.message);
   const catalogRequested = generalCourseIntent(input.message);
   const domain =
     institutionNeed
@@ -828,6 +854,7 @@ export function resolveDeterministicTurnRouting(input: {
     factTopics,
     referencedEntityIds: factReference?.entityIds,
     catalogRequested,
+    fullCatalogRequested,
     intent: institutionNeed
       ? "institution_service"
       : currentInstitutionOperation
